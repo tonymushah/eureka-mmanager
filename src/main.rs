@@ -10,11 +10,8 @@ use mangadex_api_schema::{
 };
 use try_catch::catch;
 use mangadex_api_types::RelationshipType;
-use tokio::task::yield_now;
 use actix_web::{
-    get, 
-    error, 
-    post, 
+    get,  
     put, 
     patch, 
     delete,
@@ -38,17 +35,22 @@ use crate::cover_download::{
     cover_download_quality_by_cover,
     cover_download_quality_by_manga_id
 };
+use crate::settings::{verify_settings_dir, initialise_settings_dir, initialise_data_dir, verify_data_dir};
 use crate::utils::{find_all_downloades_by_manga_id, patch_manga_by_chapter};
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use std::path::Path;
-use derive_more::{Display, Error};
-use actix_files as fs;
+use settings::server_options;
+use settings::files_dirs::DirsOptions;
+mod settings;
+
 mod chapter_download;
 mod cover_download;
 mod utils;
 // NOTE all get methods
 
-// try if the app is ok
+/// try if the app is ok
+/// # How to use
+/// {app deployed url}/
 #[get("/")]
 async fn hello() -> impl Responder {
     HttpResponse::Ok()
@@ -59,13 +61,15 @@ async fn hello() -> impl Responder {
         }).to_string())
 }
 
-// find a downloaded manga
+/// Find a downloaded manga
+/// # How to use
+/// {app deployed url}/manga/{manga_id}
 #[get("/manga/{id}")]
 async fn find_manga_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("mangas/{}.json", id);
-
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            let path = file_dirs.mangas_add(format!("{}.json", id).as_str());
             if Path::new(path.as_str()).exists() == true {
                 let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 HttpResponse::Ok()
@@ -97,13 +101,15 @@ async fn find_manga_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// find a cover by his id
+/// find a cover by his id
+/// # How to use
+/// {app deployed url}/cover/{cover_id}
 #[get("/cover/{id}")]
 async fn find_cover_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("covers/{}.json", id);
-
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            let path = file_dirs.covers_add(format!("{}.json", id).as_str());
             if Path::new(path.as_str()).exists() == true {
             let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
             HttpResponse::Ok()
@@ -135,17 +141,19 @@ async fn find_cover_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// find a cover by his id
+/// find a cover by his id
 #[get("/cover/{id}/image")]
 async fn find_cover_image_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("covers/{}.json", id);
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            let file_dir_clone = file_dirs.clone();
+            let path = file_dirs.covers_add(format!("{}.json", id).as_str());
             if Path::new(path.as_str()).exists() == true {
                 let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 let cover_data: ApiData<ApiObject<CoverAttributes>> = serde_json::from_str(jsons.as_str()).expect("cannot covert the cover json to the rust api");
                 let filename = cover_data.data.attributes.file_name;
-                let filename_path = format!("covers/images/{}", filename);
+                let filename_path = file_dir_clone.covers_add(format!("images/{}", filename).as_str());
                 HttpResponse::Ok()
                     .content_type(ContentType::jpeg())
                     .body(std::fs::read(filename_path).expect("Error on opening the file"))
@@ -174,13 +182,14 @@ async fn find_cover_image_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// find a downloaded manga cover
+/// find a downloaded manga cover
 #[get("/manga/{id}/cover")]
 async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("mangas/{}.json", id);
-
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            let file_dir_clone = file_dirs.clone();
+            let path = file_dirs.mangas_add(format!("{}.json", id).as_str());            
             if Path::new(path.as_str()).exists() == true {
                 let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 let manga_data: ApiData<ApiObject<MangaAttributes>> = serde_json::from_str(jsons.as_str()).expect("cannot covert the cover json to the rust api");
@@ -191,7 +200,7 @@ async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
                     .find(|related| related.type_ == RelationshipType::CoverArt)
                     .expect("no cover art found for manga")
                     .id;
-                let filename_path = format!("covers/{}.json", cover_id.hyphenated());
+                let filename_path = file_dir_clone.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
                     .body(std::fs::read_to_string(filename_path).expect(format!("can't find the covers/{}.json", id).as_str()))
@@ -221,13 +230,15 @@ async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// find a downloaded covers manga
+/// find a downloaded covers manga
 #[get("/manga/{id}/covers")]
 async fn find_manga_covers_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("covers/lists/{}.json", id);
-
+    
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            //let file_dir_clone = file_dirs.clone();
+            let path = file_dirs.mangas_add(format!("lists/{}.json", id).as_str());
             if Path::new(path.as_str()).exists() == true {
                 let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 HttpResponse::Ok()
@@ -259,13 +270,14 @@ async fn find_manga_covers_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// find a chapter (json data) by his id
+/// find a chapter (json data) by his id
 #[get("/chapter/{id}/data")]
 async fn find_chapters_data_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("chapters/{}/data", id);
-
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            //let file_dir_clone = file_dirs.clone();
+            let path = file_dirs.chapters_add(format!("{}/data", id).as_str());
             if Path::new(path.as_str()).exists() == true {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<String> = Vec::new();
@@ -305,12 +317,14 @@ async fn find_chapters_data_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// find a chapters data-saver (json data) by his id
+/// find a chapters data-saver (json data) by his id
 #[get("/chapter/{id}/data-saver")]
 async fn find_chapters_data_saver_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("chapters/{}/data-saver", id);
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+            //let file_dir_clone = file_dirs.clone();
+            let path = file_dirs.chapters_add(format!("{}/data-saver", id).as_str());
             if Path::new(path.as_str()).exists() == true {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<String> = Vec::new();
@@ -349,13 +363,16 @@ async fn find_chapters_data_saver_by_id(id: web::Path<String>) -> impl Responder
     
 }
 
-// find a chapters data image by his id
-#[get("/chapter/data/{id}/{filename}")]
+/// find a chapters data image by his id
+#[get("/chapter/{id}/data/{filename}")]
 async fn find_chapters_data_img_by_id(data: web::Path<(String, String)>) -> impl Responder {
     let (id, filename) = data.into_inner();
-    let path = format!("chapters/{}/data/{}", id, filename);
+    //let path = ;
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+                //let file_dir_clone = file_dirs.clone();
+                let path = file_dirs.chapters_add(format!("{}/data/{}", id, filename).as_str());
             if Path::new(path.as_str()).exists() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::jpeg())
@@ -385,13 +402,16 @@ async fn find_chapters_data_img_by_id(data: web::Path<(String, String)>) -> impl
     
 }
 
-// find a chapters data-saver image by his id
-#[get("/chapter/data-saver/{id}/{filename}")]
+/// find a chapters data-saver image by his id
+#[get("/chapter/{id}/data-saver/{filename}")]
 async fn find_chapters_data_saver_img_by_id(data: web::Path<(String, String)>) -> impl Responder {
     let (id, filename) = data.into_inner();
-    let path = format!("chapters/{}/data-saver/{}", id, filename);
+    //let path = format!("chapters/{}/data-saver/{}", id, filename);
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+                //let file_dir_clone = file_dirs.clone();
+                let path = file_dirs.chapters_add(format!("{}/data-saver/{}", id, filename).as_str());
             if Path::new(path.as_str()).exists() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::jpeg())
@@ -421,12 +441,15 @@ async fn find_chapters_data_saver_img_by_id(data: web::Path<(String, String)>) -
     
 }
 
-// find a chapter (json data) by his id
+/// find a chapter (json data) by his id
 #[get("/chapter/{id}")]
 async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("chapters/{}/data.json", id);
+    //let path = format!("chapters/{}/data.json", id);
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+                //let file_dir_clone = file_dirs.clone();
+                let path = file_dirs.chapters_add(format!("{}/data.json", id).as_str());
             if Path::new(path.as_str()).exists() == true {
                 let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 HttpResponse::Ok()
@@ -457,14 +480,16 @@ async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
 
 }
 
-// find a chapters data-saver (json data) by his id
+/// find a chapters data-saver (json data) by his id
 #[get("/chapter/all")]
 async fn find_all_downloaded_chapter() -> impl Responder {
-    let path = format!("chapters");
-    
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+                //let file_dir_clone = file_dirs.clone();
+                let path = file_dirs.chapters_add("");
             if Path::new(path.as_str()).exists() == true {
+                
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<String> = Vec::new();
                 for files in list_dir {
@@ -501,12 +526,17 @@ async fn find_all_downloaded_chapter() -> impl Responder {
     
 }
 
+/// find all downloaded manga 
 #[get("/mangas/all")]
 async fn find_all_downloaded_manga() -> impl Responder {
-    let path = format!("mangas");
+    //let path = format!("mangas");
     catch!{
         try{
+            let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+                //let file_dir_clone = file_dirs.clone();
+                let path = file_dirs.mangas_add("");
             if Path::new(path.as_str()).exists() == true {
+                
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<String> = Vec::new();
                 for files in list_dir {
@@ -542,7 +572,7 @@ async fn find_all_downloaded_manga() -> impl Responder {
     
 }
 
-// find a downloaded covers manga
+/// find a downloaded covers manga
 #[get("/manga/{id}/chapters")]
 async fn find_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
     catch!{
@@ -577,12 +607,15 @@ async fn find_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
 
 // NOTE update api data
 
-// update a cover json data by his id
+/// update a cover json data by his id
 #[patch("/cover/{id}")]
 async fn update_cover_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("covers/{}.json", id);
+    
     catch!{
         try{
+            let path = DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .covers_add(format!("{}.json", id).as_str());
             let http_client = reqwest::Client::new();
             let get_cover = http_client
                 .get(
@@ -599,7 +632,7 @@ async fn update_cover_by_id(id: web::Path<String>) -> impl Responder {
                 .await
                 .expect("error on exporting to bytes");
         
-                let mut cover_data = File::create(format!("covers/{}.json", id))
+                let mut cover_data = File::create(path.clone())
                 .expect("Error on creating file");
 
             cover_data.write_all(&bytes_).unwrap();
@@ -623,11 +656,16 @@ async fn update_cover_by_id(id: web::Path<String>) -> impl Responder {
         
 }
 
+/// update a chapter by his id
 #[patch("/chapter/{id}")]
 async fn update_chapter_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("chapters/{}/data.json", id);
+    //let path = format!("chapters/{}/data.json", id);
+    
     catch! {
         try{
+            let path = DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .chapters_add(format!("{}.json", id).as_str());
             let http_client = reqwest::Client::new();
             let get_cover = http_client
                 .get(
@@ -644,7 +682,7 @@ async fn update_chapter_by_id(id: web::Path<String>) -> impl Responder {
                 .await
                 .expect("error on exporting to bytes");
                 
-                let mut cover_data = File::create(format!("chapters/{}/data.json", id))
+                let mut cover_data = File::create(path.clone())
                 .expect("Error on creating file");
 
             cover_data.write_all(&bytes_).unwrap();
@@ -668,11 +706,16 @@ async fn update_chapter_by_id(id: web::Path<String>) -> impl Responder {
         
 }
 
+/// update all chapters data
 #[patch("/chapters/all")]
 async fn patch_all_chapter() -> impl Responder{
-    let path = format!("chapters");
+    //let path = format!("chapters");
+    
     catch! {
         try{
+            let path = DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .chapters_add("");
             if Path::new(path.as_str()).exists() == true {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<serde_json::Value> = Vec::new();
@@ -712,11 +755,16 @@ async fn patch_all_chapter() -> impl Responder{
     
 }
 
+/// patch all chapters manga data
 #[patch("/chapters/all/patch-manga")]
 async fn patch_all_chapter_manga() -> impl Responder{
-    let path = format!("chapters");
+    
     catch!{
         try{
+            let path = DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .chapters_add("");
+        //println!("{}", path);
             if Path::new(path.as_str()).exists() == true {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<serde_json::Value> = Vec::new();
@@ -756,9 +804,13 @@ async fn patch_all_chapter_manga() -> impl Responder{
     
 }
 
+/// patch a chapter manga data
 #[patch("/chapter/{id}/patch-manga")]
 async fn update_chapter_manga_by_id(id: web::Path<String>) -> impl Responder {
-    let path = format!("chapters/{}/data.json", id);
+    //let path = format!("chapters/{}/data.json", id);
+    let path = DirsOptions::new()
+        .expect("Can't load the dirOption api")
+        .chapters_add(format!("chapters/{}/data.json", id).as_str());
     catch!{
         try {
             if Path::new(path.as_str()).exists() == true {
@@ -787,11 +839,15 @@ async fn update_chapter_manga_by_id(id: web::Path<String>) -> impl Responder {
     }    
 }
 
+/// patch all manga cover
 #[patch("/mangas/all/cover")]
 async fn patch_all_manga_cover() -> impl Responder {
-    let path = format!("mangas");
+    
     catch!{
         try{
+            let path = DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .mangas_add("");
             if Path::new(path.as_str()).exists() == true {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<serde_json::Value> = Vec::new();
@@ -833,15 +889,27 @@ async fn patch_all_manga_cover() -> impl Responder {
 
 // NOTE all delete methods
 
+/// delete a chapter from the api
 #[delete("/chapter/{id}")]
 async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
     catch!{
         try{
-            let jsons = serde_json::json!({
-                "result" : "ok",
-                "type" : "manga",
-                "id" : id.as_str()
-            });
+            let mut jsons = serde_json::json!({});
+            let chapter_path = DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .mangas_add(format!("{}", id).as_str());
+            if Path::new(chapter_path.as_str()).exists() == true {
+                std::fs::remove_dir_all(chapter_path).expect("can't delete chapter dir");
+                jsons = serde_json::json!({
+                    "result" : "ok"
+                });
+            }else{
+                jsons = serde_json::json!({
+                    "result" : "error"
+                });
+                panic!("can't find chapter {}", id);
+            }
+            
             HttpResponse::Ok()
                 .content_type(ContentType::json())
                 .body(jsons.to_string())
@@ -863,7 +931,7 @@ async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
 
 // NOTE All download methods
 
-// download a manga (req only)
+/// download a manga (req only)
 #[put("/manga/{id}")]
 async fn download_manga_by_id(id: web::Path<String>) -> impl Responder {
 
@@ -871,7 +939,9 @@ async fn download_manga_by_id(id: web::Path<String>) -> impl Responder {
         try{
             let http_client = reqwest::Client::new();
             let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)).send().await.unwrap();
-            let mut file = File::create(format!("mangas/{}.json", id)).unwrap();
+            let mut file = File::create(DirsOptions::new()
+                .expect("Can't load the dirOption api")
+                .mangas_add(format!("{}.json", id).as_str())).unwrap();
 
             file.write_all(&(resp.bytes().await.unwrap())).unwrap();
             let jsons = serde_json::json!({
@@ -897,7 +967,7 @@ async fn download_manga_by_id(id: web::Path<String>) -> impl Responder {
     
 }
 
-// download all manga covers
+/// download all manga covers
 #[put("/manga/{id}/covers")]
 async fn download_manga_covers(id: web::Path<String>) -> impl Responder {
 
@@ -926,7 +996,7 @@ async fn download_manga_covers(id: web::Path<String>) -> impl Responder {
     }
 }
 
-// download the top manga cover
+/// download the top manga cover
 #[put("/manga/{id}/cover")]
 async fn download_manga_cover(id: web::Path<String>) -> impl Responder {
 
@@ -957,7 +1027,7 @@ async fn download_manga_cover(id: web::Path<String>) -> impl Responder {
     
 }
 
-// download the top manga cover with defined quality
+/// download the top manga cover with defined quality
 #[put("/manga/{id}/cover/{quality}")]
 async fn download_manga_cover_quality(id: web::Path<String>, quality: web::Path<u32>) -> impl Responder {
 
@@ -988,7 +1058,7 @@ async fn download_manga_cover_quality(id: web::Path<String>, quality: web::Path<
     
 }
 
-// download cover by id
+/// download cover by id
 #[put("/cover/{id}")]
 async fn download_cover(id: web::Path<String>) -> impl Responder {
 
@@ -1019,7 +1089,7 @@ async fn download_cover(id: web::Path<String>) -> impl Responder {
     
 }
 
-// download cover by id with defined quality
+/// download cover by id with defined quality
 #[put("/cover/{id}/{quality}")]
 async fn download_cover_quality(id: web::Path<String>, quality: web::Path<u32>) -> impl Responder {
 
@@ -1050,7 +1120,7 @@ async fn download_cover_quality(id: web::Path<String>, quality: web::Path<u32>) 
     
 }
 
-// download chapter by id
+/// download chapter by id
 #[put("/chapter/{id}")]
 async fn download_chapter_byid(id: web::Path<String>) -> impl Responder {
     format!("Start downloading manga {id}");
@@ -1083,7 +1153,7 @@ async fn download_chapter_byid(id: web::Path<String>) -> impl Responder {
     //download_chapter(id.as_str())
 }
 
-// download chapter data by id
+/// download chapter data by id
 #[put("/chapter/{id}/data")]
 async fn download_chapter_data_byid(id: web::Path<String>) -> impl Responder {
 
@@ -1116,7 +1186,7 @@ async fn download_chapter_data_byid(id: web::Path<String>) -> impl Responder {
     //download_chapter(id.as_str())
 }
 
-// download chapter data-saver by id
+/// download chapter data-saver by id
 #[put("/chapter/{id}/data-saver")]
 async fn download_chapter_data_saver_byid(id: web::Path<String>) -> impl Responder {
 
@@ -1207,6 +1277,35 @@ async fn launch_server(address: &str, port : u16) -> std::io::Result<()>{
 
 
 
+
+/*
+    TODO finish the server options api
+    TODO implements those modifiction to the entire app
+    TODO the app can edit his settings
+*/
+
 fn main() -> std::io::Result<()> {
-    launch_server("127.0.0.1", 8082)
+    catch!{
+        try{
+            println!("{}", verify_settings_dir()?);
+        }catch error{
+            println!("{}", error);
+            println!("Settings dir not found \n\tInitializing...");
+            initialise_settings_dir().unwrap();
+            println!("Initilized settings dir !");
+        }
+    }
+    catch!{
+        try{
+            println!("{}", verify_data_dir()?);
+        }catch error{
+            println!("{}", error);
+            println!("Data dir not found \n\tInitializing...");
+            initialise_data_dir().unwrap();
+            println!("Initilized package manager dir !");
+        }
+    }
+    println!("launching server");
+    let serve : server_options::ServerOptions = server_options::ServerOptions::new().expect("Can't load the server option api");
+    launch_server(serve.hostname.as_str(), serve.port)
 }

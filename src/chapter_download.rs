@@ -7,12 +7,15 @@ use mangadex_api::v5::MangaDexClient;
 use std::path::Path;
 use serde_json::json;
 
+use crate::{settings, utils};
+
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
+    let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let chapter_id = Uuid::parse_str(chapter_id).expect("Not a valid id");
-    let chapter_top_dir = format!("chapters/{}",chapter_id.hyphenated().to_string());
-    let chapter_dir = format!("chapters/{}/data", chapter_top_dir);
-    std::fs::create_dir_all(format!("{}/data", chapter_id.hyphenated().to_string()))?;
+    let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
+    let chapter_dir = format!("{}/data", chapter_top_dir);
+    std::fs::create_dir_all(format!("{}", chapter_dir))?;
     println!("chapter dir created");
     let at_home = client
         .at_home()
@@ -46,7 +49,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             ))
             .unwrap();
 
-        let res = http_client.get(page_url).send().await?;
+        let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
         let bytes = res.bytes().await?;
 
@@ -68,10 +71,11 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
 }
 pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
+    let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let chapter_id = Uuid::parse_str(chapter_id).expect("Not a valid id");
-    let chapter_top_dir = format!("chapters/{}",chapter_id.hyphenated().to_string());
+    let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data-saver", chapter_top_dir);
-    std::fs::create_dir_all(format!("chapters/{}/data-saver", chapter_id.hyphenated().to_string()))?;
+    std::fs::create_dir_all(format!("{}/data-saver", chapter_top_dir))?;
     println!("chapter dir created");
     let at_home = client
         .at_home()
@@ -105,11 +109,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
             ))
             .unwrap();
 
-        let res = http_client
-            .get(page_url)
-            .send()
-            .await?
-        ;
+        let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
         let bytes = res.bytes().await?;
 
@@ -128,97 +128,4 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
     let _ = file.write_all(jsons.to_string().as_bytes());
     Ok(jsons)
-}
-
-mod path{
-    use std::fs::File;
-    use std::io::{Write};
-    use uuid::Uuid;
-    use mangadex_api::v5::MangaDexClient;
-
-    pub async fn download_chapter(path: &str, chapter_id: &str) -> anyhow::Result<()> {
-        let client = MangaDexClient::default();
-        let chapter_id = Uuid::parse_str(chapter_id).unwrap();
-        let chapter_dir = format!("chapters/{}/{}/data", path,chapter_id.hyphenated().to_string());
-        std::fs::create_dir_all(format!("{}/data", chapter_id.hyphenated().to_string()))?;
-        let at_home = client
-            .at_home()
-            .server()
-            .chapter_id(&chapter_id)
-            .build()?
-            .send()
-            .await?;
-
-        let http_client = reqwest::Client::new();
-        // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
-        let page_filenames = at_home.chapter.data;
-        for filename in page_filenames {
-            // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
-            let page_url = at_home
-                .base_url
-                .join(&format!(
-                    "/{quality_mode}/{chapter_hash}/{page_filename}",
-                    quality_mode = "data",
-                    chapter_hash = at_home.chapter.hash,
-                    page_filename = filename
-                ))
-                .unwrap();
-
-            let res = http_client.get(page_url).send().await?;
-            // The data should be streamed rather than downloading the data all at once.
-            let bytes = res.bytes().await?;
-
-            // This is where you would download the file but for this example,
-            // we're just printing the raw data.
-            let mut file = File::create(format!("{}/{}", chapter_dir, &filename))?;
-            let _ = file.write_all(&bytes);
-            println!("downloaded {} ", &filename);
-        }
-        Ok(())
-    }
-    pub async fn download_chapter_saver(path: &str,chapter_id: &str) -> anyhow::Result<()> {
-        let client = MangaDexClient::default();
-        let chapter_id = Uuid::parse_str(chapter_id).unwrap();
-        let chapter_dir = format!("chapters/{}/{}/data-saver", path,chapter_id.hyphenated().to_string());
-        std::fs::create_dir_all(format!("{}/data-saver", chapter_id.hyphenated().to_string()))?;
-        let at_home = client
-            .at_home()
-            .server()
-            .chapter_id(&chapter_id)
-            .build()?
-            .send()
-            .await?;
-
-        let http_client = reqwest::Client::new();
-
-        // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
-        let page_filenames = at_home.chapter.data_saver;
-        for filename in page_filenames {
-            // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
-            let page_url = at_home
-                .base_url
-                .join(&format!(
-                    "/{quality_mode}/{chapter_hash}/{page_filename}",
-                    quality_mode = "data-saver",
-                    chapter_hash = at_home.chapter.hash,
-                    page_filename = filename
-                ))
-                .unwrap();
-
-            let res = http_client
-                .get(page_url)
-                .send()
-                .await?
-            ;
-            // The data should be streamed rather than downloading the data all at once.
-            let bytes = res.bytes().await?;
-
-            // This is where you would download the file but for this example,
-            // we're just printing the raw data.
-            let mut file = File::create(format!("{}/{}", chapter_dir, &filename))?;
-            let _ = file.write_all(&bytes);
-            println!("downloaded {} ", &filename);
-        }
-        Ok(())
-    }
 }
