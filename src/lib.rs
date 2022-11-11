@@ -42,11 +42,11 @@ use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use std::path::Path;
 use settings::server_options;
 use settings::files_dirs::DirsOptions;
-mod settings;
+pub mod settings;
 
-mod chapter_download;
-mod cover_download;
-mod utils;
+pub mod chapter_download;
+pub mod cover_download;
+pub mod utils;
 // NOTE all get methods
 
 /// try if the app is ok
