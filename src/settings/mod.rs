@@ -23,10 +23,8 @@ pub fn initialise_settings_dir() -> anyhow::Result<()>{
     let mut server_option = std::fs::File::create("./settings/server-options.json")?;
     // default config
     let server_option_content = serde_json::json!({
-        "data_dir" : ".",
-        "chapters" : "chapters",
-        "mangas" : "mangas",
-        "covers" : "covers"
+        "hostname" : "127.0.0.1",
+        "port" : 8090
     });
     server_option.write_all(server_option_content.to_string().as_bytes())?;
 
