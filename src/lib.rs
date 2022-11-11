@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::Write;
+use actix_web::dev::Server;
 use mangadex_api_schema::v5::{
     CoverAttributes, 
     MangaAttributes
@@ -1354,6 +1355,52 @@ pub async fn launch_server(address: &str, port : u16) -> std::io::Result<()>{
     println!("closing mangadex-desktop-api on {}:{}", address, port);
     habdle
 }
+
+pub fn launch_async_server(address: &str, port : u16) -> std::io::Result<Server>{
+    Ok(HttpServer::new(|| {
+        App::new()
+            .wrap(
+                ErrorHandlers::new()
+                    .handler(StatusCode::INTERNAL_SERVER_ERROR, add_error_header)
+            )
+            .service(hello)
+            .service(find_chapters_data_img_by_id)
+            .service(find_chapters_data_saver_img_by_id)
+            .service(download_chapter_byid)
+            .service(download_chapter_data_saver_byid)
+            .service(download_chapter_data_byid)
+            .service(download_manga_covers)
+            .service(download_manga_cover)
+            .service(download_manga_by_id)
+            .service(find_manga_by_id)
+            .service(find_cover_image_by_id)
+            .service(find_manga_cover_by_id)
+            .service(find_manga_covers_by_id)
+            .service(find_manga_covers_by_id)
+            .service(update_cover_by_id)
+            .service(find_chapters_data_by_id)
+            .service(find_chapters_data_saver_by_id)
+            .service(find_all_downloaded_chapter)
+            .service(update_chapter_by_id)
+            .service(patch_all_chapter)
+            .service(find_chapter_by_id)
+            .service(find_manga_chapters_by_id)
+            .service(find_all_downloaded_manga)
+            .service(patch_all_chapter_manga)
+            .service(update_chapter_manga_by_id)
+            .service(patch_all_manga_cover)
+            .service(delete_manga_chapters_by_id)
+        })
+    .bind((address, port))?
+    .run())
+}
+
+pub fn launch_async_server_default() -> std::io::Result<Server>{
+    println!("launching server");
+    let serve : server_options::ServerOptions = server_options::ServerOptions::new().expect("Can't load the server option api");
+    launch_async_server(serve.hostname.as_str(), serve.port)
+}
+
 
 /// Verify if the data dir and the settings are all there
 /// if on of them are not defined or not found , it automatically create the dir corresponding to the error
