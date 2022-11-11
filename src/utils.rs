@@ -72,6 +72,26 @@ pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result
     Ok(serde_json::json!(vecs))
 }
 
+pub async fn find_and_delete_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result<serde_json::Value> {
+    let files_dirs : DirsOptions = DirsOptions::new()?;
+    let path = files_dirs.chapters_add("");
+        let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
+        let mut vecs: Vec<String> = Vec::new();
+        for files in list_dir {
+            let to_use = files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string();
+            let to_insert = to_use.clone();
+            let to_remove = to_use.clone();
+            if is_chap_related_to_manga(to_use, manga_id.clone()).await.expect("Error on validating") == true {
+                vecs.push(to_insert);
+                std::fs::remove_dir_all(
+                    DirsOptions::new()?
+                        .chapters_add(to_remove.as_str())
+                )?
+            }
+        }
+    Ok(serde_json::json!(vecs))
+}
+
 pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_json::Value> {
     let path = DirsOptions::new()?.chapters_add(format!("{}/data.json", chap_id).as_str());
     let chapter : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_str(&std::fs::read_to_string(path.as_str())
