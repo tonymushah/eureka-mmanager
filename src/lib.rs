@@ -42,6 +42,7 @@ use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use std::path::Path;
 use settings::server_options;
 use settings::files_dirs::DirsOptions;
+use log::{info, warn};
 pub mod settings;
 
 pub mod chapter_download;
@@ -723,7 +724,7 @@ async fn patch_all_chapter() -> impl Responder{
                 for files in list_dir {
                     let id = files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string();
                     vecs.push(utils::update_chap_by_id(id.clone()).await.expect("can't update chapter"));
-                    println!("downloaded chapter data {}", id);
+                    info!("downloaded chapter data {}", id);
                 }
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
@@ -765,14 +766,14 @@ async fn patch_all_chapter_manga() -> impl Responder{
             let path = DirsOptions::new()
                 .expect("Can't load the dirOption api")
                 .chapters_add("");
-        //println!("{}", path);
+        //info!("{}", path);
             if Path::new(path.as_str()).exists() == true {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<serde_json::Value> = Vec::new();
                 for files in list_dir {
                     let id = files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string();
                     vecs.push(utils::patch_manga_by_chapter(id.clone()).await.expect("can't update chapter"));
-                    println!("downloaded manga data {}", id);
+                    info!("downloaded manga data {}", id);
                 }
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
@@ -1097,11 +1098,12 @@ async fn download_manga_cover(id: web::Path<String>) -> impl Responder {
 
 /// download the top manga cover with defined quality
 #[put("/manga/{id}/cover/{quality}")]
-async fn download_manga_cover_quality(id: web::Path<String>, quality: web::Path<u32>) -> impl Responder {
-
+async fn download_manga_cover_quality(path_var: web::Path<(String, u32)>) -> impl Responder {
+    let id = (*(path_var.0)).to_string();
+    let quality = path_var.1;
     catch!{
         try{
-            let response = cover_download_quality_by_manga_id(format!("{id}").as_str(), *quality).await;
+            let response = cover_download_quality_by_manga_id(format!("{id}").as_str(), quality).await;
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
@@ -1159,11 +1161,12 @@ async fn download_cover(id: web::Path<String>) -> impl Responder {
 
 /// download cover by id with defined quality
 #[put("/cover/{id}/{quality}")]
-async fn download_cover_quality(id: web::Path<String>, quality: web::Path<u32>) -> impl Responder {
-
+async fn download_cover_quality(path_var: web::Path<(String, u32)>) -> impl Responder {
+    let id = (*(path_var.0)).to_string();
+    let quality = path_var.1;
     catch!{
         try{
-            let response = cover_download_quality_by_cover(format!("{id}").as_str(), *quality).await;
+            let response = cover_download_quality_by_cover(format!("{id}").as_str(), quality).await;
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
@@ -1314,7 +1317,7 @@ fn add_error_header<B>(mut res: dev::ServiceResponse<B>) -> Result<ErrorHandlerR
 /// }
 /// ```
 pub async fn launch_server(address: &str, port : u16) -> std::io::Result<()>{
-    println!("launching mangadex-desktop-api on {}:{}", address, port);
+    info!("launching mangadex-desktop-api on {}:{}", address, port);
     let habdle = HttpServer::new(|| {
         App::new()
             .wrap(
@@ -1352,7 +1355,7 @@ pub async fn launch_server(address: &str, port : u16) -> std::io::Result<()>{
     .bind((address, port))?
     .run()
     .await;
-    println!("closing mangadex-desktop-api on {}:{}", address, port);
+    info!("closing mangadex-desktop-api on {}:{}", address, port);
     habdle
 }
 
@@ -1396,7 +1399,7 @@ pub fn launch_async_server(address: &str, port : u16) -> std::io::Result<Server>
 }
 
 pub fn launch_async_server_default() -> std::io::Result<Server>{
-    println!("launching server");
+    info!("launching server");
     let serve : server_options::ServerOptions = server_options::ServerOptions::new().expect("Can't load the server option api");
     launch_async_server(serve.hostname.as_str(), serve.port)
 }
@@ -1408,22 +1411,24 @@ pub fn verify_all_fs() -> std::io::Result<()> {
 
     catch!{
         try{
-            println!("{}", verify_settings_dir()?);
+            info!("{}", verify_settings_dir()?);
         }catch error{
-            println!("{}", error);
-            println!("Settings dir not found \n\tInitializing...");
+            warn!("{}", error);
+            warn!("Settings dir not found ");
+            info!("Initializing...");
             initialise_settings_dir().unwrap();
-            println!("Initilized settings dir !");
+            info!("Initilized settings dir !");
         }
     }
     catch!{
         try{
-            println!("{}", verify_data_dir()?);
+            info!("{}", verify_data_dir()?);
         }catch error{
-            println!("{}", error);
-            println!("Data dir not found \n\tInitializing...");
+            warn!("{}", error);
+            warn!("Data dir not found \n");
+            info!("\tInitializing...");
             initialise_data_dir().unwrap();
-            println!("Initilized package manager dir !");
+            info!("Initilized package manager dir !");
         }
     }
 
@@ -1450,7 +1455,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
 /// }
 /// ```
 pub fn launch_server_default() -> std::io::Result<()>{
-    println!("launching server");
+    info!("launching server");
     let serve : server_options::ServerOptions = server_options::ServerOptions::new().expect("Can't load the server option api");
     launch_server(serve.hostname.as_str(), serve.port)
 }

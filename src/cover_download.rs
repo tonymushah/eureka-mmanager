@@ -9,6 +9,7 @@ use uuid::Uuid;
 use mangadex_api::types::RelationshipType;
 use mangadex_api::v5::MangaDexClient;
 use mangadex_api::CDN_URL;
+use log::info;
 
 use crate::{settings, utils};
 
@@ -72,7 +73,7 @@ pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_
 
     files.write_all(&resps.bytes().await?)?;
 
-    println!("downloaded {}", filename.as_str());
+    info!("downloaded {}", filename.as_str());
     Ok(serde_json::json!({
         "result" : "ok",
         "type": "cover",
@@ -145,7 +146,7 @@ pub async fn cover_download_quality_by_manga_id(manga_id: &str, quality:  u32) -
         let resps = utils::send_request(http_client.get(format!("{}/cover/{}", mangadex_api::constants::API_URL, cover_id.hyphenated())), 5).await?;
 
         files.write_all(&resps.bytes().await?)?;
-        println!("downloaded {}", filename.as_str());
+        info!("downloaded {}", filename.as_str());
         Ok(serde_json::json!({
             "result" : "ok",
             "type": "cover",
@@ -272,8 +273,8 @@ pub async fn cover_download_quality_by_cover(cover_id: &str, quality:  u32) -> a
 
         files.write_all(&resps.bytes().await?)?;
 
-        println!("downloaded {}", filename.as_str());
-        //    println!("downloaded {}", filename.as_str());
+        info!("downloaded {}", filename.as_str());
+        //    info!("downloaded {}", filename.as_str());
         Ok(serde_json::json!({
             "result" : "ok",
             "type": "cover",
@@ -323,7 +324,7 @@ pub async fn all_covers_download_quality_by_manga_id(manga_id: &str, limit: u32)
         files.write_all(&resps.bytes().await?)?;        
 
         vecs.push(format!("{}", cover_to_use.id.hyphenated()));
-        println!("downloaded {}", filename.as_str());
+        info!("downloaded {}", filename.as_str());
     }
     let jsons = serde_json::json!({
         "result" : "ok",

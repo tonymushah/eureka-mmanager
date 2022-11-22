@@ -31,6 +31,7 @@ mangadex-api-schema = "0.1.0"
 mangadex-api-types = "0.1.0"
 derive_more = "0.99.17"
 try-catch = "0.2.2"
+log = "^0.4"
 
 [dev-dependencies]
 clap = { version = "3.1.2", features = ["derive"] }

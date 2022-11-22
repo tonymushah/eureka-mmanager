@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{Write, ErrorKind};
 //use anyhow::Ok;
+use log::info;
 use mangadex_api_schema::v5::{
     ChapterAttributes
 };
@@ -118,7 +119,7 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
             "type" : "manga",
             "id" : manga_id.hyphenated()
         });
-    println!("downloaded {}.json", manga_id.hyphenated());
+    info!("downloaded {}.json", manga_id.hyphenated());
     Ok(jsons)
 }
 

@@ -6,6 +6,7 @@ use uuid::Uuid;
 use mangadex_api::v5::MangaDexClient;
 use std::path::Path;
 use serde_json::json;
+use log::info;
 
 use crate::{settings, utils};
 
@@ -16,7 +17,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data", chapter_top_dir);
     std::fs::create_dir_all(format!("{}", chapter_dir))?;
-    println!("chapter dir created");
+    info!("chapter dir created");
     let at_home = client
         .at_home()
         .server()
@@ -32,7 +33,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
         chapter_data.write_all(&bytes_).unwrap();
-        println!("created data.json");
+        info!("created data.json");
     }
     let mut files_: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
@@ -57,7 +58,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         // we're just printing the raw data.
         let mut file = File::create(format!("{}/{}", chapter_dir, &filename))?;
         let _ = file.write_all(&bytes);
-        println!("downloaded {} ", &filename);
+        info!("downloaded {} ", &filename);
         files_.push(format!("{}", &filename));
     }
     let jsons = json!({
@@ -76,7 +77,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data-saver", chapter_top_dir);
     std::fs::create_dir_all(format!("{}/data-saver", chapter_top_dir))?;
-    println!("chapter dir created");
+    info!("chapter dir created");
     let at_home = client
         .at_home()
         .server()
@@ -92,7 +93,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
         chapter_data.write_all(&bytes_).unwrap();
-        println!("created data.json");
+        info!("created data.json");
     }
     let mut files_: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
@@ -117,7 +118,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         // we're just printing the raw data.
         let mut file = File::create(format!("{}/{}", chapter_dir, &filename))?;
         let _ = file.write_all(&bytes);
-        println!("downloaded {} ", &filename);
+        info!("downloaded {} ", &filename);
         files_.push(format!("{}", &filename));
     }
     let jsons = json!({

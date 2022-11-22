@@ -12,7 +12,7 @@ pub fn initialise_settings_dir() -> anyhow::Result<()>{
     let mut file_dir = std::fs::File::create("./settings/files-dirs.json")?;
     // default config
     let file_dir_content = serde_json::json!({
-        "data_dir" : ".",
+        "data_dir" : "data",
         "chapters" : "chapters",
         "mangas" : "mangas",
         "covers" : "covers"
