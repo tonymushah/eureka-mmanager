@@ -284,7 +284,11 @@ async fn find_chapters_data_by_id(id: web::Path<String>) -> impl Responder {
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<String> = Vec::new();
                 for files in list_dir {
-                    vecs.push(files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string());
+                    let filename_os = files.expect("can't open file").file_name().clone();
+                    let filename = filename_os.to_str().expect("can't reconize file").to_string();
+                    if filename.ends_with(".json") == false {
+                        vecs.push(filename);
+                    }
                 }
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
@@ -315,8 +319,6 @@ async fn find_chapters_data_by_id(id: web::Path<String>) -> impl Responder {
                 .body(jsons.to_string())
         }
     }
-
-    
 }
 
 /// find a chapters data-saver (json data) by his id
@@ -331,7 +333,11 @@ async fn find_chapters_data_saver_by_id(id: web::Path<String>) -> impl Responder
                 let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
                 let mut vecs: Vec<String> = Vec::new();
                 for files in list_dir {
-                    vecs.push(files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string());
+                    let filename_os = files.expect("can't open file").file_name().clone();
+                    let filename = filename_os.to_str().expect("can't reconize file").to_string();
+                    if filename.ends_with(".json") == false {
+                        vecs.push(filename);
+                    }
                 }
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
@@ -896,7 +902,7 @@ async fn patch_all_manga_cover() -> impl Responder {
 async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
     catch!{
         try{
-            let mut jsons = serde_json::json!({});
+            let jsons : serde_json::Value;
             let chapter_path = DirsOptions::new()
                 .expect("Can't load the dirOption api")
                 .mangas_add(format!("{}", id).as_str());
@@ -906,9 +912,6 @@ async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
                     "result" : "ok"
                 });
             }else{
-                jsons = serde_json::json!({
-                    "result" : "error"
-                });
                 panic!("can't find chapter {}", id);
             }
             
