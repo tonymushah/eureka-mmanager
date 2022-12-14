@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Write, ErrorKind};
 //use anyhow::Ok;
-use log::info;
+use log::{info, warn};
 use mangadex_api_schema::v5::{
     ChapterAttributes
 };
@@ -123,15 +123,17 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
     Ok(jsons)
 }
 
-pub async fn send_request(to_use: reqwest::RequestBuilder, tries_limits: u16) -> Result<reqwest::Response, std::io::Error>{
+pub async fn send_request(to_use_arg: reqwest::RequestBuilder, tries_limits: u16) -> Result<reqwest::Response, std::io::Error>{
     let mut tries = 0;
+    let to_use = to_use_arg.fetch_mode_no_cors();
     //let mut to_return : reqwest::Response;
     while tries < tries_limits {
         let resp = to_use.try_clone().unwrap().send().await;
         if resp.is_err() == true {
             tries = tries + 1;
+            warn!("tries {}", tries);
         }else{
-            return Ok(resp.unwrap());
+            return Ok(resp.ok().expect("Error"));
         }
     }
     Err(std::io::Error::new(ErrorKind::Other, "All tries failed to applies your request"))

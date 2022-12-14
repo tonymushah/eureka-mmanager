@@ -49,7 +49,6 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
                 page_filename = filename
             ))
             .unwrap();
-
         let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
         let bytes = res.bytes().await?;
