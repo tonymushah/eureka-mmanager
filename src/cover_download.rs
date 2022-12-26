@@ -15,7 +15,7 @@ use crate::{settings, utils};
 
 pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
-    let manga_id = Uuid::parse_str(manga_id).unwrap();
+    let manga_id = Uuid::parse_str(manga_id).expect("Error on execution");
     let manga = client
         .manga()
         .get()
@@ -50,7 +50,7 @@ pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_
             "{}/covers/{}/{}",
             CDN_URL, manga_id, cover.data.attributes.file_name
         ))
-        .unwrap();
+        .expect("Error on execution");
 
     
     
@@ -83,7 +83,7 @@ pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_
 
 pub async fn cover_download_quality_by_manga_id(manga_id: &str, quality:  u32) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
-    let manga_id = Uuid::parse_str(manga_id).unwrap();
+    let manga_id = Uuid::parse_str(manga_id).expect("Error on execution");
     let manga = client
         .manga()
         .get()
@@ -128,7 +128,7 @@ pub async fn cover_download_quality_by_manga_id(manga_id: &str, quality:  u32) -
                 "{}/covers/{}/{}",
                 CDN_URL, manga_id, format!("{}.{}.jpg", cover.data.attributes.file_name, quality)
             ))
-            .unwrap();
+            .expect("Error on execution");
 
         let res = utils::send_request(http_client.get(cover_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
@@ -163,7 +163,7 @@ pub async fn cover_download_by_cover(cover_id: &str) -> anyhow::Result<serde_jso
     let cover = client
         .cover()
         .get()
-        .cover_id(&Uuid::parse_str(cover_id).unwrap())
+        .cover_id(&Uuid::parse_str(cover_id).expect("Error on execution"))
         .build()?
         .send()
         .await?;
@@ -193,7 +193,7 @@ pub async fn cover_download_by_cover(cover_id: &str) -> anyhow::Result<serde_jso
             "{}/covers/{}/{}",
             CDN_URL, manga_id, cover.data.attributes.file_name
         ))
-        .unwrap();
+        .expect("Error on execution");
 
     
 
@@ -226,7 +226,7 @@ pub async fn cover_download_quality_by_cover(cover_id: &str, quality:  u32) -> a
     let cover = client
         .cover()
         .get()
-        .cover_id(&Uuid::parse_str(cover_id).unwrap())
+        .cover_id(&Uuid::parse_str(cover_id).expect("Error on execution"))
         .build()?
         .send()
         .await?;
@@ -253,7 +253,7 @@ pub async fn cover_download_quality_by_cover(cover_id: &str, quality:  u32) -> a
                 "{}/covers/{}/{}",
                 CDN_URL, manga_id, format!("{}.{}.jpg", cover.data.attributes.file_name, quality)
             ))
-            .unwrap();
+            .expect("Error on execution");
 
         let res = utils::send_request(http_client.get(cover_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
@@ -304,7 +304,7 @@ pub async fn all_covers_download_quality_by_manga_id(manga_id: &str, limit: u32)
                 "{}/covers/{}/{}",
                 CDN_URL, manga_id, cover_to_use.attributes.file_name
             ))
-            .unwrap();
+            .expect("Error on execution");
         let res = utils::send_request(http_client.get(cover_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
         let bytes = res.bytes().await?;

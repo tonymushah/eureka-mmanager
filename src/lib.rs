@@ -643,7 +643,7 @@ async fn update_cover_by_id(id: web::Path<String>) -> impl Responder {
                 let mut cover_data = File::create(path.clone())
                 .expect("Error on creating file");
 
-            cover_data.write_all(&bytes_).unwrap();
+            cover_data.write_all(&bytes_).expect("Error on execution");
                 
             let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 
@@ -693,7 +693,7 @@ async fn update_chapter_by_id(id: web::Path<String>) -> impl Responder {
                 let mut cover_data = File::create(path.clone())
                 .expect("Error on creating file");
 
-            cover_data.write_all(&bytes_).unwrap();
+            cover_data.write_all(&bytes_).expect("Error on execution");
                 
             let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
                 
@@ -1009,12 +1009,12 @@ async fn download_manga_by_id(id: web::Path<String>) -> impl Responder {
     catch!{
         try{
             let http_client = reqwest::Client::new();
-            let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)).send().await.unwrap();
+            let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)).send().await.expect("Error on execution");
             let mut file = File::create(DirsOptions::new()
                 .expect("Can't load the dirOption api")
-                .mangas_add(format!("{}.json", id).as_str())).unwrap();
+                .mangas_add(format!("{}.json", id).as_str())).expect("Error on execution");
 
-            file.write_all(&(resp.bytes().await.unwrap())).unwrap();
+            file.write_all(&(resp.bytes().await.expect("Error on execution"))).expect("Error on execution");
             cover_download_by_manga_id(format!("{}", id).as_str()).await?;
             let jsons = serde_json::json!({
                 "result" : "ok",
@@ -1049,7 +1049,7 @@ async fn download_manga_covers(id: web::Path<String>) -> impl Responder {
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(response.unwrap().to_string())
+                    .body(response.expect("Error on execution").to_string())
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1078,7 +1078,7 @@ async fn download_manga_cover(id: web::Path<String>) -> impl Responder {
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(response.unwrap().to_string())
+                    .body(response.expect("Error on execution").to_string())
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1110,7 +1110,7 @@ async fn download_manga_cover_quality(path_var: web::Path<(String, u32)>) -> imp
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(response.unwrap().to_string())
+                    .body(response.expect("Error on execution").to_string())
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1141,7 +1141,7 @@ async fn download_cover(id: web::Path<String>) -> impl Responder {
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(response.unwrap().to_string())
+                    .body(response.expect("Error on execution").to_string())
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1173,7 +1173,7 @@ async fn download_cover_quality(path_var: web::Path<(String, u32)>) -> impl Resp
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(response.unwrap().to_string())
+                    .body(response.expect("Error on execution").to_string())
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1205,7 +1205,7 @@ async fn download_chapter_byid(id: web::Path<String>) -> impl Responder {
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(response.unwrap().to_string())
+                    .body(response.expect("Error on execution").to_string())
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1238,7 +1238,7 @@ async fn download_chapter_data_byid(id: web::Path<String>) -> impl Responder {
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(format!("{}", response.unwrap().to_string()))
+                    .body(format!("{}", response.expect("Error on execution").to_string()))
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1271,7 +1271,7 @@ async fn download_chapter_data_saver_byid(id: web::Path<String>) -> impl Respond
             if response.is_ok() == true {
                 HttpResponse::Ok()
                     .content_type(ContentType::json())
-                    .body(format!("{}", response.unwrap().to_string()))
+                    .body(format!("{}", response.expect("Error on execution").to_string()))
             }else{
                 HttpResponse::BadRequest()
                     .content_type(ContentType::plaintext())
@@ -1419,7 +1419,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
             warn!("{}", error);
             warn!("Settings dir not found ");
             info!("Initializing...");
-            initialise_settings_dir().unwrap();
+            initialise_settings_dir().expect("Error on execution");
             info!("Initilized settings dir !");
         }
     }
@@ -1430,7 +1430,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
             warn!("{}", error);
             warn!("Data dir not found \n");
             info!("\tInitializing...");
-            initialise_data_dir().unwrap();
+            initialise_data_dir().expect("Error on execution");
             info!("Initilized package manager dir !");
         }
     }

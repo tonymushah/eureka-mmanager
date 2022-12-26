@@ -36,7 +36,7 @@ pub async fn update_chap_by_id(id: String) -> anyhow::Result<serde_json::Value> 
             let mut chapter_data = File::create((path).as_str())
             .expect("Error on creating file");
 
-        chapter_data.write_all(&bytes_).unwrap();
+        chapter_data.write_all(&bytes_).expect("Error on execution");
         
         let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
         
@@ -106,14 +106,14 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
         .expect(format!("can't find manga in the chapter {}", chap_id).as_str())
         .id;
     let http_client = reqwest::Client::new();
-    let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, manga_id.hyphenated())).send().await.unwrap();
+    let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, manga_id.hyphenated())).send().await.expect("Error on execution");
     let mut file = File::create(
         DirsOptions::new()?
                 .mangas_add(format!("{}.json", manga_id.hyphenated()).as_str())
                 .as_str())
-        .unwrap();
+        .expect("Error on execution");
 
-    file.write_all(&(resp.bytes().await.unwrap())).unwrap();
+    file.write_all(&(resp.bytes().await.expect("Error on execution"))).expect("Error on execution");
     let jsons = serde_json::json!({
             "result" : "ok",
             "type" : "manga",
@@ -128,7 +128,7 @@ pub async fn send_request(to_use_arg: reqwest::RequestBuilder, tries_limits: u16
     let to_use = to_use_arg.fetch_mode_no_cors();
     //let mut to_return : reqwest::Response;
     while tries < tries_limits {
-        let resp = to_use.try_clone().unwrap().send().await;
+        let resp = to_use.try_clone().expect("Error on execution").send().await;
         if resp.is_err() == true {
             tries = tries + 1;
             warn!("tries {}", tries);

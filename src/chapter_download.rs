@@ -32,7 +32,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())).send().await?;
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
-        chapter_data.write_all(&bytes_).unwrap();
+        chapter_data.write_all(&bytes_).expect("Error on execution");
         info!("created data.json");
     }
     let mut files_: Vec<String> = Vec::new();
@@ -48,7 +48,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
                 chapter_hash = at_home.chapter.hash,
                 page_filename = filename
             ))
-            .unwrap();
+            .expect("Error on execution");
         let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
         let bytes = res.bytes().await?;
@@ -91,7 +91,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())).send().await?;
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
-        chapter_data.write_all(&bytes_).unwrap();
+        chapter_data.write_all(&bytes_).expect("Error on execution");
         info!("created data.json");
     }
     let mut files_: Vec<String> = Vec::new();
@@ -107,7 +107,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
                 chapter_hash = at_home.chapter.hash,
                 page_filename = filename
             ))
-            .unwrap();
+            .expect("Error on execution");
 
         let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.

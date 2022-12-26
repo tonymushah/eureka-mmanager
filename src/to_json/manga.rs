@@ -32,17 +32,17 @@ pub fn MangaAttr_to_json(mangaAttributes: MangaAttributes) -> serde_json::Value{
     let mut links = json!({});
     
     if mangaAttributes.links.is_none() == false {
-        let liksd = mangaAttributes.links.unwrap();
+        let liksd = mangaAttributes.links.expect("Error on execution");
         links = json!({
             "al" : liksd.anilist,
             "ap" : liksd.anime_planet,
-            "bw" : liksd.book_walker.unwrap().0,
-            "mu" : liksd.manga_updates.unwrap().0,
-            "nu" : liksd.novel_updates.unwrap().0,
+            "bw" : liksd.book_walker.expect("Error on execution").0,
+            "mu" : liksd.manga_updates.expect("Error on execution").0,
+            "nu" : liksd.novel_updates.expect("Error on execution").0,
             "kt" : liksd.kitsu,
             "amz" : liksd.amazon,
             "ebj" : liksd.ebook_japan,
-            "mal" : liksd.my_anime_list.unwrap().0,
+            "mal" : liksd.my_anime_list.expect("Error on execution").0,
             "cdj" : liksd.cd_japan,
             "engtl" : liksd.ebook_japan,
             "raw" : liksd.raw
