@@ -379,7 +379,7 @@ async fn find_all_downloaded_chapter() -> impl Responder {
         for files in list_dir {
             vecs.push(
                 this_api_option!(
-                    files.expect("can't open file").file_name().to_str(),
+                    this_api_result!(files).file_name().to_str(),
                     format!("can't recognize file")
                 )
                 .to_string(),
@@ -408,19 +408,19 @@ async fn find_all_downloaded_chapter() -> impl Responder {
 #[get("/mangas/all")]
 async fn find_all_downloaded_manga() -> impl Responder {
     //let path = format!("mangas");
-    let file_dirs = DirsOptions::new().expect("can't initialise dirsOPtions api");
+    let file_dirs = this_api_result!(DirsOptions::new());
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.mangas_add("");
     if Path::new(path.as_str()).exists() == true {
-        let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
+        let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
             vecs.push(
-                files
-                    .expect("can't open file")
-                    .file_name()
-                    .to_str()
-                    .expect("can't reconize file")
+                this_api_option!(
+                    this_api_result!(files)
+                        .file_name()
+                        .to_str(), 
+                    "can't recongnize file")
                     .to_string()
                     .replace(".json", ""),
             );
@@ -928,8 +928,13 @@ pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> 
 
 pub fn launch_async_server_default() -> std::io::Result<Server> {
     info!("launching server");
-    let serve: server_options::ServerOptions =
-        server_options::ServerOptions::new().expect("Can't load the server option api");
+    let serve: server_options::ServerOptions = match
+        server_options::ServerOptions::new() {
+            Ok(data) => data,
+            Err(e) => {
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+            }
+        };
     launch_async_server(serve.hostname.as_str(), serve.port)
 }
 
@@ -943,7 +948,12 @@ pub fn verify_all_fs() -> std::io::Result<()> {
             warn!("{}", error);
             warn!("Settings dir not found ");
             info!("Initializing...");
-            initialise_settings_dir().expect("Error on execution");
+            match initialise_settings_dir(){
+                Ok(data) => data,
+                Err(e) => {
+                    return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+                }
+            };
             info!("Initilized settings dir !");
         }
     }
@@ -954,7 +964,12 @@ pub fn verify_all_fs() -> std::io::Result<()> {
             warn!("{}", error);
             warn!("Data dir not found \n");
             info!("\tInitializing...");
-            initialise_data_dir().expect("Error on execution");
+            match initialise_data_dir(){
+                Ok(data) => data,
+                Err(e) => {
+                    return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+                }
+            };
             info!("Initilized package manager dir !");
         }
     }
@@ -984,6 +999,11 @@ pub fn verify_all_fs() -> std::io::Result<()> {
 pub fn launch_server_default() -> std::io::Result<()> {
     info!("launching server");
     let serve: server_options::ServerOptions =
-        server_options::ServerOptions::new().expect("Can't load the server option api");
+        match server_options::ServerOptions::new(){
+                Ok(data) => data,
+                Err(e) => {
+                    return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+                }
+            };
     launch_server(serve.hostname.as_str(), serve.port)
 }

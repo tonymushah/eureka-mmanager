@@ -8,8 +8,8 @@ async fn login_default(username: &str, password: &str) -> anyhow::Result<String>
     let logged_user = client
         .auth()
         .login()
-        .username(Username::parse(username).expect("Error on execution"))
-        .password(Password::parse(password).expect("Error on execution"))
+        .username(Username::parse(username)?)
+        .password(Password::parse(password)?)
         .build()?
         .send()
         .await?;
@@ -26,7 +26,7 @@ async fn login_email(email: &str, password: &str) -> anyhow::Result<String>{
         .auth()
         .login()
         .email(email)
-        .password(Password::parse(password).expect("Error on execution"))
+        .password(Password::parse(password)?)
         .build()?
         .send()
         .await?;

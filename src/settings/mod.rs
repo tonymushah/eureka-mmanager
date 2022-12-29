@@ -45,7 +45,12 @@ pub fn verify_settings_dir() -> anyhow::Result<String, String> {
 }
 
 pub fn initialise_data_dir() -> anyhow::Result<()>{
-    let dirs_options : files_dirs::DirsOptions = files_dirs::DirsOptions::new().expect("can't load the dirOption API");
+    let dirs_options : files_dirs::DirsOptions = match files_dirs::DirsOptions::new(){
+        Ok(data) => data,
+        Err(_) => {
+            return Err(anyhow::Error::msg("can't load the dir options api"));
+        }
+    };
     let dirs_options0 = dirs_options.clone();
     let dirs_options2 = dirs_options.clone();
     let dirs_options3 = dirs_options.clone();
@@ -61,7 +66,12 @@ pub fn initialise_data_dir() -> anyhow::Result<()>{
 }
 
 pub fn verify_data_dir() -> anyhow::Result<String, String>{
-    let dirs_options : files_dirs::DirsOptions = files_dirs::DirsOptions::new().expect("can't load the dirOption API");
+    let dirs_options : files_dirs::DirsOptions = match files_dirs::DirsOptions::new(){
+        Ok(data) => data,
+        Err(_) => {
+            return Err("can't load the file dir api".into());
+        }
+    };
     let dirs_options0 = dirs_options.clone();
     let dirs_options2 = dirs_options.clone();
     let dirs_options3 = dirs_options.clone();

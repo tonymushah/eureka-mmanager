@@ -13,7 +13,7 @@ use crate::{settings, utils};
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let chapter_id = Uuid::parse_str(chapter_id).expect("Not a valid id");
+    let chapter_id = Uuid::parse_str(chapter_id)?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data", chapter_top_dir);
     std::fs::create_dir_all(format!("{}", chapter_dir))?;
@@ -32,7 +32,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())).send().await?;
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
-        chapter_data.write_all(&bytes_).expect("Error on execution");
+        chapter_data.write_all(&bytes_)?;
         info!("created data.json");
     }
     let mut files_: Vec<String> = Vec::new();
@@ -47,8 +47,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
                 quality_mode = "data",
                 chapter_hash = at_home.chapter.hash,
                 page_filename = filename
-            ))
-            .expect("Error on execution");
+            ))?;
         let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.
         let bytes = res.bytes().await?;
@@ -72,7 +71,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
 pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let chapter_id = Uuid::parse_str(chapter_id).expect("Not a valid id");
+    let chapter_id = Uuid::parse_str(chapter_id)?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data-saver", chapter_top_dir);
     std::fs::create_dir_all(format!("{}/data-saver", chapter_top_dir))?;
@@ -91,7 +90,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())).send().await?;
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
-        chapter_data.write_all(&bytes_).expect("Error on execution");
+        chapter_data.write_all(&bytes_)?;
         info!("created data.json");
     }
     let mut files_: Vec<String> = Vec::new();
@@ -106,8 +105,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
                 quality_mode = "data-saver",
                 chapter_hash = at_home.chapter.hash,
                 page_filename = filename
-            ))
-            .expect("Error on execution");
+            ))?;
 
         let res = utils::send_request(http_client.get(page_url), 5).await?;
         // The data should be streamed rather than downloading the data all at once.

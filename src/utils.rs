@@ -1,7 +1,8 @@
 use std::fs::File;
 use std::io::{Write, ErrorKind};
+use anyhow::Ok;
 //use anyhow::Ok;
-use log::{info, warn};
+use log::{info};
 use mangadex_api_schema::v5::{
     ChapterAttributes
 };
@@ -26,29 +27,36 @@ pub async fn update_chap_by_id(id: String) -> anyhow::Result<serde_json::Value> 
                 )
             )
             .send()
-            .await
-            .expect("Can't rend request");
+            .await?;
         
             let bytes_ = get_chapter.bytes()
-            .await
-            .expect("error on exporting to bytes");
+            .await?;
         
-            let mut chapter_data = File::create((path).as_str())
-            .expect("Error on creating file");
+            let mut chapter_data = File::create((path).as_str())?;
 
-        chapter_data.write_all(&bytes_).expect("Error on execution");
+        chapter_data.write_all(&bytes_)?;
         
-        let jsons = std::fs::read_to_string(path.as_str()).expect("Cannot open file");
+        let jsons = std::fs::read_to_string(path.as_str())?;
         
-        Ok(serde_json::from_str(jsons.as_str()).expect("can't covert to json"))
+        Ok(serde_json::from_str(jsons.as_str())?)
 }
 
 pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> anyhow::Result<bool>{
     let files_dirs : DirsOptions = DirsOptions::new()?;
     let path = files_dirs.chapters_add(format!("{}/data.json", chap_id).as_str());
-    let chapter : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_str(&std::fs::read_to_string(path.as_str())
-        .expect(format!("can't find or read file {}", path).as_str()))
-        .expect("Can't covert to json");
+    let chapter : ApiData<ApiObject<ChapterAttributes>> = match serde_json::from_str(&(
+            match std::fs::read_to_string(path.as_str()){
+                core::result::Result::Ok(data) => data,
+                Err(_) => {
+                    return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, format!("can't find or read file {}", path).as_str())));
+                }
+            }
+        )){
+            core::result::Result::Ok(data) => data,
+            Err(_) => {
+                return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, "Can't covert to json")));
+            }
+        };
     let mut is = false;
     for relas in chapter.data.relationships{
         if relas.type_ == RelationshipType::Manga && relas.id.hyphenated().to_string() == manga_id{
@@ -61,12 +69,17 @@ pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> anyh
 pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result<serde_json::Value> {
     let files_dirs : DirsOptions = DirsOptions::new()?;
     let path = files_dirs.chapters_add("");
-        let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
+        let list_dir = std::fs::read_dir(path.as_str())?;
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
-            let to_use = files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string();
+            let to_use = match files?.file_name().to_str(){
+                None => {
+                    return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, "Can't recognize file")))
+                },
+                Some(data) => data
+            }.to_string();
             let to_insert = to_use.clone();
-            if is_chap_related_to_manga(to_use, manga_id.clone()).await.expect("Error on validating") == true {
+            if is_chap_related_to_manga(to_use, manga_id.clone()).await? == true {
                 vecs.push(to_insert);
             }
         }
@@ -76,13 +89,18 @@ pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result
 pub async fn find_and_delete_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result<serde_json::Value> {
     let files_dirs : DirsOptions = DirsOptions::new()?;
     let path = files_dirs.chapters_add("");
-        let list_dir = std::fs::read_dir(path.as_str()).expect("Cannot open file");
+        let list_dir = std::fs::read_dir(path.as_str())?;
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
-            let to_use = files.expect("can't open file").file_name().to_str().expect("can't reconize file").to_string();
+            let to_use = match files?.file_name().to_str(){
+                None => {
+                    return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, "Can't recognize file")))
+                },
+                Some(data) => data
+            }.to_string();
             let to_insert = to_use.clone();
             let to_remove = to_use.clone();
-            if is_chap_related_to_manga(to_use, manga_id.clone()).await.expect("Error on validating") == true {
+            if is_chap_related_to_manga(to_use, manga_id.clone()).await? == true {
                 vecs.push(to_insert);
                 std::fs::remove_dir_all(
                     DirsOptions::new()?
@@ -95,25 +113,38 @@ pub async fn find_and_delete_all_downloades_by_manga_id(manga_id: String) -> any
 
 pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_json::Value> {
     let path = DirsOptions::new()?.chapters_add(format!("{}/data.json", chap_id).as_str());
-    let chapter : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_str(&std::fs::read_to_string(path.as_str())
-        .expect(format!("can't find or read file {}", path).as_str()))
-        .expect("Can't covert to json");
-    let manga_id = chapter
+    let chapter : ApiData<ApiObject<ChapterAttributes>> = match serde_json::from_str(&(
+            match std::fs::read_to_string(path.as_str()){
+                core::result::Result::Ok(data) => data,
+                Err(_) => {
+                    return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, format!("can't find or read file {}", path).as_str())));
+                }
+            }
+        )){
+            core::result::Result::Ok(data) => data,
+            Err(_) => {
+                return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, "Can't covert to json")));
+            }
+        };
+    let manga_id =  match chapter
         .data
         .relationships
         .iter()
-        .find(|related| related.type_ == RelationshipType::Manga)
-        .expect(format!("can't find manga in the chapter {}", chap_id).as_str())
+        .find(|related| related.type_ == RelationshipType::Manga){
+            None => {
+                return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, format!("can't find manga in the chapter {}", chap_id).as_str())));
+            },
+            Some(data) => data
+        }
         .id;
     let http_client = reqwest::Client::new();
-    let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, manga_id.hyphenated())).send().await.expect("Error on execution");
+    let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, manga_id.hyphenated())).send().await?;
     let mut file = File::create(
         DirsOptions::new()?
                 .mangas_add(format!("{}.json", manga_id.hyphenated()).as_str())
-                .as_str())
-        .expect("Error on execution");
+                .as_str())?;
 
-    file.write_all(&(resp.bytes().await.expect("Error on execution"))).expect("Error on execution");
+    file.write_all(&(resp.bytes().await?))?;
     let jsons = serde_json::json!({
             "result" : "ok",
             "type" : "manga",
@@ -125,15 +156,22 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
 
 pub async fn send_request(to_use_arg: reqwest::RequestBuilder, tries_limits: u16) -> Result<reqwest::Response, std::io::Error>{
     let mut tries = 0;
-    let to_use = to_use_arg.fetch_mode_no_cors();
+    let to_use = to_use_arg;
     //let mut to_return : reqwest::Response;
     while tries < tries_limits {
-        let resp = to_use.try_clone().expect("Error on execution").send().await;
-        if resp.is_err() == true {
-            tries = tries + 1;
-            warn!("tries {}", tries);
-        }else{
-            return Ok(resp.ok().expect("Error"));
+        let resp = match to_use.try_clone(){
+            None => {
+                return Err(std::io::Error::new(ErrorKind::Other, "can't clone the request"));
+            },
+            Some(data) => data
+        }.send().await;
+        match resp {
+            Err(_) => {
+                tries = tries + 1;
+            },
+            core::result::Result::Ok(data) => {
+                return core::result::Result::Ok(data);
+            }
         }
     }
     Err(std::io::Error::new(ErrorKind::Other, "All tries failed to applies your request"))
