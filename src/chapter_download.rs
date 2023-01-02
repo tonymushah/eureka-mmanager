@@ -132,7 +132,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
             Ok(res) => {
                 // The data should be streamed rather than downloading the data all at once.
                 if Path::new(path_to_use_clone.as_str()).exists() == false
-                    && file.metadata()?.len()
+                    || file.metadata()?.len()
                         != (match res.content_length() {
                             Some(f) => f,
                             None => {
@@ -142,7 +142,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
                 {
                     let bytes = res.bytes().await?;
                     // This is where you would download the file but for this example,
-                    // we're just printing the raw data.
+                    // we're now sending the data to the right file.
 
                     let _ = file.write_all(&bytes)?;
                 }
