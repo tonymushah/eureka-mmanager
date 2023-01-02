@@ -54,7 +54,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             Ok(res) => {
                 // The data should be streamed rather than downloading the data all at once.
                 if Path::new(path_to_use_clone.as_str()).exists() == false
-                    && file.metadata()?.len()
+                    || file.metadata()?.len()
                         != (match res.content_length() {
                             Some(f) => f,
                             None => {
