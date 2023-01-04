@@ -11,11 +11,17 @@ env:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
 
-    runs-on: fedora-latest
-
+    runs-on: ${{ matrix.platform }}
+    
     steps:
     - uses: actions/checkout@v3
+    - name: install rust 
+      uses: dtolnay/rust-toolchain@stable
     - name: Build
       run: cargo build --verbose
     - name: Run tests
