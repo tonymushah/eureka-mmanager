@@ -20,8 +20,6 @@ jobs:
     
     steps:
     - uses: actions/checkout@v3
-    - name: install rust 
-      uses: actions-rs/cargo@v1.0.1
     - name: Build
       run: cargo build --verbose
     - name: Run tests
