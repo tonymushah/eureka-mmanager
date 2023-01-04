@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Write, ErrorKind};
+use std::path::Path;
 use anyhow::Ok;
-//use anyhow::Ok;
 use log::{info};
 use mangadex_api_schema::v5::{
     ChapterAttributes
@@ -137,14 +137,14 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
             Some(data) => data
         }
         .id;
-    let http_client = reqwest::Client::new();
-    let resp = http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, manga_id.hyphenated())).send().await?;
-    let mut file = File::create(
-        DirsOptions::new()?
-                .mangas_add(format!("{}.json", manga_id.hyphenated()).as_str())
-                .as_str())?;
-
-    file.write_all(&(resp.bytes().await?))?;
+        let http_client = reqwest::Client::new();
+        let resp = send_request(http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, manga_id.hyphenated())), 5).await?;
+        let mut file = File::create(
+            DirsOptions::new()?
+                    .mangas_add(format!("{}.json", manga_id.hyphenated()).as_str())
+                    .as_str())?;
+        file.write_all(&(resp.bytes().await?))?;
+    
     let jsons = serde_json::json!({
             "result" : "ok",
             "type" : "manga",
@@ -175,4 +175,35 @@ pub async fn send_request(to_use_arg: reqwest::RequestBuilder, tries_limits: u16
         }
     }
     Err(std::io::Error::new(ErrorKind::Other, "All tries failed to applies your request"))
+}
+
+pub fn is_manga_there(manga_id: String) -> Result<bool, std::io::Error>{
+    if manga_id.is_empty() == false {
+        let path = match DirsOptions::new(){
+            core::result::Result::Ok(data) => data,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }.mangas_add(format!("{}.json", manga_id).as_str());
+        core::result::Result::Ok(Path::new(path.as_str()).exists())
+    }else{
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the manga_id should'nt be empty"));
+    }
+}
+
+pub fn is_chapter_manga_there(chap_id: String) -> Result<bool, std::io::Error>{
+    if chap_id.is_empty() == false {
+        let path = match DirsOptions::new(){
+            core::result::Result::Ok(data) => data,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }.chapters_add(format!("{}/data.json", chap_id).as_str());
+        let chap_data : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_reader(File::open(path)?)?;
+        let manga_id : uuid::Uuid = match chap_data.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::Manga){
+            Some(data) => data.id,
+            None => {
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Seems like your chapter has no manga related to him"));
+            }
+        };
+        return is_manga_there(format!("{}", manga_id));
+    }else{
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the chap_id should'nt be empty"));
+    }
 }

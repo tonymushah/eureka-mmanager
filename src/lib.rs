@@ -8,7 +8,7 @@ use crate::settings::{
 };
 use crate::utils::{
     find_all_downloades_by_manga_id, find_and_delete_all_downloades_by_manga_id,
-    patch_manga_by_chapter,
+    patch_manga_by_chapter, is_chapter_manga_there,
 };
 use actix_web::dev::Server;
 use actix_web::http::{header::ContentType};
@@ -570,10 +570,15 @@ async fn patch_all_chapter_manga() -> impl Responder {
                 format!("can't reconize file")
             )
             .to_string();
-            vecs.push(this_api_result!(
-                utils::patch_manga_by_chapter(id.clone()).await
-            ));
-            info!("downloaded manga data {}", id);
+            let id_clone = id.clone();
+            let id_clone_clone = id.clone();
+            if this_api_result!(is_chapter_manga_there(id)) == false {
+                vecs.push(this_api_result!(
+                    utils::patch_manga_by_chapter(id_clone).await
+                ));
+            }
+            
+            info!("downloaded manga data {}", id_clone_clone);
         }
         HttpResponse::Ok().content_type(ContentType::json()).body(
             serde_json::json!({
@@ -839,57 +844,6 @@ async fn download_chapter_data_saver_byid(id: web::Path<String>) -> impl Respond
         .body(response.to_string())
 }
 
-#[actix_web::main]
-/// it's launch the server in the given adrress and the given port
-/// a call like this
-///
-/// # Example
-/// ```
-/// fn main() -> std::io:Result<()> {
-///     let address = "127.0.0.1";
-///     let port : u16 = 8090;
-///     launch_server(address, port)
-///     // it launch the server at 127.0.0.1:8090
-/// }
-/// ```
-pub async fn launch_server(address: &str, port: u16) -> std::io::Result<()> {
-    info!("launching mangadex-desktop-api on {}:{}", address, port);
-    let habdle = HttpServer::new(|| {
-        App::new()
-            .service(hello)
-            .service(find_chapters_data_img_by_id)
-            .service(find_chapters_data_saver_img_by_id)
-            .service(download_chapter_byid)
-            .service(download_chapter_data_saver_byid)
-            .service(download_chapter_data_byid)
-            .service(download_manga_covers)
-            .service(download_manga_cover)
-            .service(download_manga_by_id)
-            .service(find_manga_by_id)
-            .service(find_cover_image_by_id)
-            .service(find_manga_cover_by_id)
-            .service(find_manga_covers_by_id)
-            .service(find_manga_covers_by_id)
-            .service(update_cover_by_id)
-            .service(find_chapters_data_by_id)
-            .service(find_chapters_data_saver_by_id)
-            .service(find_all_downloaded_chapter)
-            .service(update_chapter_by_id)
-            .service(patch_all_chapter)
-            .service(find_chapter_by_id)
-            .service(find_manga_chapters_by_id)
-            .service(find_all_downloaded_manga)
-            .service(patch_all_chapter_manga)
-            .service(update_chapter_manga_by_id)
-            .service(patch_all_manga_cover)
-            .service(delete_manga_chapters_by_id)
-    })
-    .bind((address, port))?
-    .run()
-    .await;
-    info!("closing mangadex-desktop-api on {}:{}", address, port);
-    habdle
-}
 
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
     Ok(HttpServer::new(|| {
@@ -921,10 +875,33 @@ pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> 
             .service(update_chapter_manga_by_id)
             .service(patch_all_manga_cover)
             .service(delete_manga_chapters_by_id)
+            .service(delete_chapter_by_id)
     })
     .bind((address, port))?
     .run())
 }
+
+#[actix_web::main]
+/// it's launch the server in the given adrress and the given port
+/// a call like this
+///
+/// # Example
+/// ```
+/// fn main() -> std::io:Result<()> {
+///     let address = "127.0.0.1";
+///     let port : u16 = 8090;
+///     launch_server(address, port)
+///     // it launch the server at 127.0.0.1:8090
+/// }
+/// ```
+pub async fn launch_server(address: &str, port: u16) -> std::io::Result<()> {
+    info!("launching mangadex-desktop-api on {}:{}", address, port);
+    let habdle = launch_async_server(address, port)?
+        .await;
+    info!("closing mangadex-desktop-api on {}:{}", address, port);
+    habdle
+}
+
 
 pub fn launch_async_server_default() -> std::io::Result<Server> {
     info!("launching server");

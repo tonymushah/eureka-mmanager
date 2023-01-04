@@ -1,6 +1,6 @@
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
-use log::info;
+use log::{info, warn};
 use mangadex_api::v5::MangaDexClient;
 use serde_json::json;
 use std::fs::File;
@@ -8,7 +8,7 @@ use std::io::Write;
 use std::path::Path;
 use uuid::Uuid;
 
-use crate::{settings, utils};
+use crate::{settings, utils::{self, send_request, is_chapter_manga_there, patch_manga_by_chapter}};
 
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
@@ -25,15 +25,25 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         .build()?
         .send()
         .await?;
-
     let http_client = reqwest::Client::new();
     // puting chapter data in a json data
     if Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() == false {
-        let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())).send().await?;
+        let get_chapter = send_request(http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())), 5).await?;
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
         chapter_data.write_all(&bytes_)?;
         info!("created data.json");
+    }
+    match is_chapter_manga_there(format!("{}", chapter_id)) {
+        Ok(data) => {
+            if data == false {
+                patch_manga_by_chapter(format!("{}", chapter_id)).await?;
+            }
+        },
+        Err(e) => {
+            let error = e.to_string();
+            warn!("Warning {}!", error);
+        }
     }
     let mut files_: Vec<String> = Vec::new();
     let mut failed: Vec<String> = Vec::new();
@@ -111,6 +121,17 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
         chapter_data.write_all(&bytes_)?;
         info!("created data.json");
+    }
+    match is_chapter_manga_there(format!("{}", chapter_id)) {
+        Ok(data) => {
+            if data == false {
+                patch_manga_by_chapter(format!("{}", chapter_id)).await?;
+            }
+        },
+        Err(e) => {
+            let error = e.to_string();
+            warn!("Warning {}!", error);
+        }
     }
     let mut files_: Vec<String> = Vec::new();
     let mut failed: Vec<String> = Vec::new();
