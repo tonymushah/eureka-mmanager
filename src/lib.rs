@@ -968,7 +968,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
 ///
 /// and we launch the function :
 /// ```
-/// fn main() -> std:io::Result<()> {
+/// fn main() -> std::io::Result<()> {
 ///     launch_server_default()
 ///     // it will launch the server at 127.0.0.1:8090
 /// }

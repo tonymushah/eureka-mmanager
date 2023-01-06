@@ -24,7 +24,7 @@ pub fn initialise_settings_dir() -> anyhow::Result<()>{
     // default config
     let server_option_content = serde_json::json!({
         "hostname" : "127.0.0.1",
-        "port" : 8090
+        "port" : 8145
     });
     server_option.write_all(server_option_content.to_string().as_bytes())?;
 
