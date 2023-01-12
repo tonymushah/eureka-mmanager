@@ -712,10 +712,7 @@ async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
     let file_dir_clone2 = file_dirs2.clone();
     let path2 = file_dirs2.covers_add(format!("{}.json", cover_id).as_str());
     let jsons = this_api_result!(std::fs::read_to_string(path2.as_str()));
-    let cover_data: ApiData<ApiObject<CoverAttributes>> =
-        this_api_result!(serde_json::from_str(jsons.as_str()));
-    let filename = cover_data.data.attributes.file_name;
-    let filename_path2 = file_dir_clone2.covers_add(format!("images/{}", filename).as_str());
+    let jsons1 = jsons.clone();
 
     let resp = find_and_delete_all_downloades_by_manga_id(id.to_string()).await;
     let jsons = this_api_result!(resp);
@@ -724,7 +721,16 @@ async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
         this_api_result!(DirsOptions::new()).mangas_add(format!("{}.json", id).as_str()),
     ));
     this_api_result!(std::fs::remove_file(filename_path1));
-    this_api_result!(std::fs::remove_file(filename_path2));
+    match serde_json::from_str(jsons1.as_str()) {
+            Ok(getted) =>{
+                let cover_data : ApiData<ApiObject<CoverAttributes>> = getted;
+                let filename = cover_data.data.attributes.file_name;
+                let filename_path2 = file_dir_clone2.covers_add(format!("images/{}", filename).as_str()); 
+                this_api_result!(std::fs::remove_file(filename_path2));
+            }, 
+            Err(_) => {}
+        };
+    
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",

@@ -4,7 +4,7 @@ use std::path::Path;
 use anyhow::Ok;
 use log::{info};
 use mangadex_api_schema::v5::{
-    ChapterAttributes
+    ChapterAttributes, CoverAttributes, MangaAttributes
 };
 use mangadex_api_schema::{
     ApiData, 
@@ -12,6 +12,7 @@ use mangadex_api_schema::{
 };
 use mangadex_api_types::RelationshipType;
 
+use crate::cover_download::cover_download_by_manga_id;
 use crate::settings::files_dirs::DirsOptions;
 
 pub async fn update_chap_by_id(id: String) -> anyhow::Result<serde_json::Value> {
@@ -144,7 +145,16 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
                     .mangas_add(format!("{}.json", manga_id.hyphenated()).as_str())
                     .as_str())?;
         file.write_all(&(resp.bytes().await?))?;
-    
+        match is_manga_cover_there(manga_id.to_string()) {
+            core::result::Result::Ok(getted) => {
+                if getted == false{
+                    cover_download_by_manga_id(manga_id.to_string().as_str()).await?;
+                }
+            }, 
+            Err(_) => {
+                cover_download_by_manga_id(manga_id.to_string().as_str()).await?;
+            }
+        }
     let jsons = serde_json::json!({
             "result" : "ok",
             "type" : "manga",
@@ -205,5 +215,65 @@ pub fn is_chapter_manga_there(chap_id: String) -> Result<bool, std::io::Error>{
         return is_manga_there(format!("{}", manga_id));
     }else{
         return Err(std::io::Error::new(std::io::ErrorKind::Other, "the chap_id should'nt be empty"));
+    }
+}
+
+pub fn is_cover_image_there(cover_id : String) -> Result<bool, std::io::Error>{
+    if cover_id.is_empty() == false {
+        let path = match DirsOptions::new(){
+            core::result::Result::Ok(data) => data,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }.covers_add(format!("{}.json", cover_id).as_str());
+        let cover_data : ApiData<ApiObject<CoverAttributes>> = serde_json::from_reader(File::open(path)?)?;
+        let cover_file_name = cover_data.data.attributes.file_name;
+        let cover_file_name_path = match DirsOptions::new(){
+            core::result::Result::Ok(data) => data,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }.covers_add(format!("images/{}", cover_file_name).as_str());
+        if Path::new(cover_file_name_path.as_str()).exists() {
+            std::io::Result::Ok(true)
+        }else{
+            std::io::Result::Ok(false)
+        }
+    }else{
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the cover_id should'nt be empty"));
+    }
+}
+
+pub fn is_cover_there(cover_id : String) -> Result<bool, std::io::Error>{
+    if cover_id.is_empty() == false {
+        let path = match DirsOptions::new(){
+            core::result::Result::Ok(data) => data,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }.covers_add(format!("{}.json", cover_id).as_str());
+        if Path::new(path.as_str()).exists() {
+            return is_cover_image_there(cover_id);
+        }else{
+            std::io::Result::Ok(false)
+        }
+    }else{
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the cover_id should'nt be empty"));
+    }
+}
+
+pub fn is_manga_cover_there(manga_id : String) -> Result<bool, std::io::Error>{
+    if manga_id.is_empty() == false {
+        let path = match DirsOptions::new(){
+            core::result::Result::Ok(data) => data,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+        }.mangas_add(format!("{}.json", manga_id).as_str());
+        if Path::new(path.as_str()).exists() == false {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "this manga hasn't been downloaded"));
+        }else{
+            let manga_data : ApiData<ApiObject<MangaAttributes>> = serde_json::from_reader(File::open(path)?)?;
+            let cover_id : uuid::Uuid = match manga_data.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::CoverArt){
+                None => return core::result::Result::Err(std::io::Error::new(std::io::ErrorKind::Other, "this manga has no cover_art")),
+                Some(d) => d.id
+            };
+            return is_cover_there(cover_id.to_string());
+        }
+        
+    }else{
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the manga_id should'nt be empty"));
     }
 }
