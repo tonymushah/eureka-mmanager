@@ -854,34 +854,49 @@ async fn download_chapter_data_saver_byid(id: web::Path<String>) -> impl Respond
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
     Ok(HttpServer::new(|| {
         App::new()
-            .service(hello)
-            .service(find_chapters_data_img_by_id)
-            .service(find_chapters_data_saver_img_by_id)
-            .service(download_chapter_byid)
-            .service(download_chapter_data_saver_byid)
-            .service(download_chapter_data_byid)
-            .service(download_manga_covers)
-            .service(download_manga_cover)
-            .service(download_manga_by_id)
+            /*
+                get Methods
+            */
             .service(find_manga_by_id)
+            .service(find_cover_by_id)
             .service(find_cover_image_by_id)
             .service(find_manga_cover_by_id)
             .service(find_manga_covers_by_id)
-            .service(find_manga_covers_by_id)
-            .service(update_cover_by_id)
             .service(find_chapters_data_by_id)
             .service(find_chapters_data_saver_by_id)
+            .service(find_chapters_data_img_by_id)
+            .service(find_chapters_data_saver_img_by_id)
+            .service(find_chapter_by_id)
             .service(find_all_downloaded_chapter)
+            .service(find_all_downloaded_manga)
+            .service(find_manga_chapters_by_id)
+            .service(hello)
+            /*
+                patch methods
+            */
+            .service(update_cover_by_id)
             .service(update_chapter_by_id)
             .service(patch_all_chapter)
-            .service(find_chapter_by_id)
-            .service(find_manga_chapters_by_id)
-            .service(find_all_downloaded_manga)
             .service(patch_all_chapter_manga)
             .service(update_chapter_manga_by_id)
             .service(patch_all_manga_cover)
-            .service(delete_manga_chapters_by_id)
+            /*
+                delete methods
+            */
             .service(delete_chapter_by_id)
+            .service(delete_manga_chapters_by_id)
+            /*
+                put methods
+            */
+            .service(download_manga_by_id)
+            .service(download_manga_covers)
+            .service(download_manga_cover)
+            .service(download_manga_cover_quality)
+            .service(download_cover)
+            .service(download_cover_quality)
+            .service(download_chapter_byid)
+            .service(download_chapter_data_byid)
+            .service(download_chapter_data_saver_byid)
     })
     .bind((address, port))?
     .run())
