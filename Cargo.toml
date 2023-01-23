@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.1.1-rc1"
+version = "0.1.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -24,7 +24,7 @@ uuid = { version = "1.0.0", features = ["serde", "v4"] }
 mangadex-api = { version = "2.0.0-rc.1", features = ["multi-thread"] }
 anyhow = "1.0.55"
 serde_json = "1.0.79"
-tokio = { version = "1.18.1", features = ["full"] }
+tokio = { version = "1.24.2", features = ["full"] }
 json = "0.12.4"
 actix-web = "4"
 actix-files = "0.6.2"
