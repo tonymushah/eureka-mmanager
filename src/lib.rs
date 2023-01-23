@@ -8,13 +8,11 @@ use crate::settings::{
 };
 use crate::utils::{
     find_all_downloades_by_manga_id, find_and_delete_all_downloades_by_manga_id,
-    patch_manga_by_chapter, is_chapter_manga_there,
+    is_chapter_manga_there, patch_manga_by_chapter,
 };
 use actix_web::dev::Server;
-use actix_web::http::{header::ContentType};
-use actix_web::{
-    delete, get, patch, put, web, App, HttpResponse, HttpServer, Responder,
-};
+use actix_web::http::header::ContentType;
+use actix_web::{delete, get, patch, put, web, App, HttpResponse, HttpServer, Responder};
 use log::{info, warn};
 use mangadex_api_schema::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema::{ApiData, ApiObject};
@@ -24,7 +22,6 @@ use settings::server_options;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use try_catch::catch;
 pub mod settings;
 
 pub mod chapter_download;
@@ -417,12 +414,11 @@ async fn find_all_downloaded_manga() -> impl Responder {
         for files in list_dir {
             vecs.push(
                 this_api_option!(
-                    this_api_result!(files)
-                        .file_name()
-                        .to_str(), 
-                    "can't recongnize file")
-                    .to_string()
-                    .replace(".json", ""),
+                    this_api_result!(files).file_name().to_str(),
+                    "can't recongnize file"
+                )
+                .to_string()
+                .replace(".json", ""),
             );
         }
         HttpResponse::Ok().content_type(ContentType::json()).body(
@@ -577,7 +573,7 @@ async fn patch_all_chapter_manga() -> impl Responder {
                     utils::patch_manga_by_chapter(id_clone).await
                 ));
             }
-            
+
             info!("downloaded manga data {}", id_clone_clone);
         }
         HttpResponse::Ok().content_type(ContentType::json()).body(
@@ -722,15 +718,16 @@ async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
     ));
     this_api_result!(std::fs::remove_file(filename_path1));
     match serde_json::from_str(jsons1.as_str()) {
-            Ok(getted) =>{
-                let cover_data : ApiData<ApiObject<CoverAttributes>> = getted;
-                let filename = cover_data.data.attributes.file_name;
-                let filename_path2 = file_dir_clone2.covers_add(format!("images/{}", filename).as_str()); 
-                this_api_result!(std::fs::remove_file(filename_path2));
-            }, 
-            Err(_) => {}
-        };
-    
+        Ok(getted) => {
+            let cover_data: ApiData<ApiObject<CoverAttributes>> = getted;
+            let filename = cover_data.data.attributes.file_name;
+            let filename_path2 =
+                file_dir_clone2.covers_add(format!("images/{}", filename).as_str());
+            this_api_result!(std::fs::remove_file(filename_path2));
+        }
+        Err(_) => {}
+    };
+
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
@@ -850,7 +847,6 @@ async fn download_chapter_data_saver_byid(id: web::Path<String>) -> impl Respond
         .body(response.to_string())
 }
 
-
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
     Ok(HttpServer::new(|| {
         App::new()
@@ -917,58 +913,65 @@ pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> 
 /// ```
 pub async fn launch_server(address: &str, port: u16) -> std::io::Result<()> {
     info!("launching mangadex-desktop-api on {}:{}", address, port);
-    let habdle = launch_async_server(address, port)?
-        .await;
+    let habdle = launch_async_server(address, port)?.await;
     info!("closing mangadex-desktop-api on {}:{}", address, port);
     habdle
 }
 
-
 pub fn launch_async_server_default() -> std::io::Result<Server> {
     info!("launching server");
-    let serve: server_options::ServerOptions = match
-        server_options::ServerOptions::new() {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
-            }
-        };
+    let serve: server_options::ServerOptions = match server_options::ServerOptions::new() {
+        Ok(data) => data,
+        Err(e) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ));
+        }
+    };
     launch_async_server(serve.hostname.as_str(), serve.port)
 }
 
 /// Verify if the data dir and the settings are all there
 /// if on of them are not defined or not found , it automatically create the dir corresponding to the error
 pub fn verify_all_fs() -> std::io::Result<()> {
-    catch! {
-        try{
-            info!("{}", verify_settings_dir()?);
-        }catch error{
+    match verify_settings_dir() {
+        Ok(data) => {
+            info!("{}", data);
+        }
+        Err(error) => {
             warn!("{}", error);
             warn!("Settings dir not found ");
             info!("Initializing...");
-            match initialise_settings_dir(){
+            match initialise_settings_dir() {
                 Ok(data) => data,
                 Err(e) => {
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        e.to_string(),
+                    ));
                 }
             };
-            info!("Initilized settings dir !");
         }
-    }
-    catch! {
-        try{
-            info!("{}", verify_data_dir()?);
-        }catch error{
+    };
+    info!("Initilized settings dir !");
+    match verify_data_dir() {
+        Ok(data) => {
+            info!("{}", data);
+        }
+        Err(error) => {
             warn!("{}", error);
             warn!("Data dir not found \n");
             info!("\tInitializing...");
-            match initialise_data_dir(){
+            match initialise_data_dir() {
                 Ok(data) => data,
                 Err(e) => {
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        e.to_string(),
+                    ));
                 }
             };
-            info!("Initilized package manager dir !");
         }
     }
 
@@ -996,12 +999,14 @@ pub fn verify_all_fs() -> std::io::Result<()> {
 /// ```
 pub fn launch_server_default() -> std::io::Result<()> {
     info!("launching server");
-    let serve: server_options::ServerOptions =
-        match server_options::ServerOptions::new(){
-                Ok(data) => data,
-                Err(e) => {
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()));
-                }
-            };
+    let serve: server_options::ServerOptions = match server_options::ServerOptions::new() {
+        Ok(data) => data,
+        Err(e) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ));
+        }
+    };
     launch_server(serve.hostname.as_str(), serve.port)
 }
