@@ -3,37 +3,57 @@ use crate::cover_download::{
     all_covers_download_quality_by_manga_id, cover_download_by_cover, cover_download_by_manga_id,
     cover_download_quality_by_cover, cover_download_quality_by_manga_id,
 };
+use crate::manga_download::download_manga;
+use crate::settings::file_history::init_history_dir;
 use crate::settings::{
     initialise_data_dir, initialise_settings_dir, verify_data_dir, verify_settings_dir,
 };
 use crate::utils::{
-    find_all_downloades_by_manga_id, find_and_delete_all_downloades_by_manga_id,
-    is_chapter_manga_there, patch_manga_by_chapter,
+    find_and_delete_all_downloades_by_manga_id,
+    get_query_hash_value_or_else, is_chapter_manga_there, patch_manga_by_chapter,
 };
-use actix_web::dev::Server;
-use actix_web::http::header::ContentType;
-use actix_web::{delete, get, patch, put, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::dev::{self, Server, ServiceResponse};
+use actix_web::http::header::{self, ContentType};
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::{
+    delete, get, http::StatusCode, patch, put, web, App, HttpRequest, HttpResponse, HttpServer,
+    Responder,
+};
 use log::{info, warn};
 use mangadex_api_schema::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema::{ApiData, ApiObject};
 use mangadex_api_types::RelationshipType;
 use settings::files_dirs::DirsOptions;
 use settings::server_options;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
+use std::num::ParseIntError;
 use std::path::Path;
-pub mod settings;
+use utils::{get_downloaded_manga, query_string_to_hash_map, get_downloaded_chapter_of_a_manga, get_all_downloaded_chapters, get_downloaded_cover_of_a_manga_collection};
 
 pub mod chapter_download;
 pub mod cover_download;
+pub mod manga_download;
+pub mod settings;
 pub mod utils;
 // NOTE all get methods
+
+fn get_params(request: HttpRequest) -> HashMap<String, String> {
+    return match query_string_to_hash_map(request.query_string()) {
+        Ok(value) => value,
+        Err(error) => {
+            println!("{}", error.to_string());
+            HashMap::new()
+        }
+    };
+}
 
 /// try if the app is ok
 /// # How to use
 /// {app deployed url}/
 #[get("/")]
-async fn hello() -> impl Responder {
+async fn hello(/*request: HttpRequest*/) -> impl Responder {
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
@@ -196,26 +216,27 @@ async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
 
 /// find a downloaded covers manga
 #[get("/manga/{id}/covers")]
-async fn find_manga_covers_by_id(id: web::Path<String>) -> impl Responder {
-    let file_dirs = this_api_result!(DirsOptions::new());
-    //let file_dir_clone = file_dirs.clone();
-    let path = file_dirs.mangas_add(format!("lists/{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
-        let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
-        HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(jsons.to_string())
-    } else {
-        let jsons = serde_json::json!({
-            "result" : "error",
-            "type" : "manga",
-            "id" : id.as_str(),
-            "message" : "Cannot find the manga cover list in the api"
-        });
-        HttpResponse::NotFound()
-            .content_type(ContentType::json())
-            .body(jsons.to_string())
-    }
+async fn find_manga_covers_by_id(id: web::Path<String>, request : HttpRequest) -> impl Responder {
+    let query = get_params(request);
+    let offset: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
+            .as_str()
+            .parse();
+    let offset = this_api_result!(offset);
+    let limit: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
+            .as_str()
+            .parse();
+    let limit = this_api_result!(limit);
+    let getted = this_api_result!(get_downloaded_cover_of_a_manga_collection(format!("{}", id), offset, limit));
+    HttpResponse::Ok().content_type(ContentType::json()).body(
+        serde_json::json!({
+                "result" : "ok",
+                "type" : "collection",
+                "data" : getted
+            })
+        .to_string(),
+    )
 }
 
 /// find a chapter (json data) by his id
@@ -364,93 +385,77 @@ async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
     }
 }
 
-/// find a chapters data-saver (json data) by his id
-#[get("/chapter/all")]
-async fn find_all_downloaded_chapter() -> impl Responder {
-    let file_dirs = this_api_result!(DirsOptions::new());
-    //let file_dir_clone = file_dirs.clone();
-    let path = file_dirs.chapters_add("");
-    if Path::new(path.as_str()).exists() == true {
-        let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
-        let mut vecs: Vec<String> = Vec::new();
-        for files in list_dir {
-            vecs.push(
-                this_api_option!(
-                    this_api_result!(files).file_name().to_str(),
-                    format!("can't recognize file")
-                )
-                .to_string(),
-            );
-        }
-        HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::json!({
+/// get all dowloaded chapter
+#[get("/chapter")]
+async fn find_all_downloaded_chapter(request : HttpRequest) -> impl Responder {
+    let query = get_params(request);
+    let offset: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
+            .as_str()
+            .parse();
+    let offset = this_api_result!(offset);
+    let limit: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
+            .as_str()
+            .parse();
+    let limit = this_api_result!(limit);
+    let getted = this_api_result!(get_all_downloaded_chapters(offset, limit));
+    HttpResponse::Ok().content_type(ContentType::json()).body(
+        serde_json::json!({
                 "result" : "ok",
                 "type" : "collection",
-                "data" : vecs
+                "data" : getted
             })
-            .to_string(),
-        )
-    } else {
-        let jsons = serde_json::json!({
-            "result" : "error",
-            "message" : "can't find the chapters directory"
-        });
-        HttpResponse::NotFound()
-            .content_type(ContentType::json())
-            .body(jsons.to_string())
-    }
+        .to_string(),
+    )
 }
 
 /// find all downloaded manga
-#[get("/mangas/all")]
-async fn find_all_downloaded_manga() -> impl Responder {
-    //let path = format!("mangas");
-    let file_dirs = this_api_result!(DirsOptions::new());
-    //let file_dir_clone = file_dirs.clone();
-    let path = file_dirs.mangas_add("");
-    if Path::new(path.as_str()).exists() == true {
-        let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
-        let mut vecs: Vec<String> = Vec::new();
-        for files in list_dir {
-            vecs.push(
-                this_api_option!(
-                    this_api_result!(files).file_name().to_str(),
-                    "can't recongnize file"
-                )
-                .to_string()
-                .replace(".json", ""),
-            );
-        }
-        HttpResponse::Ok().content_type(ContentType::json()).body(
-            serde_json::json!({
-                    "result" : "ok",
-                    "type" : "collection",
-                    "data" : vecs
+#[get("/manga")]
+async fn find_all_downloaded_manga(request: HttpRequest) -> impl Responder {
+    let query = get_params(request);
+    let offset: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
+            .as_str()
+            .parse();
+    let offset = this_api_result!(offset);
+    let limit: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
+            .as_str()
+            .parse();
+    let limit = this_api_result!(limit);
+
+    let getted = this_api_result!(get_downloaded_manga(offset, limit));
+    HttpResponse::Ok().content_type(ContentType::json()).body(
+        serde_json::json!({
+                "result" : "ok",
+                "type" : "collection",
+                "data" : getted
             })
-            .to_string(),
-        )
-    } else {
-        let jsons = serde_json::json!({
-            "result" : "error",
-            "message" : "can't find the chapters directory"
-        });
-        HttpResponse::NotFound()
-            .content_type(ContentType::json())
-            .body(jsons.to_string())
-    }
+        .to_string(),
+    )
 }
 
 /// find all downloaded chapter manga
 #[get("/manga/{id}/chapters")]
-async fn find_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
-    let resp = find_all_downloades_by_manga_id(id.to_string()).await;
-    let jsons = this_api_result!(resp);
-
+async fn find_manga_chapters_by_id(id: web::Path<String>, request: HttpRequest) -> impl Responder {
+    let query = get_params(request);
+    let offset: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
+            .as_str()
+            .parse();
+    let offset = this_api_result!(offset);
+    let limit: Result<usize, ParseIntError> =
+        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
+            .as_str()
+            .parse();
+    let limit = this_api_result!(limit);
+    let to_use = this_api_result!(get_downloaded_chapter_of_a_manga(id.to_string(), offset, limit).await);
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
             "type" : "collection",
-            "data" : jsons
+            "data" : to_use
         })
         .to_string(),
     )
@@ -517,7 +522,7 @@ async fn update_chapter_by_id(id: web::Path<String>) -> impl Responder {
 }
 
 /// update all chapters data
-#[patch("/chapters/all")]
+#[patch("/chapter/all")]
 async fn patch_all_chapter() -> impl Responder {
     let path = this_api_result!(DirsOptions::new()).chapters_add("");
     if Path::new(path.as_str()).exists() == true {
@@ -553,7 +558,7 @@ async fn patch_all_chapter() -> impl Responder {
 }
 
 /// patch all chapters manga data
-#[patch("/chapters/all/patch-manga")]
+#[patch("/chapter/all/patch-manga")]
 async fn patch_all_chapter_manga() -> impl Responder {
     let path = this_api_result!(DirsOptions::new()).chapters_add("");
     //info!("{}", path);
@@ -619,7 +624,7 @@ async fn update_chapter_manga_by_id(id: web::Path<String>) -> impl Responder {
 }
 
 /// patch all manga cover
-#[patch("/mangas/all/cover")]
+#[patch("/manga/all/cover")]
 async fn patch_all_manga_cover() -> impl Responder {
     let path = this_api_result!(DirsOptions::new()).mangas_add("");
     if Path::new(path.as_str()).exists() == true {
@@ -745,13 +750,11 @@ async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
 #[put("/manga/{id}")]
 async fn download_manga_by_id(id: web::Path<String>) -> impl Responder {
     let http_client = reqwest::Client::new();
-    let resp = this_api_result!(http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)).send().await);
-    let mut file = this_api_result!(File::create(
-        this_api_result!(DirsOptions::new()).mangas_add(format!("{}.json", id).as_str())
-    ));
+    let manga_urn_uuid = format!("{}", id);
+    let manga_id = this_api_result!(uuid::Uuid::parse_str(manga_urn_uuid.as_str()));
+    let download_manga_query = download_manga(http_client, manga_id).await;
+    this_api_result!(download_manga_query);
 
-    this_api_result!(file.write_all(&this_api_result!(resp.bytes().await)));
-    this_api_result!(cover_download_by_manga_id(format!("{}", id).as_str()).await);
     let jsons = serde_json::json!({
         "result" : "ok",
         "type" : "manga",
@@ -847,9 +850,33 @@ async fn download_chapter_data_saver_byid(id: web::Path<String>) -> impl Respond
         .body(response.to_string())
 }
 
+/// url not found handler
+///
+///
+
+fn not_found_message<B>(
+    mut res: dev::ServiceResponse<B>,
+) -> Result<ErrorHandlerResponse<B>, actix_web::Error> {
+    res.response_mut().headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json"),
+    );
+    let (req, res) = res.into_parts();
+    let json = serde_json::json!({
+        "result" : "error",
+        "message" : format!("Ressource {} not found", req.path())
+    });
+    let res = res.set_body(json.to_string());
+    let res = ServiceResponse::new(req, res)
+        .map_into_boxed_body()
+        .map_into_right_body();
+    Ok(ErrorHandlerResponse::Response(res))
+}
+
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
     Ok(HttpServer::new(|| {
         App::new()
+            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
             /*
                 get Methods
             */
@@ -974,7 +1001,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
             };
         }
     }
-
+    init_history_dir()?;
     Ok(())
 }
 

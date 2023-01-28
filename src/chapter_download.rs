@@ -8,12 +8,22 @@ use std::io::Write;
 use std::path::Path;
 use uuid::Uuid;
 
-use crate::{settings, utils::{self, send_request, is_chapter_manga_there, patch_manga_by_chapter}};
+use crate::{settings::{self, file_history::HistoryEntry, insert_in_history, commit_rel, remove_in_history}, utils::{self, send_request, is_chapter_manga_there, patch_manga_by_chapter}};
 
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
+    let chapter_id = Uuid::parse_str(chapter_id)?;
+    let history_entry = HistoryEntry::new(chapter_id, mangadex_api_types::RelationshipType::Chapter);
+    match insert_in_history(&history_entry){
+        Ok(_) => (),
+        Err(error) => {
+            if error.kind() != std::io::ErrorKind::AlreadyExists {
+                return Err(anyhow::Error::new(error))
+            }
+        }
+    };
+    commit_rel(history_entry.get_data_type())?;
     let client = MangaDexClient::default();
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let chapter_id = Uuid::parse_str(chapter_id)?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data", chapter_top_dir);
     std::fs::create_dir_all(format!("{}", chapter_dir))?;
@@ -95,6 +105,8 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
     });
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
     let _ = file.write_all(jsons.to_string().as_bytes());
+    remove_in_history(&history_entry)?;
+    commit_rel(history_entry.get_data_type())?;
     Ok(jsons)
 }
 pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_json::Value> {

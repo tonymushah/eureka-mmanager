@@ -1,0 +1,81 @@
+#[derive(Clone, serde::Serialize)]
+pub struct Collection<T>
+    where 
+        T : serde::Serialize,
+        T: Clone
+{
+    data: Vec<T>,
+    limit: usize,
+    offset: usize,
+    total: usize,
+}
+
+impl<T> Collection<T> 
+    where 
+        T : serde::Serialize,
+        T: Clone
+{
+    pub fn new(
+        to_use: &mut Vec<T>,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Collection<T>, std::io::Error> {
+        if offset > to_use.len() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "the offset is greater than the vector length",
+            ));
+        } else {
+            let (_, right) = to_use.split_at(offset);
+            let data;
+            if right.len() <= limit {
+                data = right.to_vec();
+                return Ok(Collection {
+                    data: data,
+                    limit,
+                    offset,
+                    total: to_use.len(),
+                });
+            } else {
+                let (left1, _) = right.split_at(limit);
+                data = left1.to_vec();
+                return Ok(Collection {
+                    data: data,
+                    limit,
+                    offset,
+                    total: to_use.len(),
+                });
+            }
+        }
+    }
+    pub fn get_data(self) -> Vec<T> {
+        return self.data;
+    }
+    pub fn get_total(self) -> usize {
+        return self.total;
+    }
+    pub fn get_offset(self) -> usize {
+        return self.offset;
+    }
+    pub fn get_limit(self) -> usize {
+        return self.limit;
+    }
+    pub fn convert_to<S, F>(&mut self, f: F) -> Result<Collection<S>, std::io::Error>
+    where
+        F: Fn(T) -> S,
+        S : Clone,
+        S : serde::Serialize
+    {
+        let mut new_data: Vec<S> = Vec::new();
+        let old_data = self.data.clone();
+        for data in old_data {
+            new_data.push(f(data));
+        }
+        Ok(Collection {
+            data: new_data,
+            offset: self.offset,
+            limit: self.limit,
+            total: self.total,
+        })
+    }
+}
