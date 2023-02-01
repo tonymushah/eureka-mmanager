@@ -4,7 +4,7 @@ use crate::cover_download::{
     cover_download_quality_by_cover, cover_download_quality_by_manga_id,
 };
 use crate::manga_download::download_manga;
-use crate::settings::file_history::init_history_dir;
+use crate::settings::file_history::{init_history_dir, load_history};
 use crate::settings::{
     initialise_data_dir, initialise_settings_dir, verify_data_dir, verify_settings_dir,
 };
@@ -1001,7 +1001,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
             };
         }
     }
-    init_history_dir()?;
+    load_history()?;
     Ok(())
 }
 

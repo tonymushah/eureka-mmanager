@@ -3,7 +3,7 @@ use std::{io::{Write}};
 use mangadex_api_types::RelationshipType;
 use serde::{Serialize, Deserialize};
 
-use super::files_dirs::DirsOptions;
+use super::{files_dirs::DirsOptions, init_static_history};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct HistoryEntry{
@@ -165,5 +165,11 @@ pub fn init_history_dir() -> Result<(), std::io::Error>{
     };
     let path: String = dir_options.data_dir_add(format!("history").as_str());
     std::fs::create_dir_all(path)?;
+    Ok(())
+}
+
+pub fn load_history() -> Result<(), std::io::Error>{
+    init_history_dir()?;
+    init_static_history()?;
     Ok(())
 }
