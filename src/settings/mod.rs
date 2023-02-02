@@ -34,13 +34,18 @@ pub fn init_static_history() -> Result<(), std::io::Error> {
                 }
             },
         );
-        match HISTORY.set(Mutex::new(instance)) {
-            Ok(a) => a,
-            Err(_) => std::panic::panic_any(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Error on initing static history",
-            )),
-        };
+        match HISTORY.get() {
+            None => {
+                match HISTORY.set(Mutex::new(instance)) {
+                    Ok(a) => a,
+                    Err(_) => std::panic::panic_any(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "Error on initing static history",
+                    )),
+                };
+            },
+            Some(_) => ()
+        }
     })
     .join();
     match thread {
@@ -222,11 +227,13 @@ pub fn remove_in_history(to_remove: &HistoryEntry) -> Result<(), std::io::Error>
             return Err(error);
         }
     };
-    history_w_file.get_history().remove_uuid(to_remove.get_id())?;
+    history_w_file
+        .get_history()
+        .remove_uuid(to_remove.get_id())?;
     Ok(())
 }
 
-pub fn commit_rel(relationship_type: RelationshipType) -> Result<(), std::io::Error>{
+pub fn commit_rel(relationship_type: RelationshipType) -> Result<(), std::io::Error> {
     let history_w_file = match get_history_w_file_by_rel(relationship_type) {
         Ok(data) => data,
         Err(error) => {
@@ -237,7 +244,7 @@ pub fn commit_rel(relationship_type: RelationshipType) -> Result<(), std::io::Er
     Ok(())
 }
 
-pub fn rollback_rel(relationship_type: RelationshipType) -> Result<(), std::io::Error>{
+pub fn rollback_rel(relationship_type: RelationshipType) -> Result<(), std::io::Error> {
     let history_w_file = match get_history_w_file_by_rel(relationship_type) {
         Ok(data) => data,
         Err(error) => {
