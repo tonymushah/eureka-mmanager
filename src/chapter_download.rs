@@ -1,6 +1,6 @@
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
-use log::{info, trace, warn};
+use log::{info, warn};
 use mangadex_api::v5::MangaDexClient;
 use serde_json::json;
 use std::fs::File;

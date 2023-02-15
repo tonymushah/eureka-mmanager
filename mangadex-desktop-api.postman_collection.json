@@ -54,7 +54,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "06f6356a-4511-4bbd-a97b-4c609b9f7959"
+											"value": "21da6414-c849-46e8-9750-350f5f6dcd54"
 										}
 									]
 								}
@@ -92,13 +92,22 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/mangas/all",
+									"raw": "{{base_url}}/manga?offset=10&limit=4",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"mangas",
-										"all"
+										"manga"
+									],
+									"query": [
+										{
+											"key": "offset",
+											"value": "10"
+										},
+										{
+											"key": "limit",
+											"value": "4"
+										}
 									]
 								}
 							},
@@ -122,7 +131,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "b4c93297-b32f-4f90-b619-55456a38b0aa"
+											"value": "21da6414-c849-46e8-9750-350f5f6dcd54"
 										}
 									]
 								}
@@ -140,12 +149,12 @@
 								"method": "PATCH",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/mangas/all/cover",
+									"raw": "{{base_url}}/manga/all/cover",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"mangas",
+										"manga",
 										"all",
 										"cover"
 									]
@@ -587,13 +596,12 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/chapter/all",
+									"raw": "{{base_url}}/chapter",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"chapter",
-										"all"
+										"chapter"
 									]
 								}
 							},
@@ -634,12 +642,12 @@
 								"method": "PATCH",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/chapters/all",
+									"raw": "{{base_url}}/chapter/all",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"chapters",
+										"chapter",
 										"all"
 									]
 								}
@@ -652,12 +660,12 @@
 								"method": "PATCH",
 								"header": [],
 								"url": {
-									"raw": "{{base_url}}/chapters/all/patch-manga",
+									"raw": "{{base_url}}/chapter/all/patch-manga",
 									"host": [
 										"{{base_url}}"
 									],
 									"path": [
-										"chapters",
+										"chapter",
 										"all",
 										"patch-manga"
 									]
@@ -814,10 +822,49 @@
 					],
 					"path": [
 						""
+					],
+					"query": [
+						{
+							"key": "offset",
+							"value": "0",
+							"disabled": true
+						},
+						{
+							"key": "limit",
+							"value": "10",
+							"disabled": true
+						}
 					]
 				}
 			},
 			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8090",
+			"type": "default"
 		}
 	]
 }

@@ -11,7 +11,7 @@ use mangadex_api::v5::MangaDexClient;
 use mangadex_api::CDN_URL;
 use log::info;
 
-use crate::{settings::{self, file_history::HistoryEntry}, utils};
+use crate::{settings::{self}, utils};
 
 pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::default();
