@@ -16,7 +16,7 @@ use mangadex_api_types::RelationshipType;
 use crate::settings::files_dirs::DirsOptions;
 use std::num::ParseIntError;
 use std::path::Path;
-use std::str::FromStr;
+use std::str::{FromStr, ParseBoolError};
 use crate::utils::{get_downloaded_manga, get_downloaded_chapter_of_a_manga, get_all_downloaded_chapters, get_downloaded_cover_of_a_manga_collection};
 
 /// try if the app is ok
@@ -365,6 +365,7 @@ pub async fn find_all_downloaded_chapter(request : HttpRequest) -> impl Responde
             .as_str()
             .parse();
     let limit = this_api_result!(limit);
+    //let include_failed : Result<boolean, ParseBoolError> = 
     let getted = this_api_result!(get_all_downloaded_chapters(offset, limit));
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
