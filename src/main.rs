@@ -21,6 +21,10 @@ macro_rules! print_historyFile {
 }
 
 fn main() -> std::io::Result<()> {
+    fern::Dispatch::new()
+        .level(log::LevelFilter::Info)
+        .chain(std::io::stdout())
+        .apply().unwrap();
     verify_all_fs()?;
     launch_server_default()?;
     //match init_static_history() {

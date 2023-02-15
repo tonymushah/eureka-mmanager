@@ -1,6 +1,6 @@
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
-use log::{info, warn};
+use log::{info, trace, warn};
 use mangadex_api::v5::MangaDexClient;
 use serde_json::json;
 use std::fs::File;
@@ -8,16 +8,22 @@ use std::io::Write;
 use std::path::Path;
 use uuid::Uuid;
 
-use crate::{settings::{self, file_history::HistoryEntry, insert_in_history, commit_rel, remove_in_history}, utils::{self, send_request, is_chapter_manga_there, patch_manga_by_chapter}};
+use crate::{
+    settings::{
+        self, commit_rel, file_history::HistoryEntry, insert_in_history, remove_in_history,
+    },
+    utils::{self, is_chapter_manga_there, patch_manga_by_chapter, send_request},
+};
 
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let chapter_id = Uuid::parse_str(chapter_id)?;
-    let history_entry = HistoryEntry::new(chapter_id, mangadex_api_types::RelationshipType::Chapter);
-    match insert_in_history(&history_entry){
+    let history_entry =
+        HistoryEntry::new(chapter_id, mangadex_api_types::RelationshipType::Chapter);
+    match insert_in_history(&history_entry) {
         Ok(_) => (),
         Err(error) => {
             if error.kind() != std::io::ErrorKind::AlreadyExists {
-                return Err(anyhow::Error::new(error))
+                return Err(anyhow::Error::new(error));
             }
         }
     };
@@ -49,7 +55,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             if data == false {
                 patch_manga_by_chapter(format!("{}", chapter_id)).await?;
             }
-        },
+        }
         Err(e) => {
             let error = e.to_string();
             warn!("Warning {}!", error);
@@ -62,7 +68,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
     for filename in page_filenames {
         let path_to_use = format!("{}/{}", chapter_dir, &filename);
         let path_to_use_clone = path_to_use.clone();
-        let mut file = File::create(path_to_use)?;
+        let mut file = File::open(path_to_use)?;
         // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
         let page_url = at_home.base_url.join(&format!(
             "/{quality_mode}/{chapter_hash}/{page_filename}",
@@ -72,25 +78,41 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         ))?;
         match utils::send_request(http_client.get(page_url), 5).await {
             Ok(res) => {
+                let res_length = res.content_length();
                 // The data should be streamed rather than downloading the data all at once.
                 if Path::new(path_to_use_clone.as_str()).exists() == false
+                    || res_length.is_none() == true
                     || file.metadata()?.len()
-                        != (match res.content_length() {
-                            Some(f) => f,
-                            None => {
-                                continue;
+                        != match res_length {
+                            Some(d) => {
+                                //info!("data length : {}", d);
+                                d
                             }
-                        })
+                            None => 0,
+                        }
                 {
-                    let bytes = res.bytes().await?;
+                    match res.bytes().await {
+                        core::result::Result::Err(error) => {
+                            //info!("error on fetching data : {}", error.to_string());
+                            return Err(anyhow::Error::new(error));
+                        }
+                        core::result::Result::Ok(bytes) => {
+                            file = File::create(path_to_use_clone)?;
+                            match file.write_all(&bytes) {
+                                core::result::Result::Err(error) => {
+                                    //info!(" at file write_all : {}", error.to_string());
+                                    return Err(anyhow::Error::new(error));
+                                }
+                                core::result::Result::Ok(_) => {
+                                    info!("downloaded {} ", &filename);
+                                    files_.push(format!("{}", &filename));
+                                }
+                            };
+                        }
+                    };
                     // This is where you would download the file but for this example,
                     // we're just printing the raw data.
-
-                    let _ = file.write_all(&bytes)?;
                 }
-                info!("downloaded {} ", &filename);
-
-                files_.push(format!("{}", &filename));
             }
             Err(_) => {
                 failed.push(format!("{}", &filename));
@@ -128,7 +150,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
     let http_client = reqwest::Client::new();
     // puting chapter data in a json data
     if Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() == false {
-        let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())).send().await?;
+        let get_chapter = send_request(http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())), 5).await?;
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
         chapter_data.write_all(&bytes_)?;
@@ -139,7 +161,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
             if data == false {
                 patch_manga_by_chapter(format!("{}", chapter_id)).await?;
             }
-        },
+        }
         Err(e) => {
             let error = e.to_string();
             warn!("Warning {}!", error);
@@ -152,7 +174,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
     for filename in page_filenames {
         let path_to_use = format!("{}/{}", chapter_dir, &filename);
         let path_to_use_clone = format!("{}/{}", chapter_dir, &filename);
-        let mut file = File::create(path_to_use)?;
+        let mut file = File::open(path_to_use)?;
         // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
         let page_url = at_home.base_url.join(&format!(
             "/{quality_mode}/{chapter_hash}/{page_filename}",
@@ -160,34 +182,48 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
             chapter_hash = at_home.chapter.hash,
             page_filename = filename
         ))?;
-
         match utils::send_request(http_client.get(page_url), 5).await {
             Ok(res) => {
+                let res_length = res.content_length();
                 // The data should be streamed rather than downloading the data all at once.
                 if Path::new(path_to_use_clone.as_str()).exists() == false
+                    || res_length.is_none() == true
                     || file.metadata()?.len()
-                        != (match res.content_length() {
-                            Some(f) => f,
-                            None => {
-                                continue;
+                        != match res_length {
+                            Some(d) => {
+                                //info!("data length : {}", d);
+                                d
                             }
-                        })
+                            None => 0,
+                        }
                 {
-                    let bytes = res.bytes().await?;
+                    match res.bytes().await {
+                        core::result::Result::Err(error) => {
+                            //info!("error on fetching data : {}", error.to_string());
+                            return Err(anyhow::Error::new(error));
+                        }
+                        core::result::Result::Ok(bytes) => {
+                            file = File::create(path_to_use_clone)?;
+                            match file.write_all(&bytes) {
+                                core::result::Result::Err(error) => {
+                                    //info!(" at file write_all : {}", error.to_string());
+                                    return Err(anyhow::Error::new(error));
+                                }
+                                core::result::Result::Ok(_) => {
+                                    info!("downloaded {} ", &filename);
+                                    files_.push(format!("{}", &filename));
+                                }
+                            };
+                        }
+                    };
                     // This is where you would download the file but for this example,
-                    // we're now sending the data to the right file.
-
-                    let _ = file.write_all(&bytes)?;
+                    // we're just printing the raw data.
                 }
-                info!("downloaded {} ", &filename);
-
-                files_.push(format!("{}", &filename));
             }
             Err(_) => {
                 failed.push(format!("{}", &filename));
             }
         };
-        files_.push(format!("{}", &filename));
     }
     let jsons = json!({
         "result" : "ok",

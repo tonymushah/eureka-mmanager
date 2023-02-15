@@ -822,7 +822,7 @@ async fn download_cover_quality(path_var: web::Path<(String, u32)>) -> impl Resp
 /// download chapter by id
 #[put("/chapter/{id}")]
 async fn download_chapter_byid(id: web::Path<String>) -> impl Responder {
-    format!("Start downloading manga {id}");
+    info!("Start downloading chapter {id}");
 
     let response = this_api_result!(download_chapter(format!("{id}").as_str()).await);
     HttpResponse::Ok()

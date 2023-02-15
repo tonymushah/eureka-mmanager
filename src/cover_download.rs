@@ -23,7 +23,6 @@ pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_
         .build()?
         .send()
         .await?;
-    let http_client = reqwest::Client::new();
     let cover_id = match manga
         .data
         .relationships
@@ -35,53 +34,7 @@ pub async fn cover_download_by_manga_id(manga_id: &str) -> anyhow::Result<serde_
             }
         }
         .id;
-    let cover = client
-        .cover()
-        .get()
-        .cover_id(&cover_id)
-        .build()?
-        .send()
-        .await?;
-
-    // This uses the best quality image.
-    // To use smaller, thumbnail-sized images, append any of the following:
-    //
-    // - .512.jpg
-    // - .256.jpg
-    //
-    // For example, "https://uploads.mangadex.org/covers/8f3e1818-a015-491d-bd81-3addc4d7d56a/4113e972-d228-4172-a885-cb30baffff97.jpg.512.jpg"
-    let cover_url = Url::parse(&format!(
-            "{}/covers/{}/{}",
-            CDN_URL, manga_id, cover.data.attributes.file_name
-        ))?;
-
-    
-    
-    let res = utils::send_request(http_client.get(cover_url), 5).await?;
-    // The data should be streamed rather than downloading the data all at once.
-    let bytes = res.bytes().await?;
-    let filename = cover.data.attributes.file_name;
-    // This is where you would download the file but for this example, we're just printing the raw data.
-    let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let file_dirs_clone = files_dirs.clone();
-    let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
-    let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
-
-    let mut file = File::create(file_path)?;
-    let _ = file.write_all(&bytes);
-    let mut files = File::create(json_cover)?;
-
-
-    let resps = http_client.get(format!("{}/cover/{}", mangadex_api::constants::API_URL, cover_id.hyphenated())).send().await?;
-
-    files.write_all(&resps.bytes().await?)?;
-
-    info!("downloaded {}", filename.as_str());
-    Ok(serde_json::json!({
-        "result" : "ok",
-        "type": "cover",
-        "downloded" : cover_id.hyphenated()
-    }))
+    cover_download_by_cover(cover_id.to_string().as_str()).await
 }
 
 pub async fn cover_download_quality_by_manga_id(manga_id: &str, quality:  u32) -> anyhow::Result<serde_json::Value> {
@@ -94,7 +47,6 @@ pub async fn cover_download_quality_by_manga_id(manga_id: &str, quality:  u32) -
         .build()?
         .send()
         .await?;
-    let http_client = reqwest::Client::new();
 
     let cover_id = match manga
         .data
@@ -108,60 +60,7 @@ pub async fn cover_download_quality_by_manga_id(manga_id: &str, quality:  u32) -
         }
         .id;
 
-    let cover = client
-        .cover()
-        .get()
-        .cover_id(&cover_id)
-        .build()?
-        .send()
-        .await?;
-
-    // This uses the best quality image.
-    // To use smaller, thumbnail-sized images, append any of the following:
-    //
-    // - .512.jpg
-    // - .256.jpg
-    //
-    // For example, "https://uploads.mangadex.org/covers/8f3e1818-a015-491d-bd81-3addc4d7d56a/4113e972-d228-4172-a885-cb30baffff97.jpg.512.jpg"
-    if quality == 256 || quality == 512 {
-        // This uses the best quality image.
-        // To use smaller, thumbnail-sized images, append any of the following:
-        //
-        // - .512.jpg
-        // - .256.jpg
-        //
-        // For example, "https://uploads.mangadex.org/covers/8f3e1818-a015-491d-bd81-3addc4d7d56a/4113e972-d228-4172-a885-cb30baffff97.jpg.512.jpg"
-        let cover_url = Url::parse(&format!(
-                "{}/covers/{}/{}",
-                CDN_URL, manga_id, format!("{}.{}.jpg", cover.data.attributes.file_name, quality)
-            ))?;
-
-        let res = utils::send_request(http_client.get(cover_url), 5).await?;
-        // The data should be streamed rather than downloading the data all at once.
-        let bytes = res.bytes().await?;
-        let filename = cover.data.attributes.file_name;
-        let files_dirs = settings::files_dirs::DirsOptions::new()?;
-        let file_dirs_clone = files_dirs.clone();
-        let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
-        let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
-
-        let mut file = File::create(file_path)?;
-        let _ = file.write_all(&bytes);
-        let mut files = File::create(json_cover)?;
-
-        let resps = utils::send_request(http_client.get(format!("{}/cover/{}", mangadex_api::constants::API_URL, cover_id.hyphenated())), 5).await?;
-
-        files.write_all(&resps.bytes().await?)?;
-        info!("downloaded {}", filename.as_str());
-        Ok(serde_json::json!({
-            "result" : "ok",
-            "type": "cover",
-            "downloded" : cover_id.hyphenated()
-        }))
-    }else {
-        Err(anyhow::Error::msg("not a valid size"))
-    }
-    
+    cover_download_quality_by_cover(cover_id.to_string().as_str(), quality).await
 }
 
 pub async fn cover_download_by_cover(cover_id: &str) -> anyhow::Result<serde_json::Value> {
@@ -176,8 +75,6 @@ pub async fn cover_download_by_cover(cover_id: &str) -> anyhow::Result<serde_jso
 
     let http_client = reqwest::Client::new();
     
-    
-
     let manga_id = match cover
         .data
         .relationships
