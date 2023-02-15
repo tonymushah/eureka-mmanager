@@ -1,4 +1,5 @@
 use crate::methods::get_params;
+use crate::settings::get_history;
 use crate::{this_api_result, this_api_option};
 use crate::utils::{
     get_query_hash_value_or_else
@@ -8,12 +9,14 @@ use actix_web::{
     get, web, HttpRequest, HttpResponse,
     Responder,
 };
+use log::info;
 use mangadex_api_schema::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema::{ApiData, ApiObject};
 use mangadex_api_types::RelationshipType;
 use crate::settings::files_dirs::DirsOptions;
 use std::num::ParseIntError;
 use std::path::Path;
+use std::str::FromStr;
 use crate::utils::{get_downloaded_manga, get_downloaded_chapter_of_a_manga, get_all_downloaded_chapters, get_downloaded_cover_of_a_manga_collection};
 
 /// try if the app is ok
@@ -298,16 +301,49 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data.json", id).as_str());
     if Path::new(path.as_str()).exists() == true {
+        
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
-        HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(jsons.to_string())
+        let history = this_api_result!(get_history());
+        match history.get_mut(&RelationshipType::Chapter) {
+            None => {
+                HttpResponse::Ok()
+                    .insert_header(("X-DOWNLOAD-FAILED", "false"))
+                    .content_type(ContentType::json())
+                    .body(jsons.to_string())
+            }, 
+            Some(history_) => {
+                let uuid_str = format!("urn:uuid:{}", id);
+                match uuid::Uuid::from_str(uuid_str.as_str()) {
+                    Ok(uuid_data) => {
+                        if history_.get_history().is_in(uuid_data) == true {
+                            HttpResponse::Ok()
+                                .insert_header(("X-DOWNLOAD-FAILED", "true"))
+                                .content_type(ContentType::json())
+                                .body(jsons.to_string())
+                        } else {
+                            HttpResponse::Ok()
+                                .insert_header(("X-DOWNLOAD-FAILED", "false"))
+                                .content_type(ContentType::json())
+                                .body(jsons.to_string())
+                        }
+                    },
+                    Err(error) => {
+                        info!("{}", error.to_string());
+                        HttpResponse::Ok()
+                            .insert_header(("X-DOWNLOAD-FAILED", "false"))
+                            .insert_header(("EUREKA-UUID-PARSING-ERROR", "true"))
+                            .content_type(ContentType::json())
+                            .body(jsons.to_string())
+                    }
+                }
+                
+            }
+        }
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
-            "type" : "manga",
             "id" : id.as_str(),
-            "message" : "Cannot find the manga in the api"
+            "message" : "Cannot find the chapter in the api"
         });
         HttpResponse::NotFound()
             .content_type(ContentType::json())
