@@ -1,23 +1,21 @@
 use crate::methods::get_params;
-use crate::settings::get_history;
-use crate::{this_api_result, this_api_option};
+use crate::settings::files_dirs::DirsOptions;
+use crate::settings::{get_history, get_history_w_file_by_rel, get_history_w_file_by_rel_or_init};
+use crate::utils::get_query_hash_value_or_else;
 use crate::utils::{
-    get_query_hash_value_or_else
+    get_all_downloaded_chapters, get_downloaded_chapter_of_a_manga,
+    get_downloaded_cover_of_a_manga_collection, get_downloaded_manga,
 };
-use actix_web::http::header::{ContentType};
-use actix_web::{
-    get, web, HttpRequest, HttpResponse,
-    Responder,
-};
+use crate::{this_api_option, this_api_result};
+use actix_web::http::header::ContentType;
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use log::info;
 use mangadex_api_schema::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema::{ApiData, ApiObject};
 use mangadex_api_types::RelationshipType;
-use crate::settings::files_dirs::DirsOptions;
 use std::num::ParseIntError;
 use std::path::Path;
 use std::str::{FromStr, ParseBoolError};
-use crate::utils::{get_downloaded_manga, get_downloaded_chapter_of_a_manga, get_all_downloaded_chapters, get_downloaded_cover_of_a_manga_collection};
 
 /// try if the app is ok
 /// # How to use
@@ -149,7 +147,10 @@ pub async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
 
 /// find a downloaded covers manga
 #[get("/manga/{id}/covers")]
-pub async fn find_manga_covers_by_id(id: web::Path<String>, request : HttpRequest) -> impl Responder {
+pub async fn find_manga_covers_by_id(
+    id: web::Path<String>,
+    request: HttpRequest,
+) -> impl Responder {
     let query = get_params(request);
     let offset: Result<usize, ParseIntError> =
         get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
@@ -161,13 +162,17 @@ pub async fn find_manga_covers_by_id(id: web::Path<String>, request : HttpReques
             .as_str()
             .parse();
     let limit = this_api_result!(limit);
-    let getted = this_api_result!(get_downloaded_cover_of_a_manga_collection(format!("{}", id), offset, limit));
+    let getted = this_api_result!(get_downloaded_cover_of_a_manga_collection(
+        format!("{}", id),
+        offset,
+        limit
+    ));
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
-                "result" : "ok",
-                "type" : "collection",
-                "data" : getted
-            })
+            "result" : "ok",
+            "type" : "collection",
+            "data" : getted
+        })
         .to_string(),
     )
 }
@@ -272,7 +277,9 @@ pub async fn find_chapters_data_img_by_id(data: web::Path<(String, String)>) -> 
 
 /// find a chapters data-saver image by his id
 #[get("/chapter/{id}/data-saver/{filename}")]
-pub async fn find_chapters_data_saver_img_by_id(data: web::Path<(String, String)>) -> impl Responder {
+pub async fn find_chapters_data_saver_img_by_id(
+    data: web::Path<(String, String)>,
+) -> impl Responder {
     let (id, filename) = data.into_inner();
     let file_dirs = this_api_result!(DirsOptions::new());
     let path = file_dirs.chapters_add(format!("{}/data-saver/{}", id, filename).as_str());
@@ -301,42 +308,32 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data.json", id).as_str());
     if Path::new(path.as_str()).exists() == true {
-        
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
-        let history = this_api_result!(get_history());
-        match history.get_mut(&RelationshipType::Chapter) {
-            None => {
+        let history_ = this_api_result!(get_history_w_file_by_rel_or_init(RelationshipType::Chapter));
+
+        let uuid_str = format!("urn:uuid:{}", id);
+        match uuid::Uuid::from_str(uuid_str.as_str()) {
+            Ok(uuid_data) => {
+                println!("{}", uuid_data.to_string());
+                if history_.get_history().is_in(uuid_data) == true {
+                    HttpResponse::Ok()
+                        .insert_header(("X-DOWNLOAD-FAILED", "true"))
+                        .content_type(ContentType::json())
+                        .body(jsons.to_string())
+                } else {
+                    HttpResponse::Ok()
+                        .insert_header(("X-DOWNLOAD-FAILED", "false"))
+                        .content_type(ContentType::json())
+                        .body(jsons.to_string())
+                }
+            }
+            Err(error) => {
+                info!("{}", error.to_string());
                 HttpResponse::Ok()
                     .insert_header(("X-DOWNLOAD-FAILED", "false"))
+                    .insert_header(("EUREKA-UUID-PARSING-ERROR", "true"))
                     .content_type(ContentType::json())
                     .body(jsons.to_string())
-            }, 
-            Some(history_) => {
-                let uuid_str = format!("urn:uuid:{}", id);
-                match uuid::Uuid::from_str(uuid_str.as_str()) {
-                    Ok(uuid_data) => {
-                        if history_.get_history().is_in(uuid_data) == true {
-                            HttpResponse::Ok()
-                                .insert_header(("X-DOWNLOAD-FAILED", "true"))
-                                .content_type(ContentType::json())
-                                .body(jsons.to_string())
-                        } else {
-                            HttpResponse::Ok()
-                                .insert_header(("X-DOWNLOAD-FAILED", "false"))
-                                .content_type(ContentType::json())
-                                .body(jsons.to_string())
-                        }
-                    },
-                    Err(error) => {
-                        info!("{}", error.to_string());
-                        HttpResponse::Ok()
-                            .insert_header(("X-DOWNLOAD-FAILED", "false"))
-                            .insert_header(("EUREKA-UUID-PARSING-ERROR", "true"))
-                            .content_type(ContentType::json())
-                            .body(jsons.to_string())
-                    }
-                }
-                
             }
         }
     } else {
@@ -353,7 +350,7 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
 
 /// get all dowloaded chapter
 #[get("/chapter")]
-pub async fn find_all_downloaded_chapter(request : HttpRequest) -> impl Responder {
+pub async fn find_all_downloaded_chapter(request: HttpRequest) -> impl Responder {
     let query = get_params(request);
     let offset: Result<usize, ParseIntError> =
         get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
@@ -365,14 +362,14 @@ pub async fn find_all_downloaded_chapter(request : HttpRequest) -> impl Responde
             .as_str()
             .parse();
     let limit = this_api_result!(limit);
-    //let include_failed : Result<boolean, ParseBoolError> = 
+    //let include_failed : Result<boolean, ParseBoolError> =
     let getted = this_api_result!(get_all_downloaded_chapters(offset, limit));
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
-                "result" : "ok",
-                "type" : "collection",
-                "data" : getted
-            })
+            "result" : "ok",
+            "type" : "collection",
+            "data" : getted
+        })
         .to_string(),
     )
 }
@@ -395,17 +392,20 @@ pub async fn find_all_downloaded_manga(request: HttpRequest) -> impl Responder {
     let getted = this_api_result!(get_downloaded_manga(offset, limit));
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
-                "result" : "ok",
-                "type" : "collection",
-                "data" : getted
-            })
+            "result" : "ok",
+            "type" : "collection",
+            "data" : getted
+        })
         .to_string(),
     )
 }
 
 /// find all downloaded chapter manga
 #[get("/manga/{id}/chapters")]
-pub async fn find_manga_chapters_by_id(id: web::Path<String>, request: HttpRequest) -> impl Responder {
+pub async fn find_manga_chapters_by_id(
+    id: web::Path<String>,
+    request: HttpRequest,
+) -> impl Responder {
     let query = get_params(request);
     let offset: Result<usize, ParseIntError> =
         get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
@@ -417,7 +417,8 @@ pub async fn find_manga_chapters_by_id(id: web::Path<String>, request: HttpReque
             .as_str()
             .parse();
     let limit = this_api_result!(limit);
-    let to_use = this_api_result!(get_downloaded_chapter_of_a_manga(id.to_string(), offset, limit).await);
+    let to_use =
+        this_api_result!(get_downloaded_chapter_of_a_manga(id.to_string(), offset, limit).await);
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",

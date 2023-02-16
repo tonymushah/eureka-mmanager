@@ -17,11 +17,11 @@ static mut HISTORY: once_cell::sync::OnceCell<Mutex<HashMap<RelationshipType, Hi
     once_cell::sync::OnceCell::new();
 
 pub fn init_static_history() -> Result<(), std::io::Error> {
-    let thread = std::thread::spawn(|| unsafe {
+    let thread = std::thread::spawn(|| -> Result<(), std::io::Error> { unsafe {
         let dir_options: DirsOptions = match DirsOptions::new() {
             Ok(data) => data,
-            Err(_) => {
-                panic!("Error on loading history");
+            Err(error) => {
+                return Err(std::io::Error::new(std::io::ErrorKind::Other, error.to_string()));
             }
         };
         let mut instance: HashMap<RelationshipType, HistoryWFile> = HashMap::new();
@@ -29,27 +29,29 @@ pub fn init_static_history() -> Result<(), std::io::Error> {
             RelationshipType::Manga,
             match init_history(RelationshipType::Manga, &dir_options) {
                 Ok(data) => data,
-                Err(_) => {
-                    panic!("Error on loading manga history");
+                Err(error) => {
+                    return Err(error);
                 }
             },
         );
         match HISTORY.get() {
             None => {
                 match HISTORY.set(Mutex::new(instance)) {
-                    Ok(a) => a,
-                    Err(_) => std::panic::panic_any(std::io::Error::new(
+                    Ok(a) => return Ok(a),
+                    Err(_) => {
+                        return Err(std::io::Error::new(
                         std::io::ErrorKind::Other,
-                        "Error on initing static history",
-                    )),
+                        "Error on initing static history"
+                    ))},
                 };
             },
             Some(_) => ()
-        }
-    })
+        };
+        Ok(())
+    }})
     .join();
     match thread {
-        Ok(_) => (),
+        Ok(getted) => getted?,
         Err(_) => {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
@@ -183,8 +185,7 @@ pub fn get_history_w_file_by_rel(
         Some(data) => return Ok(data),
     };
 }
-
-pub fn insert_in_history(to_insert: &HistoryEntry) -> Result<(), std::io::Error> {
+pub fn get_history_w_file_by_rel_or_init(relationship_type: RelationshipType) -> Result<&'static mut HistoryWFile, std::io::Error>{
     let history = get_history()?;
     let dir_options: DirsOptions = match DirsOptions::new() {
         Ok(data) => data,
@@ -195,16 +196,16 @@ pub fn insert_in_history(to_insert: &HistoryEntry) -> Result<(), std::io::Error>
             ))
         }
     };
-    let history_w_file = match get_history_w_file_by_rel(to_insert.get_data_type()) {
+    let history_w_file = match get_history_w_file_by_rel(relationship_type) {
         Ok(data) => data,
         Err(error) => {
             let to_use;
             if error.kind() == std::io::ErrorKind::NotFound {
                 history.insert(
-                    to_insert.get_data_type(),
-                    init_history(to_insert.get_data_type(), &dir_options)?,
+                    relationship_type,
+                    init_history(relationship_type, &dir_options)?,
                 );
-                match get_history_w_file_by_rel(to_insert.get_data_type()) {
+                match get_history_w_file_by_rel(relationship_type) {
                     Ok(data) => {
                         to_use = data;
                     }
@@ -216,6 +217,11 @@ pub fn insert_in_history(to_insert: &HistoryEntry) -> Result<(), std::io::Error>
             to_use
         }
     };
+    Ok(history_w_file)
+}
+
+pub fn insert_in_history(to_insert: &HistoryEntry) -> Result<(), std::io::Error> {
+    let history_w_file = get_history_w_file_by_rel_or_init(to_insert.get_data_type())?;
     history_w_file.get_history().add_uuid(to_insert.get_id())?;
     Ok(())
 }
