@@ -1,6 +1,6 @@
 use crate::methods::get_params;
 use crate::settings::files_dirs::DirsOptions;
-use crate::settings::{get_history, get_history_w_file_by_rel, get_history_w_file_by_rel_or_init};
+use crate::settings::{get_history_w_file_by_rel_or_init};
 use crate::utils::get_query_hash_value_or_else;
 use crate::utils::{
     get_all_downloaded_chapters, get_downloaded_chapter_of_a_manga,
@@ -15,7 +15,7 @@ use mangadex_api_schema::{ApiData, ApiObject};
 use mangadex_api_types::RelationshipType;
 use std::num::ParseIntError;
 use std::path::Path;
-use std::str::{FromStr, ParseBoolError};
+use std::str::{FromStr};
 
 /// try if the app is ok
 /// # How to use
@@ -314,7 +314,6 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
         let uuid_str = format!("urn:uuid:{}", id);
         match uuid::Uuid::from_str(uuid_str.as_str()) {
             Ok(uuid_data) => {
-                println!("{}", uuid_data.to_string());
                 if history_.get_history().is_in(uuid_data) == true {
                     HttpResponse::Ok()
                         .insert_header(("X-DOWNLOAD-FAILED", "true"))

@@ -50,9 +50,11 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         chapter_data.write_all(&bytes_)?;
         info!("created data.json");
     }
+    info!("debug step 1");
     match is_chapter_manga_there(format!("{}", chapter_id)) {
         Ok(data) => {
             if data == false {
+                info!("debug step 2");
                 patch_manga_by_chapter(format!("{}", chapter_id)).await?;
             }
         }
@@ -61,14 +63,13 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             warn!("Warning {}!", error);
         }
     }
+    info!("debug step 3");
     let mut files_: Vec<String> = Vec::new();
-    let mut failed: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
     let page_filenames = at_home.chapter.data;
     for filename in page_filenames {
         let path_to_use = format!("{}/{}", chapter_dir, &filename);
         let path_to_use_clone = path_to_use.clone();
-        let mut file = File::open(path_to_use)?;
         // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
         let page_url = at_home.base_url.join(&format!(
             "/{quality_mode}/{chapter_hash}/{page_filename}",
@@ -76,53 +77,78 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             chapter_hash = at_home.chapter.hash,
             page_filename = filename
         ))?;
+        info!("debug step 4");
         match utils::send_request(http_client.get(page_url), 5).await {
             Ok(res) => {
-                let res_length = res.content_length();
-                // The data should be streamed rather than downloading the data all at once.
-                if Path::new(path_to_use_clone.as_str()).exists() == false
-                    || res_length.is_none() == true
-                    || file.metadata()?.len()
-                        != match res_length {
-                            Some(d) => {
-                                //info!("data length : {}", d);
-                                d
-                            }
-                            None => 0,
-                        }
-                {
-                    match res.bytes().await {
-                        core::result::Result::Err(error) => {
-                            //info!("error on fetching data : {}", error.to_string());
-                            return Err(anyhow::Error::new(error));
-                        }
-                        core::result::Result::Ok(bytes) => {
-                            file = File::create(path_to_use_clone)?;
-                            match file.write_all(&bytes) {
+                match File::open(path_to_use) {
+                    Ok(file) => {
+                        let res_length = res.content_length();
+                        // The data should be streamed rather than downloading the data all at once.
+                        if Path::new(path_to_use_clone.as_str()).exists() == false
+                            || res_length.is_none() == true
+                            || file.metadata()?.len()
+                                != match res_length {
+                                    Some(d) => {
+                                        //info!("data length : {}", d);
+                                        d
+                                    }
+                                    None => 0,
+                                }
+                        {
+                            match res.bytes().await {
                                 core::result::Result::Err(error) => {
-                                    //info!(" at file write_all : {}", error.to_string());
+                                    //info!("error on fetching data : {}", error.to_string());
                                     return Err(anyhow::Error::new(error));
                                 }
-                                core::result::Result::Ok(_) => {
-                                    info!("downloaded {} ", &filename);
-                                    files_.push(format!("{}", &filename));
+                                core::result::Result::Ok(bytes) => {
+                                    let mut file = File::create(path_to_use_clone)?;
+                                    match file.write_all(&bytes) {
+                                        core::result::Result::Err(error) => {
+                                            //info!(" at file write_all : {}", error.to_string());
+                                            return Err(anyhow::Error::new(error));
+                                        }
+                                        core::result::Result::Ok(_) => {
+                                            info!("downloaded {} ", &filename);
+                                            files_.push(format!("{}", &filename));
+                                        }
+                                    };
                                 }
                             };
+                            // This is where you would download the file but for this example,
+                            // we're just printing the raw data.
                         }
-                    };
-                    // This is where you would download the file but for this example,
-                    // we're just printing the raw data.
-                }
+                    }
+                    Err(_) => {
+                        match res.bytes().await {
+                            core::result::Result::Err(error) => {
+                                //info!("error on fetching data : {}", error.to_string());
+                                return Err(anyhow::Error::new(error));
+                            }
+                            core::result::Result::Ok(bytes) => {
+                                let mut file = File::create(path_to_use_clone)?;
+                                match file.write_all(&bytes) {
+                                    core::result::Result::Err(error) => {
+                                        //info!(" at file write_all : {}", error.to_string());
+                                        return Err(anyhow::Error::new(error));
+                                    }
+                                    core::result::Result::Ok(_) => {
+                                        info!("downloaded {} ", &filename);
+                                        files_.push(format!("{}", &filename));
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
             }
-            Err(_) => {
-                failed.push(format!("{}", &filename));
+            Err(error) => {
+                return Err(anyhow::Error::new(error));
             }
         };
     }
     let jsons = json!({
         "result" : "ok",
         "dir" : chapter_dir,
-        "failed" : failed,
         "downloaded" : files_
     });
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
@@ -168,13 +194,11 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         }
     }
     let mut files_: Vec<String> = Vec::new();
-    let mut failed: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
     let page_filenames = at_home.chapter.data_saver;
     for filename in page_filenames {
         let path_to_use = format!("{}/{}", chapter_dir, &filename);
         let path_to_use_clone = format!("{}/{}", chapter_dir, &filename);
-        let mut file = File::open(path_to_use)?;
         // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
         let page_url = at_home.base_url.join(&format!(
             "/{quality_mode}/{chapter_hash}/{page_filename}",
@@ -184,55 +208,78 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         ))?;
         match utils::send_request(http_client.get(page_url), 5).await {
             Ok(res) => {
-                let res_length = res.content_length();
-                // The data should be streamed rather than downloading the data all at once.
-                if Path::new(path_to_use_clone.as_str()).exists() == false
-                    || res_length.is_none() == true
-                    || file.metadata()?.len()
-                        != match res_length {
-                            Some(d) => {
-                                //info!("data length : {}", d);
-                                d
-                            }
-                            None => 0,
-                        }
-                {
-                    match res.bytes().await {
-                        core::result::Result::Err(error) => {
-                            //info!("error on fetching data : {}", error.to_string());
-                            return Err(anyhow::Error::new(error));
-                        }
-                        core::result::Result::Ok(bytes) => {
-                            file = File::create(path_to_use_clone)?;
-                            match file.write_all(&bytes) {
+                match File::open(path_to_use) {
+                    Ok(file) => {
+                        let res_length = res.content_length();
+                        // The data should be streamed rather than downloading the data all at once.
+                        if Path::new(path_to_use_clone.as_str()).exists() == false
+                            || res_length.is_none() == true
+                            || file.metadata()?.len()
+                                != match res_length {
+                                    Some(d) => {
+                                        //info!("data length : {}", d);
+                                        d
+                                    }
+                                    None => 0,
+                                }
+                        {
+                            match res.bytes().await {
                                 core::result::Result::Err(error) => {
-                                    //info!(" at file write_all : {}", error.to_string());
+                                    //info!("error on fetching data : {}", error.to_string());
                                     return Err(anyhow::Error::new(error));
                                 }
-                                core::result::Result::Ok(_) => {
-                                    info!("downloaded {} ", &filename);
-                                    files_.push(format!("{}", &filename));
+                                core::result::Result::Ok(bytes) => {
+                                    let mut file = File::create(path_to_use_clone)?;
+                                    match file.write_all(&bytes) {
+                                        core::result::Result::Err(error) => {
+                                            //info!(" at file write_all : {}", error.to_string());
+                                            return Err(anyhow::Error::new(error));
+                                        }
+                                        core::result::Result::Ok(_) => {
+                                            info!("downloaded {} ", &filename);
+                                            files_.push(format!("{}", &filename));
+                                        }
+                                    };
                                 }
                             };
+                            // This is where you would download the file but for this example,
+                            // we're just printing the raw data.
                         }
-                    };
-                    // This is where you would download the file but for this example,
-                    // we're just printing the raw data.
-                }
+                    }
+                    Err(_) => {
+                        match res.bytes().await {
+                            core::result::Result::Err(error) => {
+                                //info!("error on fetching data : {}", error.to_string());
+                                return Err(anyhow::Error::new(error));
+                            }
+                            core::result::Result::Ok(bytes) => {
+                                let mut file = File::create(path_to_use_clone)?;
+                                match file.write_all(&bytes) {
+                                    core::result::Result::Err(error) => {
+                                        //info!(" at file write_all : {}", error.to_string());
+                                        return Err(anyhow::Error::new(error));
+                                    }
+                                    core::result::Result::Ok(_) => {
+                                        info!("downloaded {} ", &filename);
+                                        files_.push(format!("{}", &filename));
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
             }
-            Err(_) => {
-                failed.push(format!("{}", &filename));
+            Err(error) => {
+                return Err(anyhow::Error::new(error));
             }
         };
     }
     let jsons = json!({
         "result" : "ok",
         "dir" : chapter_dir,
-        "failed" : failed,
         "downloaded" : files_
     });
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
     let _ = file.write_all(jsons.to_string().as_bytes());
     Ok(jsons)
 }
-
