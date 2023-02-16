@@ -50,20 +50,18 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         chapter_data.write_all(&bytes_)?;
         info!("created data.json");
     }
-    info!("debug step 1");
     match is_chapter_manga_there(format!("{}", chapter_id)) {
         Ok(data) => {
             if data == false {
-                info!("debug step 2");
                 patch_manga_by_chapter(format!("{}", chapter_id)).await?;
             }
         }
         Err(e) => {
             let error = e.to_string();
             warn!("Warning {}!", error);
+            patch_manga_by_chapter(format!("{}", chapter_id)).await?;
         }
     }
-    info!("debug step 3");
     let mut files_: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
     let page_filenames = at_home.chapter.data;
@@ -77,7 +75,6 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             chapter_hash = at_home.chapter.hash,
             page_filename = filename
         ))?;
-        info!("debug step 4");
         match utils::send_request(http_client.get(page_url), 5).await {
             Ok(res) => {
                 match File::open(path_to_use) {
@@ -191,6 +188,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         Err(e) => {
             let error = e.to_string();
             warn!("Warning {}!", error);
+            patch_manga_by_chapter(format!("{}", chapter_id)).await?;
         }
     }
     let mut files_: Vec<String> = Vec::new();
