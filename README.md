@@ -1,5 +1,7 @@
 # special eureka (mangadex-desktop-api2)
 
+[![Rust](https://github.com/tonymushah/eureka-mmanager/actions/workflows/rust.yml/badge.svg)](https://github.com/tonymushah/eureka-mmanager/actions/workflows/rust.yml)
+
 ## What is this??
 
 It's a ... um ... i don't know what to describe this but it's just a system to download and manage the offline data of the [special-eureka](https://github.com/tonymushah/special-eureka) app. \
