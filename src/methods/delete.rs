@@ -19,7 +19,7 @@ use std::path::Path;
 #[delete("/chapter/{id}")]
 pub async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
     let jsons: serde_json::Value;
-    let chapter_path = this_api_result!(DirsOptions::new()).mangas_add(format!("{}", id).as_str());
+    let chapter_path = this_api_result!(DirsOptions::new()).chapters_add(format!("{}", id).as_str());
     if Path::new(chapter_path.as_str()).exists() == true {
         this_api_result!(std::fs::remove_dir_all(chapter_path));
         jsons = serde_json::json!({
