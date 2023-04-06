@@ -1,8 +1,8 @@
 use crate::methods::get_params;
 use crate::settings::files_dirs::DirsOptions;
 use crate::settings::{get_history_w_file_by_rel_or_init};
-use crate::utils::get_query_hash_value_or_else;
-use crate::utils::{
+use crate::utils::query::get_query_hash_value_or_else;
+use crate::utils::manga::{
     get_all_downloaded_chapters, get_downloaded_chapter_of_a_manga,
     get_downloaded_cover_of_a_manga_collection, get_downloaded_manga,
 };

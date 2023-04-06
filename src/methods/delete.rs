@@ -1,5 +1,5 @@
 use crate::{this_api_option, this_api_result};
-use crate::utils::{
+use crate::utils::manga::{
     find_and_delete_all_downloades_by_manga_id
 };
 use actix_web::http::header::{ContentType};

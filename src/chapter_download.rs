@@ -12,7 +12,7 @@ use crate::{
     settings::{
         self, commit_rel, file_history::HistoryEntry, insert_in_history, remove_in_history,
     },
-    utils::{self, is_chapter_manga_there, patch_manga_by_chapter, send_request},
+    utils::{self, chapter::{is_chapter_manga_there, patch_manga_by_chapter}, send_request},
 };
 
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {

@@ -2,8 +2,8 @@ use crate::cover_download::{
     cover_download_by_manga_id,
 };
 use crate::{this_api_result, this_api_option};
-use crate::utils::{
-    is_chapter_manga_there, patch_manga_by_chapter,
+use crate::utils::chapter::{
+    is_chapter_manga_there, patch_manga_by_chapter, update_chap_by_id,
 };
 use actix_web::http::header::{ContentType};
 use actix_web::{
@@ -89,7 +89,7 @@ pub async fn patch_all_chapter() -> impl Responder {
                 format!("can't reconize file")
             )
             .to_string();
-            vecs.push(this_api_result!(crate::utils::update_chap_by_id(id.clone()).await));
+            vecs.push(this_api_result!(update_chap_by_id(id.clone()).await));
             info!("downloaded chapter data {}", id);
         }
         HttpResponse::Ok().content_type(ContentType::json()).body(
@@ -130,7 +130,7 @@ pub async fn patch_all_chapter_manga() -> impl Responder {
             let id_clone_clone = id.clone();
             if this_api_result!(is_chapter_manga_there(id)) == false {
                 vecs.push(this_api_result!(
-                    crate::utils::patch_manga_by_chapter(id_clone).await
+                    patch_manga_by_chapter(id_clone).await
                 ));
             }
 

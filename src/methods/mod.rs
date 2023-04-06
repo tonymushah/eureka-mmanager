@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use actix_web::HttpRequest;
 
-use crate::utils::query_string_to_hash_map;
+use crate::utils::query::query_string_to_hash_map;
 
 pub mod get;
 pub mod patch;

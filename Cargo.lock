@@ -3,6 +3,30 @@
 version = 3
 
 [[package]]
+name = "actix"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f728064aca1c318585bf4bb04ffcfac9e75e508ab4e8b1bd9ba5dfe04e2cbed5"
+dependencies = [
+ "actix-rt",
+ "actix_derive",
+ "bitflags",
+ "bytes",
+ "crossbeam-channel",
+ "futures-core",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "pin-project-lite",
+ "smallvec",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "actix-codec"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -108,6 +132,7 @@ version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ea16c295198e958ef31930a6ef37d0fb64e9ca3b6116e6b93a8bdae96ee1000"
 dependencies = [
+ "actix-macros",
  "futures-core",
  "tokio",
 ]
@@ -199,6 +224,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fa9362663c8643d67b2d5eafba49e4cb2c8a053a29ed00a0bea121f17c76b13"
 dependencies = [
  "actix-router",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "actix_derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d44b8fee1ced9671ba043476deddef739dd0959bf77030b26b738cc591737a7"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",
@@ -507,6 +543,25 @@ name = "crc32fast"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b540bd8bc810d3885c6ea91e2018302f68baba2129ab3e88f32389ee9370880d"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
+name = "crossbeam-channel"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf2b3e8478797446514c91ef04bafcb59faba183e621ad488df88983cc14128c"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+]
+
+[[package]]
+name = "crossbeam-utils"
+version = "0.8.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c063cd8cc95f5c377ed0d4b49a4b21f632396ff690e8470c29b3359b346984b"
 dependencies = [
  "cfg-if",
 ]
@@ -1148,10 +1203,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "mangadex-api-rust"
-version = "2.0.0-rc.1"
+name = "mangadex-api"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b82e97d737b5718715eef7f2e4c78ac3e09f479349b85c5df9984f31257970e"
+checksum = "e52f36edfc925ef0ecbeae652c6072d259faef5d9886842b754a787683b55610"
 dependencies = [
  "derive_builder",
  "futures",
@@ -1168,9 +1223,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api-schema-rust"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea7428a2f45ffda38df65a662e0fd1f9217f932bf16af9457aa12fee962bb73f"
+checksum = "7922c906e1daad375e49bc37110ee5d40804a490ca083261c58a8c8186a0341a"
 dependencies = [
  "mangadex-api-types-rust",
  "reqwest",
@@ -1183,9 +1238,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api-types-rust"
-version = "0.1.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "272fd27f4a90751b86bd733be31558ae2010aeaaaaa019f86d1f8f1562f29be9"
+checksum = "72d0e06eca57823d6b1c03378885cc0ddf0ea946222eeb1e6defbaf24a7998b7"
 dependencies = [
  "anyhow",
  "derive_builder",
@@ -1199,9 +1254,11 @@ dependencies = [
 
 [[package]]
 name = "mangadex-desktop-api2"
-version = "0.1.5"
+version = "0.2.0"
 dependencies = [
+ "actix",
  "actix-files",
+ "actix-rt",
  "actix-web",
  "anyhow",
  "clap",
@@ -1212,7 +1269,7 @@ dependencies = [
  "futures",
  "json",
  "log",
- "mangadex-api-rust",
+ "mangadex-api",
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
  "once_cell",
