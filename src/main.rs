@@ -7,20 +7,20 @@
 
 //use std::fs;
 
-use mangadex_api_schema::{ApiObject, v5::ChapterAttributes};
-use mangadex_api_types::{ReferenceExpansionResource, RelationshipType};
+//use mangadex_api_schema::{ApiObject, v5::ChapterAttributes};
+//use mangadex_api_types::{ReferenceExpansionResource, RelationshipType};
 use mangadex_desktop_api2::{launch_server_default, verify_all_fs};
-use mangadex_api::MangaDexClient;
+//use mangadex_api::MangaDexClient;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    /*fern::Dispatch::new()
+    fern::Dispatch::new()
         .level(log::LevelFilter::Info)
         .chain(std::io::stdout())
-        .apply().unwrap();*/
-    //verify_all_fs()?;
-    //launch_server_default()?;
-    let client = MangaDexClient::default();
+        .apply().unwrap();
+    verify_all_fs()?;
+    launch_server_default()?;
+    /*let client = MangaDexClient::default();
     let getted = client
         .chapter()
         .get()
@@ -31,6 +31,6 @@ async fn main() -> anyhow::Result<()> {
         .build()?
         .send()
         .await?;
-    println!("{}", serde_json::to_string(&getted)?);
+    println!("{}", serde_json::to_string(&getted)?);*/
     anyhow::Ok(())
 }

@@ -1,4 +1,3 @@
-use anyhow::Ok;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -10,9 +9,13 @@ pub struct DirsOptions{
 }
 
 impl DirsOptions{
-    pub fn new() -> anyhow::Result<DirsOptions>{
+    pub fn new_() -> std::io::Result<DirsOptions>{
         let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string("./settings/files-dirs.json")?.as_str())?;
         Ok(instance)
+    }
+    pub fn new() -> anyhow::Result<DirsOptions>{
+        let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string("./settings/files-dirs.json")?.as_str())?;
+        anyhow::Ok(instance)
     }
     pub fn data_dir_add(&self, path: &str) -> String{
         return format!("{}/{}", self.data_dir, path);
