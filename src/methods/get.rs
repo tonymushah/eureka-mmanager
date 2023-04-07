@@ -428,11 +428,17 @@ pub async fn find_manga_chapters_by_id(
     )
 }
 
-/* 
+
 #[get("/manga/{id}/aggregate")]
 pub async fn aggregate_manga(
     id : web::Path<String>
 ) -> impl Responder {
-    
+    let aggregate = this_api_result!(crate::utils::manga_aggregate::aggregate_manga_chapters(id.to_string()).await);
+    HttpResponse::Ok().content_type(ContentType::json()).body(
+        serde_json::json!({
+            "result" : "ok",
+            "volumes" : aggregate.volumes
+        })
+        .to_string(),
+    )
 }
-*/
