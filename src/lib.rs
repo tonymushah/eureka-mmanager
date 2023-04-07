@@ -8,9 +8,7 @@ use log::{info, warn};
 use settings::server_options;
 
 mod methods;
-pub mod chapter_download;
-pub mod cover_download;
-pub mod manga_download;
+pub mod download;
 pub mod settings;
 pub mod utils;
 pub mod server;

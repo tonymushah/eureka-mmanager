@@ -1,9 +1,9 @@
-use crate::chapter_download::{download_chapter, download_chapter_saver};
-use crate::cover_download::{
+use crate::download::chapter::{download_chapter, download_chapter_saver};
+use crate::download::cover::{
     all_covers_download_quality_by_manga_id, cover_download_by_cover, cover_download_by_manga_id,
     cover_download_quality_by_cover, cover_download_quality_by_manga_id,
 };
-use crate::manga_download::download_manga;
+use crate::download::manga::download_manga;
 use crate::this_api_result;
 use actix_web::http::header::{ContentType};
 use actix_web::{

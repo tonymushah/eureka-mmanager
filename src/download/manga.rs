@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Write};
 
-use crate::cover_download::cover_download_by_manga_id;
+use crate::download::cover::cover_download_by_manga_id;
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::send_request;
 

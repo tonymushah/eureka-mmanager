@@ -1,4 +1,4 @@
-use crate::cover_download::{
+use crate::download::cover::{
     cover_download_by_manga_id,
 };
 use crate::{this_api_result, this_api_option};

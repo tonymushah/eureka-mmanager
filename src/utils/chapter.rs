@@ -4,7 +4,7 @@ use log::info;
 use mangadex_api_schema::{ApiObject, ApiData, v5::ChapterAttributes};
 use mangadex_api_types::RelationshipType;
 
-use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry, insert_in_history, commit_rel, remove_in_history}, utils::manga::is_manga_cover_there, manga_download::download_manga, cover_download::cover_download_by_manga_id};
+use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry, insert_in_history, commit_rel, remove_in_history}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id};
 
 use super::manga::is_manga_there;
 

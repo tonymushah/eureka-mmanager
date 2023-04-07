@@ -41,6 +41,86 @@ async fn verify_chapter_and_manga(chapter_id: &Uuid, http_client : &reqwest::Cli
     anyhow::Ok(())
 }
 
+async fn download_chapter_file<U>(
+    http_client : &reqwest::Client,
+    page_url : U,
+    path_to_use : &String,
+    files_ : &mut Vec<String>,
+    filename : &String
+) -> anyhow::Result<()>
+where 
+    U : reqwest::IntoUrl
+{
+    match utils::send_request(http_client.get(page_url), 5).await {
+            Ok(res) => {
+                match File::open(path_to_use) {
+                    Ok(file) => {
+                        let res_length = res.content_length();
+                        // The data should be streamed rather than downloading the data all at once.
+                        if Path::new(path_to_use.as_str()).exists() == false
+                            || res_length.is_none() == true
+                            || file.metadata()?.len()
+                                != match res_length {
+                                    Some(d) => {
+                                        //info!("data length : {}", d);
+                                        d
+                                    }
+                                    None => 0,
+                                }
+                        {
+                            match res.bytes().await {
+                                core::result::Result::Err(error) => {
+                                    //info!("error on fetching data : {}", error.to_string());
+                                    return Err(anyhow::Error::new(error));
+                                }
+                                core::result::Result::Ok(bytes) => {
+                                    let mut file = File::create(path_to_use)?;
+                                    match file.write_all(&bytes) {
+                                        core::result::Result::Err(error) => {
+                                            //info!(" at file write_all : {}", error.to_string());
+                                            return Err(anyhow::Error::new(error));
+                                        }
+                                        core::result::Result::Ok(_) => {
+                                            info!("downloaded {} ", &filename);
+                                            files_.push(format!("{}", &filename));
+                                        }
+                                    };
+                                }
+                            };
+                            // This is where you would download the file but for this example,
+                            // we're just printing the raw data.
+                        }
+                    }
+                    Err(_) => {
+                        match res.bytes().await {
+                            core::result::Result::Err(error) => {
+                                //info!("error on fetching data : {}", error.to_string());
+                                return Err(anyhow::Error::new(error));
+                            }
+                            core::result::Result::Ok(bytes) => {
+                                let mut file = File::create(path_to_use)?;
+                                match file.write_all(&bytes) {
+                                    core::result::Result::Err(error) => {
+                                        //info!(" at file write_all : {}", error.to_string());
+                                        return Err(anyhow::Error::new(error));
+                                    }
+                                    core::result::Result::Ok(_) => {
+                                        info!("downloaded {} ", &filename);
+                                        files_.push(format!("{}", &filename));
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+            Err(error) => {
+                return Err(anyhow::Error::new(error));
+            }
+        };
+    anyhow::Ok(())
+}
+
 pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
     let chapter_id = Uuid::parse_str(chapter_id)?;
     let history_entry =
@@ -74,7 +154,6 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
     let page_filenames = at_home.chapter.data;
     for filename in page_filenames {
         let path_to_use = format!("{}/{}", chapter_dir, &filename);
-        let path_to_use_clone = path_to_use.clone();
         // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
         let page_url = at_home.base_url.join(&format!(
             "/{quality_mode}/{chapter_hash}/{page_filename}",
@@ -82,73 +161,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
             chapter_hash = at_home.chapter.hash,
             page_filename = filename
         ))?;
-        match utils::send_request(http_client.get(page_url), 5).await {
-            Ok(res) => {
-                match File::open(path_to_use) {
-                    Ok(file) => {
-                        let res_length = res.content_length();
-                        // The data should be streamed rather than downloading the data all at once.
-                        if Path::new(path_to_use_clone.as_str()).exists() == false
-                            || res_length.is_none() == true
-                            || file.metadata()?.len()
-                                != match res_length {
-                                    Some(d) => {
-                                        //info!("data length : {}", d);
-                                        d
-                                    }
-                                    None => 0,
-                                }
-                        {
-                            match res.bytes().await {
-                                core::result::Result::Err(error) => {
-                                    //info!("error on fetching data : {}", error.to_string());
-                                    return Err(anyhow::Error::new(error));
-                                }
-                                core::result::Result::Ok(bytes) => {
-                                    let mut file = File::create(path_to_use_clone)?;
-                                    match file.write_all(&bytes) {
-                                        core::result::Result::Err(error) => {
-                                            //info!(" at file write_all : {}", error.to_string());
-                                            return Err(anyhow::Error::new(error));
-                                        }
-                                        core::result::Result::Ok(_) => {
-                                            info!("downloaded {} ", &filename);
-                                            files_.push(format!("{}", &filename));
-                                        }
-                                    };
-                                }
-                            };
-                            // This is where you would download the file but for this example,
-                            // we're just printing the raw data.
-                        }
-                    }
-                    Err(_) => {
-                        match res.bytes().await {
-                            core::result::Result::Err(error) => {
-                                //info!("error on fetching data : {}", error.to_string());
-                                return Err(anyhow::Error::new(error));
-                            }
-                            core::result::Result::Ok(bytes) => {
-                                let mut file = File::create(path_to_use_clone)?;
-                                match file.write_all(&bytes) {
-                                    core::result::Result::Err(error) => {
-                                        //info!(" at file write_all : {}", error.to_string());
-                                        return Err(anyhow::Error::new(error));
-                                    }
-                                    core::result::Result::Ok(_) => {
-                                        info!("downloaded {} ", &filename);
-                                        files_.push(format!("{}", &filename));
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-            Err(error) => {
-                return Err(anyhow::Error::new(error));
-            }
-        };
+        download_chapter_file(&http_client, page_url, &path_to_use, &mut files_, &filename).await?;
     }
     let jsons = json!({
         "result" : "ok",
@@ -183,7 +196,6 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
     let page_filenames = at_home.chapter.data_saver;
     for filename in page_filenames {
         let path_to_use = format!("{}/{}", chapter_dir, &filename);
-        let path_to_use_clone = format!("{}/{}", chapter_dir, &filename);
         // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
         let page_url = at_home.base_url.join(&format!(
             "/{quality_mode}/{chapter_hash}/{page_filename}",
@@ -191,73 +203,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
             chapter_hash = at_home.chapter.hash,
             page_filename = filename
         ))?;
-        match utils::send_request(http_client.get(page_url), 5).await {
-            Ok(res) => {
-                match File::open(path_to_use) {
-                    Ok(file) => {
-                        let res_length = res.content_length();
-                        // The data should be streamed rather than downloading the data all at once.
-                        if Path::new(path_to_use_clone.as_str()).exists() == false
-                            || res_length.is_none() == true
-                            || file.metadata()?.len()
-                                != match res_length {
-                                    Some(d) => {
-                                        //info!("data length : {}", d);
-                                        d
-                                    }
-                                    None => 0,
-                                }
-                        {
-                            match res.bytes().await {
-                                core::result::Result::Err(error) => {
-                                    //info!("error on fetching data : {}", error.to_string());
-                                    return Err(anyhow::Error::new(error));
-                                }
-                                core::result::Result::Ok(bytes) => {
-                                    let mut file = File::create(path_to_use_clone)?;
-                                    match file.write_all(&bytes) {
-                                        core::result::Result::Err(error) => {
-                                            //info!(" at file write_all : {}", error.to_string());
-                                            return Err(anyhow::Error::new(error));
-                                        }
-                                        core::result::Result::Ok(_) => {
-                                            info!("downloaded {} ", &filename);
-                                            files_.push(format!("{}", &filename));
-                                        }
-                                    };
-                                }
-                            };
-                            // This is where you would download the file but for this example,
-                            // we're just printing the raw data.
-                        }
-                    }
-                    Err(_) => {
-                        match res.bytes().await {
-                            core::result::Result::Err(error) => {
-                                //info!("error on fetching data : {}", error.to_string());
-                                return Err(anyhow::Error::new(error));
-                            }
-                            core::result::Result::Ok(bytes) => {
-                                let mut file = File::create(path_to_use_clone)?;
-                                match file.write_all(&bytes) {
-                                    core::result::Result::Err(error) => {
-                                        //info!(" at file write_all : {}", error.to_string());
-                                        return Err(anyhow::Error::new(error));
-                                    }
-                                    core::result::Result::Ok(_) => {
-                                        info!("downloaded {} ", &filename);
-                                        files_.push(format!("{}", &filename));
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-            Err(error) => {
-                return Err(anyhow::Error::new(error));
-            }
-        };
+        download_chapter_file(&http_client, page_url, &path_to_use, &mut files_, &filename).await?;
     }
     let jsons = json!({
         "result" : "ok",
@@ -267,4 +213,22 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
     let _ = file.write_all(jsons.to_string().as_bytes());
     Ok(jsons)
+}
+
+#[cfg(test)]
+mod tests{
+    use crate::settings::init_static_history;
+
+    use super::*;
+    
+    /// this will test the downloading for this chapter 
+    /// https://mangadex.org/chapter/b8e7925e-581a-4c06-a964-0d822053391a
+    /// 
+    /// Dev note : Don't go there it's an H...
+    #[tokio::test]
+    async fn test_download_chapter_normal(){
+        init_static_history().unwrap();
+        let chapter_id = "b8e7925e-581a-4c06-a964-0d822053391a";
+        download_chapter(chapter_id).await.unwrap();
+    }
 }
