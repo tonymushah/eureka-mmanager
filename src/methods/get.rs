@@ -10,9 +10,9 @@ use crate::{this_api_option, this_api_result};
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use log::info;
+use mangadex_api::types::RelationshipType;
 use mangadex_api_schema::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema::{ApiData, ApiObject};
-use mangadex_api_types::RelationshipType;
 use std::num::ParseIntError;
 use std::path::Path;
 use std::str::{FromStr};
@@ -309,7 +309,7 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
     let path = file_dirs.chapters_add(format!("{}/data.json", id).as_str());
     if Path::new(path.as_str()).exists() == true {
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
-        let history_ = this_api_result!(get_history_w_file_by_rel_or_init(RelationshipType::Chapter));
+        let history_ = this_api_result!(get_history_w_file_by_rel_or_init(mangadex_api_types::RelationshipType::Chapter));
 
         let uuid_str = format!("urn:uuid:{}", id);
         match uuid::Uuid::from_str(uuid_str.as_str()) {

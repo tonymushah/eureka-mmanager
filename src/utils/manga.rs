@@ -1,15 +1,16 @@
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::{ErrorKind};
 use std::path::Path;
 use anyhow::Ok;
+use mangadex_api::types::RelationshipType;
 use mangadex_api_schema::v5::{
-    ChapterAttributes, MangaAttributes, MangaAggregateResponse, MangaAggregate
+    ChapterAttributes, MangaAttributes,
 };
 use mangadex_api_schema::{
     ApiData, 
     ApiObject
 };
-use mangadex_api_types::RelationshipType;
 
 use crate::settings::files_dirs::DirsOptions;
 
@@ -288,10 +289,28 @@ pub async fn get_all_downloaded_chapter_data(manga_id : String) -> Result<Vec<Ap
         anyhow::Result::Ok(d) => d,
         Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     };
-    let data = match get_chapters_by_vec_id(data) {
+    let mut data = match get_chapters_by_vec_id(data) {
         anyhow::Result::Ok(d) => d,
         Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     };
+    data.sort_by(|a, b| {
+        let a = match a.attributes.chapter.clone() {
+            None => return Ordering::Equal,
+            Some(d) => d
+        };
+        let b = match b.attributes.chapter.clone() {
+            None => return Ordering::Equal,
+            Some(d) => d
+        };
+        let a_chp = match a.parse::<usize>() {
+            core::result::Result::Ok(d) => d,
+            Err(_) => return Ordering::Equal
+        };
+        let b_chp = match b.parse::<usize>() {
+            core::result::Result::Ok(d) => d,
+            Err(_) => return Ordering::Equal
+        };
+        a_chp.cmp(&b_chp)
+    });
     core::result::Result::Ok(data)
 }
-

@@ -1289,9 +1289,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e52f36edfc925ef0ecbeae652c6072d259faef5d9886842b754a787683b55610"
+checksum = "6012c57aedc0dd38d6716cfdf6b78610854e91e46bfca7906e368d25c5321029"
 dependencies = [
  "derive_builder",
  "futures",
@@ -1308,9 +1308,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api-schema-rust"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7922c906e1daad375e49bc37110ee5d40804a490ca083261c58a8c8186a0341a"
+checksum = "ee037df3b66ab648a03c3355663a0e2e4833e6e0e5d7968fb4d41e53ce1cc334"
 dependencies = [
  "mangadex-api-types-rust",
  "reqwest",
@@ -1323,9 +1323,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api-types-rust"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72d0e06eca57823d6b1c03378885cc0ddf0ea946222eeb1e6defbaf24a7998b7"
+checksum = "20d7990e082965caa6dc0fb8c27add0c3878135b4ae8ec617e835371d64f54c2"
 dependencies = [
  "anyhow",
  "derive_builder",
@@ -1339,7 +1339,7 @@ dependencies = [
 
 [[package]]
 name = "mangadex-desktop-api2"
-version = "0.2.0"
+version = "0.2.0-rc1"
 dependencies = [
  "actix",
  "actix-rt",

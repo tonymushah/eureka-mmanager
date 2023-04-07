@@ -7,9 +7,9 @@ use actix_web::{
     delete, web, HttpResponse,
     Responder,
 };
+use mangadex_api::types::RelationshipType;
 use mangadex_api_schema::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema::{ApiData, ApiObject};
-use mangadex_api_types::RelationshipType;
 use crate::settings::files_dirs::DirsOptions;
 use std::path::Path;
 
