@@ -1,6 +1,6 @@
 use crate::methods::get_params;
 use crate::settings::files_dirs::DirsOptions;
-use crate::settings::{get_history_w_file_by_rel_or_init};
+use crate::r#static::history::{get_history_w_file_by_rel_or_init};
 use crate::utils::query::get_query_hash_value_or_else;
 use crate::utils::manga::{
     get_all_downloaded_chapters, get_downloaded_chapter_of_a_manga,
@@ -427,3 +427,12 @@ pub async fn find_manga_chapters_by_id(
         .to_string(),
     )
 }
+
+/* 
+#[get("/manga/{id}/aggregate")]
+pub async fn aggregate_manga(
+    id : web::Path<String>
+) -> impl Responder {
+    
+}
+*/

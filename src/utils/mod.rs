@@ -6,6 +6,7 @@ pub mod manga;
 pub mod query;
 pub mod cover;
 pub mod chapter;
+pub mod manga_aggregate;
 
 pub async fn send_request(to_use_arg: reqwest::RequestBuilder, tries_limits: u16) -> Result<reqwest::Response, std::io::Error>{
     let mut tries = 0;

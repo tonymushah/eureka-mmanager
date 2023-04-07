@@ -3,7 +3,7 @@ use std::io::{ErrorKind};
 use std::path::Path;
 use anyhow::Ok;
 use mangadex_api_schema::v5::{
-    ChapterAttributes, MangaAttributes
+    ChapterAttributes, MangaAttributes, MangaAggregateResponse, MangaAggregate
 };
 use mangadex_api_schema::{
     ApiData, 
@@ -13,6 +13,7 @@ use mangadex_api_types::RelationshipType;
 
 use crate::settings::files_dirs::DirsOptions;
 
+use super::chapter::get_chapters_by_vec_id;
 use super::collection::Collection;
 use super::cover::{get_cover_data, is_cover_there};
 
@@ -281,3 +282,16 @@ pub fn is_manga_there(manga_id: String) -> Result<bool, std::io::Error>{
         return Err(std::io::Error::new(std::io::ErrorKind::Other, "the manga_id should'nt be empty"));
     }
 }
+
+pub async fn get_all_downloaded_chapter_data(manga_id : String) -> Result<Vec<ApiObject<ChapterAttributes>>, std::io::Error> {
+    let data = match find_all_downloades_by_manga_id(manga_id).await {
+        anyhow::Result::Ok(d) => d,
+        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+    };
+    let data = match get_chapters_by_vec_id(data) {
+        anyhow::Result::Ok(d) => d,
+        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+    };
+    core::result::Result::Ok(data)
+}
+

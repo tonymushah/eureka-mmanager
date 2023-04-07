@@ -1,7 +1,10 @@
 use crate::server::launch_async_server;
 use crate::settings::file_history::{load_history};
 use crate::settings::{
-    initialise_data_dir, initialise_settings_dir, verify_data_dir, verify_settings_dir,
+    verifications::{
+        data::{initialise_data_dir, verify_data_dir}, 
+        settings::{initialise_settings_dir, verify_settings_dir}
+    }
 };
 use actix_web::dev::{Server};
 use log::{info, warn};
@@ -12,6 +15,7 @@ pub mod download;
 pub mod settings;
 pub mod utils;
 pub mod server;
+pub mod r#static;
 /// url not found handler
 ///
 ///

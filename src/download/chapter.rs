@@ -10,10 +10,12 @@ use uuid::Uuid;
 
 use crate::{
     settings::{
-        self, commit_rel, file_history::HistoryEntry, insert_in_history, remove_in_history,
+        self, file_history::HistoryEntry,
     },
     utils::{self, chapter::{is_chapter_manga_there, patch_manga_by_chapter}, send_request},
+    r#static::history::{commit_rel, insert_in_history, remove_in_history}
 };
+
 /// puting chapter data in a json data
 async fn verify_chapter_and_manga(chapter_id: &Uuid, http_client : &reqwest::Client, chapter_top_dir : &String) -> anyhow::Result<()>{
     if Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() == false {
@@ -217,7 +219,7 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
 
 #[cfg(test)]
 mod tests{
-    use crate::settings::init_static_history;
+    use crate::r#static::history::init_static_history;
 
     use super::*;
     

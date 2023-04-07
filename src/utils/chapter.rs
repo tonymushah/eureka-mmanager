@@ -4,7 +4,9 @@ use log::info;
 use mangadex_api_schema::{ApiObject, ApiData, v5::ChapterAttributes};
 use mangadex_api_types::RelationshipType;
 
-use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry, insert_in_history, commit_rel, remove_in_history}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id};
+use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id};
+
+use crate::r#static::history::{insert_in_history, commit_rel, remove_in_history};
 
 use super::manga::is_manga_there;
 
@@ -104,4 +106,45 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
     remove_in_history(&history_entry)?;
     commit_rel(history_entry.get_data_type())?;
     Ok(jsons)
+}
+
+pub fn get_chapter_by_id<T>(chap_id: T) -> anyhow::Result<ApiObject<ChapterAttributes>> 
+    where
+        T : ToString
+{
+    let file_dirs = DirsOptions::new()?;
+    //let file_dir_clone = file_dirs.clone();
+    let path = file_dirs.chapters_add(format!("{}/data.json", chap_id.to_string()).as_str());
+    let data : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_reader(File::open(path)?)?;
+    anyhow::Ok(data.data)
+}
+
+pub fn get_chapters_by_vec_id(chap_ids: Vec<String>) -> anyhow::Result<Vec<ApiObject<ChapterAttributes>>> {
+    let mut datas : Vec<ApiObject<ChapterAttributes>> = Vec::new();
+    for id in chap_ids {
+        datas.push(get_chapter_by_id(id)?);
+    }
+    anyhow::Ok(datas)
+}
+
+#[cfg(test)]
+mod tests{
+    use crate::utils::manga::find_all_downloades_by_manga_id;
+
+    use super::*;
+    #[tokio::test]
+    pub async fn test_get_chapter_by_id(){
+        let result = get_chapter_by_id("167fb8f3-1180-4b1c-ac02-a01dc24b8865".to_string());
+        let data = result.unwrap();
+        println!("{}", serde_json::to_string(&data).unwrap());
+    }
+    #[tokio::test]
+    pub async fn test_get_chapters_by_vec_ids(){
+        let manga_id = "17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8".to_string();
+        let manga_downloads = find_all_downloades_by_manga_id(manga_id).await.unwrap();
+        let datas = get_chapters_by_vec_id(manga_downloads).unwrap();
+        for chap in datas {
+            println!("{}", serde_json::to_string(&chap).unwrap())
+        }
+    }
 }

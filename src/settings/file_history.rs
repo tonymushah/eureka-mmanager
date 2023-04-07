@@ -3,7 +3,8 @@ use std::{io::{Write}};
 use mangadex_api_types::RelationshipType;
 use serde::{Serialize, Deserialize};
 
-use super::{files_dirs::DirsOptions, init_static_history};
+use super::{files_dirs::DirsOptions};
+use crate::r#static::history::init_static_history;
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct HistoryEntry{
