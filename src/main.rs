@@ -12,8 +12,7 @@
 use mangadex_desktop_api2::{launch_server_default, verify_all_fs};
 //use mangadex_api::MangaDexClient;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     fern::Dispatch::new()
         .level(log::LevelFilter::Info)
         .chain(std::io::stdout())
