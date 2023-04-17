@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.2.0-rc1"
+version = "0.2.0"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
@@ -39,6 +39,7 @@ fern = "0.6.1"
 actix = "0.13.0"
 actix-rt = "2.2"
 linfa-linear = { version = "0.6.1", optional = true}
+binary_search_tree = "0.2.2"
 
 [dev-dependencies]
 clap = { version = "3.1.2", features = ["derive"] }
