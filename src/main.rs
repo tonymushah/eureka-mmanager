@@ -6,68 +6,25 @@
 
 //use std::fs;
 
-use std::borrow::Borrow;
-use std::cmp::Ordering;
 use std::io::Write;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use mangadex_api_schema::{v5::ChapterAttributes, ApiObject};
 //use mangadex_api_schema::{ApiObject, v5::ChapterAttributes};
 //use mangadex_api_types::{ReferenceExpansionResource, RelationshipType};
 use binary_search_tree::BinarySearchTree;
 use mangadex_api::MangaDexClient;
-use mangadex_api_types::{RelationshipType, ReferenceExpansionResource, MangaFeedSortOrder, OrderDirection};
+use mangadex_api_types::{MangaFeedSortOrder, OrderDirection};
+use mangadex_desktop_api2::utils::feed::ChapterFeed;
 use mangadex_desktop_api2::{
     launch_server_default, utils::manga::get_all_downloaded_manga, verify_all_fs,
 };
-use serde::{Deserialize, Serialize};
 use std::fs::File;
-use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 //use mangadex_api::MangaDexClient;
 
-#[derive(Deserialize, Serialize)]
-struct ChapterFeed(ApiObject<ChapterAttributes>);
-
-impl Eq for ChapterFeed {}
-
-impl PartialOrd for ChapterFeed {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.0
-            .attributes
-            .readable_at
-            .as_ref()
-            .partial_cmp(other.0.attributes.readable_at.as_ref())
-    }
-}
-
-impl AsRef<ApiObject<ChapterAttributes>> for ChapterFeed {
-    fn as_ref(&self) -> &ApiObject<ChapterAttributes> {
-        &self.0
-    }
-}
-
-impl PartialEq for ChapterFeed {
-    fn eq(&self, other: &Self) -> bool {
-        self.0.id == other.0.id
-    }
-}
-
-impl Ord for ChapterFeed {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if self.0.id.cmp(&other.0.id) == Ordering::Equal {
-            return Ordering::Equal;
-        }
-        self.0
-            .attributes
-            .readable_at
-            .as_ref()
-            .cmp(other.0.attributes.readable_at.as_ref())
-    }
-}
 
 async fn collect_feed(
     manga_id: String,
@@ -85,7 +42,7 @@ async fn collect_feed(
         .send()
         .await??;
     for feed in feeds.data {
-        feed_.lock().await.insert(ChapterFeed(feed));
+        feed_.lock().await.insert(ChapterFeed::new(feed));
     }
     Ok(id)
 }
@@ -121,7 +78,8 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
         let feeds = Arc::clone(&chapter_data);
         let guard = feeds.lock().await;
-        let data = guard.sorted_vec();
+        let mut data = guard.sorted_vec();
+        data.reverse();
         let value = serde_json::json!({ "data": data });
         let mut result = File::create("./result.json").unwrap();
         result.write(value.to_string().as_bytes()).unwrap();
