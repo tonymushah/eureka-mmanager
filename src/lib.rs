@@ -1,4 +1,3 @@
-use crate::server::launch_async_server;
 use crate::settings::file_history::{load_history};
 use crate::settings::{
     verifications::{
@@ -16,9 +15,13 @@ pub mod settings;
 pub mod utils;
 pub mod server;
 pub mod r#static;
+#[cfg(feature = "feeds")]
+pub mod feeds;
 /// url not found handler
 ///
 ///
+
+pub use crate::server::launch_async_server;
 
 #[actix_web::main]
 /// it's launch the server in the given adrress and the given port

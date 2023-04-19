@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use mangadex_api_schema::{ApiObject, v5::ChapterAttributes};
 use serde::{Serialize, Deserialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct ChapterFeed(ApiObject<ChapterAttributes>);
 
 impl ChapterFeed {
