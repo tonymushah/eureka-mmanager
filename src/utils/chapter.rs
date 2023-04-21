@@ -1,4 +1,4 @@
-use std::{fs::File, io::{ErrorKind, Write}};
+use std::{fs::File, io::{ErrorKind, Write}, path::Path};
 
 use log::info;
 use mangadex_api_schema::{ApiObject, ApiData, v5::ChapterAttributes};
@@ -7,7 +7,7 @@ use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, uti
 
 use crate::r#static::history::{insert_in_history, commit_rel, remove_in_history};
 
-use super::manga::is_manga_there;
+use super::{manga::is_manga_there, collection::Collection};
 
 pub fn is_chapter_manga_there(chap_id: String) -> Result<bool, std::io::Error>{
     if chap_id.is_empty() == false {
@@ -141,7 +141,12 @@ pub fn get_chapter_by_id<T>(chap_id: T) -> anyhow::Result<ApiObject<ChapterAttri
 pub fn get_chapters_by_vec_id(chap_ids: Vec<String>) -> anyhow::Result<Vec<ApiObject<ChapterAttributes>>> {
     let mut datas : Vec<ApiObject<ChapterAttributes>> = Vec::new();
     for id in chap_ids {
-        datas.push(get_chapter_by_id(id)?);
+        match get_chapter_by_id(id) {
+            Ok(data_) => {
+                datas.push(data_);
+            },
+            Err(_) => ()
+        }
     }
     anyhow::Ok(datas)
 }
@@ -166,4 +171,51 @@ mod tests{
             println!("{}", serde_json::to_string(&chap).unwrap())
         }
     }
+}
+
+pub fn get_all_chapter()-> Result<Vec<String>, std::io::Error>{
+    let file_dirs = match DirsOptions::new() {
+        core::result::Result::Ok(data) => data,
+        Err(error) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                error.to_string(),
+            ))
+        }
+    };
+    //let file_dir_clone = file_dirs.clone();
+    let path = file_dirs.chapters_add("");
+    if Path::new(path.as_str()).exists() == true {
+        let list_dir = (std::fs::read_dir(path.as_str()))?;
+        let mut vecs: Vec<String> = Vec::new();
+        for files in list_dir {
+            
+                match (files)?.file_name().to_str() {
+                    Some(data) => {
+                        if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
+                            vecs.push(data.to_string());
+                        }
+                    },
+                    None => {
+                    }
+                }
+                
+            
+        }
+        return std::io::Result::Ok(vecs);
+    } else {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "can't find the manga directory",
+        ));
+    }
+}
+
+pub fn get_all_downloaded_chapters(
+    offset: usize,
+    limit: usize,
+) -> Result<Collection<String>, std::io::Error> {
+    let mut vecs: Vec<String> = get_all_chapter()?;
+        let collection: Collection<String> = Collection::new(&mut vecs, limit, offset)?;
+        return std::io::Result::Ok(collection);
 }

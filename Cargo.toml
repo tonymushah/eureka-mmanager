@@ -39,7 +39,7 @@ binary_search_tree = { version = "0.2.2", optional = true }
 actix-web-actors = { version = "4", optional = true }
 
 [features]
-default = ["feeds_rt"]
+default = ["feeds"]
 recommendation = ["dep:linfa-linear"]
 feeds = ["dep:binary_search_tree"]
 feeds_rt = ["feeds", "dep:actix"]

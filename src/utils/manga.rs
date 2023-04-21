@@ -8,34 +8,14 @@ use std::path::Path;
 
 use crate::settings::files_dirs::DirsOptions;
 
-use super::chapter::get_chapters_by_vec_id;
+use super::chapter::{get_all_chapter, get_chapters_by_vec_id, get_chapter_by_id};
 use super::collection::Collection;
-use super::cover::{get_cover_data, is_cover_there};
+use super::cover::{get_all_cover, get_cover_data, is_cover_there};
 
 pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> anyhow::Result<bool> {
-    let files_dirs: DirsOptions = DirsOptions::new()?;
-    let path = files_dirs.chapters_add(format!("{}/data.json", chap_id).as_str());
-    let chapter: ApiData<ApiObject<ChapterAttributes>> = match serde_json::from_str(
-        &(match std::fs::read_to_string(path.as_str()) {
-            core::result::Result::Ok(data) => data,
-            Err(_) => {
-                return Err(anyhow::Error::new(std::io::Error::new(
-                    ErrorKind::Other,
-                    format!("can't find or read file {}", path).as_str(),
-                )));
-            }
-        }),
-    ) {
-        core::result::Result::Ok(data) => data,
-        Err(_) => {
-            return Err(anyhow::Error::new(std::io::Error::new(
-                ErrorKind::Other,
-                "Can't covert to json",
-            )));
-        }
-    };
+    let chapter: ApiObject<ChapterAttributes> = get_chapter_by_id(chap_id)?;
     let mut is = false;
-    for relas in chapter.data.relationships {
+    for relas in chapter.relationships {
         if relas.type_ == RelationshipType::Manga && relas.id.hyphenated().to_string() == manga_id {
             is = true;
         }
@@ -44,25 +24,16 @@ pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> anyh
 }
 
 pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result<Vec<String>> {
-    let files_dirs: DirsOptions = DirsOptions::new()?;
-    let path = files_dirs.chapters_add("");
-    let list_dir = std::fs::read_dir(path.as_str())?;
     let mut vecs: Vec<String> = Vec::new();
-    for files in list_dir {
-        let to_use = match files?.file_name().to_str() {
-            None => {
-                return Err(anyhow::Error::new(std::io::Error::new(
-                    ErrorKind::Other,
-                    "Can't recognize file",
-                )))
-            }
-            Some(data) => data,
-        }
-        .to_string();
-        let to_insert = to_use.clone();
-        if is_chap_related_to_manga(to_use, manga_id.clone()).await? == true {
-            vecs.push(to_insert);
-        }
+    for chap in get_all_chapter()? {
+        match is_chap_related_to_manga(chap.clone(), manga_id.clone()).await {
+            Ok(d) => {
+                if d == true {
+                    vecs.push(chap);
+                }
+            },
+            Err(_) => ()
+        };
     }
     Ok(vecs)
 }
@@ -70,21 +41,9 @@ pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result
 pub async fn find_and_delete_all_downloades_by_manga_id(
     manga_id: String,
 ) -> anyhow::Result<serde_json::Value> {
-    let files_dirs: DirsOptions = DirsOptions::new()?;
-    let path = files_dirs.chapters_add("");
-    let list_dir = std::fs::read_dir(path.as_str())?;
     let mut vecs: Vec<String> = Vec::new();
-    for files in list_dir {
-        let to_use = match files?.file_name().to_str() {
-            None => {
-                return Err(anyhow::Error::new(std::io::Error::new(
-                    ErrorKind::Other,
-                    "Can't recognize file",
-                )))
-            }
-            Some(data) => data,
-        }
-        .to_string();
+    for files in get_all_chapter()? {
+        let to_use = files;
         let to_insert = to_use.clone();
         let to_remove = to_use.clone();
         if is_chap_related_to_manga(to_use, manga_id.clone()).await? == true {
@@ -95,106 +54,23 @@ pub async fn find_and_delete_all_downloades_by_manga_id(
     Ok(serde_json::json!(vecs))
 }
 
-pub fn get_all_downloaded_chapters(
-    offset: usize,
-    limit: usize,
-) -> Result<Collection<String>, std::io::Error> {
-    let file_dirs = match DirsOptions::new() {
-        core::result::Result::Ok(data) => data,
-        Err(error) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                error.to_string(),
-            ))
-        }
-    };
-    //let file_dir_clone = file_dirs.clone();
-    let path = file_dirs.chapters_add("");
-    if Path::new(path.as_str()).exists() == true {
-        let list_dir = (std::fs::read_dir(path.as_str()))?;
-        let mut vecs: Vec<String> = Vec::new();
-        for files in list_dir {
-            vecs.push(
-                match (files)?.file_name().to_str() {
-                    Some(data) => data,
-                    None => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "can't recongnize file",
-                        ))
-                    }
-                }
-                .to_string(),
-            );
-        }
-        let collection: Collection<String> = Collection::new(&mut vecs, limit, offset)?;
-        return std::io::Result::Ok(collection);
-    } else {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "can't find the manga directory",
-        ));
-    }
-}
-
 pub fn get_downloaded_cover_of_a_manga(manga_id: String) -> Result<Vec<String>, std::io::Error> {
-    let file_dirs = match DirsOptions::new() {
-        core::result::Result::Ok(data) => data,
-        Err(error) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                error.to_string(),
-            ))
-        }
-    };
-    let path = file_dirs.covers_add("");
-    if Path::new(path.as_str()).exists() == true {
-        let list_dir = (std::fs::read_dir(path.as_str()))?;
-        let mut vecs: Vec<String> = Vec::new();
-        for files in list_dir {
-            match files {
-                core::result::Result::Ok(file) => {
-                    if match file.metadata() {
-                        core::result::Result::Ok(data) => data,
-                        Err(_) => continue,
-                    }
-                    .is_file()
-                        == true
-                    {
-                        vecs.push(
-                            match file.file_name().to_str() {
-                                Some(data) => data,
-                                None => continue,
-                            }
-                            .to_string()
-                            .replace(".json", ""),
-                        );
-                    }
+    let vecs: Vec<String> = get_all_cover()?;
+    let mut related_covers: Vec<String> = Vec::new();
+    vecs.iter().for_each(|data| {
+        let manga_id = manga_id.clone();
+        let data = data.clone();
+        let data_clone = data.clone();
+        match is_cover_related_to_manga(manga_id, data) {
+            core::result::Result::Ok(result) => {
+                if result == true {
+                    related_covers.push(data_clone);
                 }
-                Err(_) => continue,
             }
+            Err(_) => (),
         }
-        let mut related_covers: Vec<String> = Vec::new();
-        vecs.iter().for_each(|data| {
-            let manga_id = manga_id.clone();
-            let data = data.clone();
-            let data_clone = data.clone();
-            match is_cover_related_to_manga(manga_id, data) {
-                core::result::Result::Ok(result) => {
-                    if result == true {
-                        related_covers.push(data_clone);
-                    }
-                }
-                Err(_) => (),
-            }
-        });
-        return std::io::Result::Ok(related_covers);
-    } else {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "can't find the manga directory",
-        ));
-    }
+    });
+    return std::io::Result::Ok(related_covers);
 }
 
 pub fn get_downloaded_cover_of_a_manga_collection(
@@ -460,33 +336,34 @@ pub async fn get_all_downloaded_chapter_data(
             ))
         }
     };
-    let mut data = match get_chapters_by_vec_id(data) {
-        anyhow::Result::Ok(d) => d,
+    match get_chapters_by_vec_id(data) {
+        anyhow::Result::Ok(mut data) => {
+            data.sort_by(|a, b| {
+                let a = match a.attributes.chapter.clone() {
+                    None => return Ordering::Equal,
+                    Some(d) => d,
+                };
+                let b = match b.attributes.chapter.clone() {
+                    None => return Ordering::Equal,
+                    Some(d) => d,
+                };
+                let a_chp = match a.parse::<usize>() {
+                    core::result::Result::Ok(d) => d,
+                    Err(_) => return Ordering::Equal,
+                };
+                let b_chp = match b.parse::<usize>() {
+                    core::result::Result::Ok(d) => d,
+                    Err(_) => return Ordering::Equal,
+                };
+                a_chp.cmp(&b_chp)
+            });
+            core::result::Result::Ok(data)
+        }
         Err(e) => {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 e.to_string(),
             ))
         }
-    };
-    data.sort_by(|a, b| {
-        let a = match a.attributes.chapter.clone() {
-            None => return Ordering::Equal,
-            Some(d) => d,
-        };
-        let b = match b.attributes.chapter.clone() {
-            None => return Ordering::Equal,
-            Some(d) => d,
-        };
-        let a_chp = match a.parse::<usize>() {
-            core::result::Result::Ok(d) => d,
-            Err(_) => return Ordering::Equal,
-        };
-        let b_chp = match b.parse::<usize>() {
-            core::result::Result::Ok(d) => d,
-            Err(_) => return Ordering::Equal,
-        };
-        a_chp.cmp(&b_chp)
-    });
-    core::result::Result::Ok(data)
+    }
 }

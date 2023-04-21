@@ -61,3 +61,49 @@ pub fn get_cover_data(cover_id : String) -> Result<ApiData<ApiObject<CoverAttrib
         Err(error) => Err(error)
     }
 }
+
+pub fn get_all_cover() -> Result<Vec<String>, std::io::Error>{
+    let file_dirs = match DirsOptions::new() {
+        core::result::Result::Ok(data) => data,
+        Err(error) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                error.to_string(),
+            ))
+        }
+    };
+    let path = file_dirs.covers_add("");
+    if Path::new(path.as_str()).exists() == true {
+        let list_dir = (std::fs::read_dir(path.as_str()))?;
+        let mut vecs: Vec<String> = Vec::new();
+        for files in list_dir {
+            match files {
+                core::result::Result::Ok(file) => {
+                    if match file.metadata() {
+                        core::result::Result::Ok(data) => data,
+                        Err(_) => continue,
+                    }
+                    .is_file()
+                        == true
+                    {
+                        vecs.push(
+                            match file.file_name().to_str() {
+                                Some(data) => data,
+                                None => continue,
+                            }
+                            .to_string()
+                            .replace(".json", ""),
+                        );
+                    }
+                }
+                Err(_) => continue,
+            }
+        }
+        return std::io::Result::Ok(vecs);
+    } else {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "can't find the cover directory",
+        ));
+    }
+}

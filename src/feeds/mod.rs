@@ -105,5 +105,6 @@ pub async fn get_downloaded_manga_feed(translated_lang : Option<Language>) -> an
         });
     }
     handles.await;
+    drop(client);
     anyhow::Ok((Arc::clone(&chapter_data), Arc::clone(&errors)))
 }
