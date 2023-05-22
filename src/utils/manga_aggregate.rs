@@ -53,15 +53,15 @@ fn group_chapter_to_chapter_aggregate(input : Vec<ApiObject<ChapterAttributes>>)
         returns.push(chap_hashmapentry_to_chapter_aggregate(chunk)?);
     }
     returns.sort_by(|a, b| {
-        let a_chp = match a.chapter.parse::<usize>() {
+        let a_chp = match a.chapter.parse::<f32>() {
             Ok(d) => d,
             Err(_) => return Ordering::Equal
         };
-        let b_chp = match b.chapter.parse::<usize>() {
+        let b_chp = match b.chapter.parse::<f32>() {
             Ok(d) => d,
             Err(_) => return Ordering::Equal
         };
-        a_chp.cmp(&b_chp)
+        a_chp.total_cmp(&b_chp)
     });
     Ok(returns)
 }
@@ -105,15 +105,15 @@ pub fn group_chapter_to_volume_aggregate(input : Vec<ApiObject<ChapterAttributes
         data.push(chapter_volume_hashmap_entry_to_volume_aggregate(in_)?);
     }
     data.sort_by(|a, b| {
-        let a = match a.volume.parse::<usize>() {
+        let a = match a.volume.parse::<f32>() {
             Ok(d) => d,
             Err(_) => return Ordering::Equal
         };
-        let b = match b.volume.parse::<usize>() {
+        let b = match b.volume.parse::<f32>() {
             Ok(d) => d,
             Err(_) => return Ordering::Equal
         };
-        a.cmp(&b)
+        a.total_cmp(&b)
     });
     Ok(data)
 }
