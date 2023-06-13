@@ -1,7 +1,9 @@
 use std::{fs::File, io::{ErrorKind, Write}, path::Path};
 
 use log::info;
-use mangadex_api_schema::{ApiObject, ApiData, v5::ChapterAttributes};
+use mangadex_api::{HttpClientRef};
+use mangadex_api_schema_rust::{ApiObject, ApiData, v5::ChapterAttributes};
+use mangadex_api_types_rust::RelationshipType;
 
 use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id};
 
@@ -16,7 +18,7 @@ pub fn is_chapter_manga_there(chap_id: String) -> Result<bool, std::io::Error>{
             Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
         }.chapters_add(format!("{}/data.json", chap_id).as_str());
         let chap_data : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_reader(File::open(path)?)?;
-        let manga_id : uuid::Uuid = match chap_data.data.relationships.iter().find(|rel| rel.type_ == mangadex_api::types::RelationshipType::Manga){
+        let manga_id : uuid::Uuid = match chap_data.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::Manga){
             Some(data) => data.id,
             None => {
                 return Err(std::io::Error::new(std::io::ErrorKind::Other, "Seems like your chapter has no manga related to him"));
@@ -28,11 +30,11 @@ pub fn is_chapter_manga_there(chap_id: String) -> Result<bool, std::io::Error>{
     }
 }
 
-pub async fn update_chap_by_id(id: String) -> anyhow::Result<serde_json::Value> {
+pub async fn update_chap_by_id(id: String, client : HttpClientRef) -> anyhow::Result<serde_json::Value> {
     let files_dirs : DirsOptions = DirsOptions::new()?;
     let path = files_dirs.chapters_add(format!("{}/data.json", id).as_str());
 
-        let http_client = reqwest::Client::new();
+        let http_client = client.lock().await.client.clone();
         let get_chapter = http_client
             .get(
                 format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", 
@@ -55,7 +57,7 @@ pub async fn update_chap_by_id(id: String) -> anyhow::Result<serde_json::Value> 
         Ok(serde_json::from_str(jsons.as_str())?)
 }
 
-pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_json::Value> {
+pub async fn patch_manga_by_chapter(chap_id: String, client : HttpClientRef) -> anyhow::Result<serde_json::Value> {
     let path = DirsOptions::new()?.chapters_add(format!("{}/data.json", chap_id).as_str());
     let chapter : ApiData<ApiObject<ChapterAttributes>> = match serde_json::from_str(&(
             match std::fs::read_to_string(path.as_str()){
@@ -74,46 +76,26 @@ pub async fn patch_manga_by_chapter(chap_id: String) -> anyhow::Result<serde_jso
         .data
         .relationships
         .iter()
-        .find(|related| related.type_ == mangadex_api::types::RelationshipType::Manga){
+        .find(|related| related.type_ == RelationshipType::Manga){
             None => {
                 return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, format!("can't find manga in the chapter {}", chap_id).as_str())));
             },
             Some(data) => data
         };
     let manga_id = manga.id;
-    let type_ = match manga.type_ {
-        mangadex_api::types::RelationshipType::Manga => mangadex_api_types::RelationshipType::Manga,
-        mangadex_api::types::RelationshipType::Chapter => mangadex_api_types::RelationshipType::Chapter,
-        mangadex_api::types::RelationshipType::CoverArt => mangadex_api_types::RelationshipType::CoverArt,
-        mangadex_api::types::RelationshipType::Author => mangadex_api_types::RelationshipType::Author,
-        mangadex_api::types::RelationshipType::Artist => mangadex_api_types::RelationshipType::Artist,
-        mangadex_api::types::RelationshipType::ScanlationGroup => mangadex_api_types::RelationshipType::ScanlationGroup,
-        mangadex_api::types::RelationshipType::Tag => mangadex_api_types::RelationshipType::Tag,
-        mangadex_api::types::RelationshipType::User => mangadex_api_types::RelationshipType::User,
-        mangadex_api::types::RelationshipType::CustomList => mangadex_api_types::RelationshipType::CustomList,
-        mangadex_api::types::RelationshipType::MappingId => mangadex_api_types::RelationshipType::MappingId,
-        mangadex_api::types::RelationshipType::Member => mangadex_api_types::RelationshipType::Member,
-        mangadex_api::types::RelationshipType::ReportReason => mangadex_api_types::RelationshipType::ReportReason,
-        mangadex_api::types::RelationshipType::UploadSession => mangadex_api_types::RelationshipType::UploadSession,
-        mangadex_api::types::RelationshipType::UploadSessionFile => mangadex_api_types::RelationshipType::UploadSessionFile,
-        mangadex_api::types::RelationshipType::Collection => mangadex_api_types::RelationshipType::Collection,
-        mangadex_api::types::RelationshipType::MangaRelation => mangadex_api_types::RelationshipType::MangaRelation,
-        mangadex_api::types::RelationshipType::Unknown => mangadex_api_types::RelationshipType::Unknown,
-        _ => mangadex_api_types::RelationshipType::Unknown
-    };
+    let type_ = manga.type_;
     let history_entry = HistoryEntry::new(manga_id, type_);
     insert_in_history(&history_entry)?;
     commit_rel(history_entry.get_data_type())?;
-        let http_client = reqwest::Client::new();
-        download_manga(http_client, manga_id).await?;
+        download_manga(client.clone(), manga_id).await?;
         match is_manga_cover_there(manga_id.to_string()) {
             core::result::Result::Ok(getted) => {
                 if getted == false{
-                    cover_download_by_manga_id(manga_id.to_string().as_str()).await?;
+                    cover_download_by_manga_id(manga_id.to_string().as_str(), client.clone()).await?;
                 }
             }, 
             Err(_) => {
-                cover_download_by_manga_id(manga_id.to_string().as_str()).await?;
+                cover_download_by_manga_id(manga_id.to_string().as_str(), client).await?;
             }
         }
     let jsons = serde_json::json!({

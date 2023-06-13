@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use mangadex_api_schema::{ApiObject, v5::ChapterAttributes};
+use mangadex_api_schema_rust::{ApiObject, v5::ChapterAttributes};
 use serde::{Serialize, Deserialize};
 
 #[derive(Deserialize, Serialize, Clone)]

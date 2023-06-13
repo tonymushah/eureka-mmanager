@@ -7,8 +7,8 @@
 
 //use std::fs;
 
-//use mangadex_api_schema::{ApiObject, v5::ChapterAttributes};
-//use mangadex_api_types::{ReferenceExpansionResource, RelationshipType};
+//use mangadex_api_schema_rust::{ApiObject, v5::ChapterAttributes};
+//use mangadex_api_types_rust::{ReferenceExpansionResource, RelationshipType};
 use mangadex_desktop_api2::{launch_server_default, verify_all_fs};
 //use mangadex_api::MangaDexClient;
 

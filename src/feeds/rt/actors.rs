@@ -8,7 +8,7 @@ use actix::prelude::*;
 
 use binary_search_tree::BinarySearchTree;
 use mangadex_api::MangaDexClient;
-use mangadex_api_types::{MangaFeedSortOrder, OrderDirection};
+use mangadex_api_types_rust::{MangaFeedSortOrder, OrderDirection};
 use tokio::sync::Mutex;
 use tokio::task::futures::TaskLocalFuture;
 use tokio::task::{JoinHandle, JoinSet, LocalSet};

@@ -1,15 +1,15 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
 edition = "2021"
+resolver = "2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-derive_builder = "0.11.2"
 reqwest = { version = "0.11.14", features = [
     "cookies",
     "json",
@@ -18,29 +18,32 @@ reqwest = { version = "0.11.14", features = [
     "blocking"
 ] }
 serde = { version = "1.0.136", features = ["derive"] }
-serde_qs = "0.9.2"
 thiserror = "1.0.30"
 url = { version = "2.2.2", features = ["serde"] }
 uuid = { version = "1.0.0", features = ["serde", "v4"] }
-mangadex-api = { version = "2.0.1", features = ["multi-thread"] }
+mangadex-api = { version = "2.1.1", features = ["multi-thread", "utils"] }
 anyhow = "1.0.55"
 serde_json = "1.0.79"
 tokio = { version = "1.24.2", features = ["full"] }
 actix-web = { version = "4" }
-mangadex-api-schema = { version = "0.3.0", package = "mangadex-api-schema-rust" }
-mangadex-api-types = { version = "0.3.0", package = "mangadex-api-types-rust" }
+mangadex-api-schema-rust = { version = "0.3.2", default-features = false, features = ["serialize"] }
+mangadex-api-types-rust = { version = "0.3.4", default-features = false }
 log = "^0.4"
 once_cell = "1.17.0"
 fern = "0.6.1"
+futures = { version = "0.3.21" }
 actix = { version = "0.13.0", optional = true}
 actix-rt = { version = "2.2", optional = true}
 linfa-linear = { version = "0.6.1", optional = true }
 binary_search_tree = { version = "0.2.2", optional = true }
 actix-web-actors = { version = "4", optional = true }
+surrealdb = { version = "1.0.0-beta.9", features = ["kv-rocksdb"], optional = true }
+derive_builder = { version = "0.11.2", optional = true }
+
 
 [features]
 default = ["feeds"]
 recommendation = ["dep:linfa-linear"]
-feeds = ["dep:binary_search_tree"]
+feeds = ["dep:binary_search_tree", "dep:derive_builder"]
 feeds_rt = ["feeds", "dep:actix"]
 websockets = ["dep:actix", "dep:actix-web-actors"]

@@ -1,11 +1,16 @@
 
+use std::sync::Arc;
+
 use actix_web::dev::{self, Server, ServiceResponse};
 use actix_web::http::header::{self};
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::web;
 use actix_web::{
     http::StatusCode, App, HttpServer,
     //web
 };
+use futures::lock::Mutex;
+use mangadex_api::{HttpClientRef, HttpClient};
 use crate::methods::get::{find_all_downloaded_manga, find_cover_by_id, find_chapters_data_saver_img_by_id, find_manga_by_id, find_cover_image_by_id, find_manga_cover_by_id, find_manga_covers_by_id, find_chapters_data_by_id, find_chapters_data_saver_by_id, find_chapters_data_img_by_id, find_chapter_by_id, find_all_downloaded_chapter, find_manga_chapters_by_id, hello, aggregate_manga};
 use crate::methods::patch::{update_cover_by_id, update_chapter_by_id, patch_all_chapter, patch_all_chapter_manga, update_chapter_manga_by_id, patch_all_manga_cover};
 use crate::methods::delete::{delete_chapter_by_id, delete_manga_chapters_by_id};
@@ -21,6 +26,11 @@ pub mod state;
 /// url not found handler
 ///
 ///
+
+#[derive(Clone)]
+pub struct AppState{
+    pub http_client : HttpClientRef
+}
 
 fn not_found_message<B>(
     mut res: dev::ServiceResponse<B>,
@@ -43,12 +53,12 @@ fn not_found_message<B>(
 
 /// Get the server handle
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
-    /*let state = AppState {
-        dir_option : Arc::new(DirsOptions::new_()?),
-        history : Arc::new(HashMap::new())
-    };*/
+    let state = AppState {
+        http_client : Arc::new(Mutex::new(HttpClient::default()))
+    };
     Ok(HttpServer::new(move|| {
         App::new()
+            .app_data(web::Data::new(state.clone()))
             .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
             /*
                 get Methods

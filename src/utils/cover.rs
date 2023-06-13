@@ -1,6 +1,6 @@
 use std::{fs::File, path::Path};
 
-use mangadex_api_schema::{v5::CoverAttributes, ApiObject, ApiData};
+use mangadex_api_schema_rust::{v5::CoverAttributes, ApiObject, ApiData};
 
 use crate::settings::files_dirs::DirsOptions;
 

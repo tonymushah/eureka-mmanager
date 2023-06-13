@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Mutex};
 
-use mangadex_api_types::RelationshipType;
+use mangadex_api_types_rust::RelationshipType;
 
 use crate::settings::{
     file_history::{init_history, HistoryEntry, HistoryWFile},

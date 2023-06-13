@@ -1,7 +1,7 @@
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
 use log::{info, warn};
-use mangadex_api::v5::MangaDexClient;
+use mangadex_api::{v5::MangaDexClient, utils::get_reqwest_client, HttpClientRef};
 use serde_json::json;
 use std::fs::File;
 use std::io::Write;
@@ -17,7 +17,8 @@ use crate::{
 };
 
 /// puting chapter data in a json data
-async fn verify_chapter_and_manga(chapter_id: &Uuid, http_client : &reqwest::Client, chapter_top_dir : &String) -> anyhow::Result<()>{
+async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chapter_top_dir : &String) -> anyhow::Result<()>{
+    let http_client = client.lock().await.client.clone();
     if Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() == false {
         let get_chapter = send_request(http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())), 5).await?;
         if get_chapter.status().is_client_error() || get_chapter.status().is_server_error() {
@@ -31,13 +32,13 @@ async fn verify_chapter_and_manga(chapter_id: &Uuid, http_client : &reqwest::Cli
     match is_chapter_manga_there(format!("{}", chapter_id)) {
         Ok(data) => {
             if data == false {
-                patch_manga_by_chapter(format!("{}", chapter_id)).await?;
+                patch_manga_by_chapter(format!("{}", chapter_id), client).await?;
             }
         }
         Err(e) => {
             let error = e.to_string();
             warn!("Warning {}!", error);
-            patch_manga_by_chapter(format!("{}", chapter_id)).await?;
+            patch_manga_by_chapter(format!("{}", chapter_id), client).await?;
         }
     }
     anyhow::Ok(())
@@ -123,10 +124,10 @@ where
     anyhow::Ok(())
 }
 
-pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
+pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyhow::Result<serde_json::Value> {
     let chapter_id = Uuid::parse_str(chapter_id)?;
     let history_entry =
-        HistoryEntry::new(chapter_id, mangadex_api_types::RelationshipType::Chapter);
+        HistoryEntry::new(chapter_id, mangadex_api_types_rust::RelationshipType::Chapter);
     match insert_in_history(&history_entry) {
         Ok(_) => (),
         Err(error) => {
@@ -136,7 +137,7 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         }
     };
     commit_rel(history_entry.get_data_type())?;
-    let client = MangaDexClient::default();
+    let client = MangaDexClient::new_with_http_client_ref(client_.clone());
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data", chapter_top_dir);
@@ -149,8 +150,8 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
         .build()?
         .send()
         .await?;
-    let http_client = reqwest::Client::new();
-    verify_chapter_and_manga(&chapter_id, &http_client, &chapter_top_dir).await?;
+    let http_client = get_reqwest_client(&client).await;
+    verify_chapter_and_manga(&chapter_id, client_, &chapter_top_dir).await?;
     let mut files_: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
     let page_filenames = at_home.chapter.data;
@@ -176,8 +177,8 @@ pub async fn download_chapter(chapter_id: &str) -> anyhow::Result<serde_json::Va
     commit_rel(history_entry.get_data_type())?;
     Ok(jsons)
 }
-pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_json::Value> {
-    let client = MangaDexClient::default();
+pub async fn download_chapter_saver(chapter_id: &str, client_: HttpClientRef) -> anyhow::Result<serde_json::Value> {
+    let client = MangaDexClient::new_with_http_client_ref(client_.clone());
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let chapter_id = Uuid::parse_str(chapter_id)?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
@@ -191,8 +192,8 @@ pub async fn download_chapter_saver(chapter_id: &str) -> anyhow::Result<serde_js
         .build()?
         .send()
         .await?;
-    let http_client = reqwest::Client::new();
-    verify_chapter_and_manga(&chapter_id, &http_client, &chapter_top_dir).await?;
+    let http_client = get_reqwest_client(&client).await;
+    verify_chapter_and_manga(&chapter_id, client_, &chapter_top_dir).await?;
     let mut files_: Vec<String> = Vec::new();
     // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
     let page_filenames = at_home.chapter.data_saver;
@@ -231,6 +232,7 @@ mod tests{
     async fn test_download_chapter_normal(){
         init_static_history().unwrap();
         let chapter_id = "b8e7925e-581a-4c06-a964-0d822053391a";
-        download_chapter(chapter_id).await.unwrap();
+        let client = MangaDexClient::default();
+        download_chapter(chapter_id, client.get_http_client()).await.unwrap();
     }
 }

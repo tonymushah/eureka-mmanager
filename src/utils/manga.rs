@@ -1,6 +1,6 @@
-use mangadex_api::types::RelationshipType;
-use mangadex_api_schema::v5::{ChapterAttributes, MangaAttributes};
-use mangadex_api_schema::{ApiData, ApiObject};
+use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes};
+use mangadex_api_schema_rust::{ApiData, ApiObject};
+use mangadex_api_types_rust::RelationshipType;
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io::ErrorKind;

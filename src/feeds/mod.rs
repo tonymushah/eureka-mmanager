@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use binary_search_tree::BinarySearchTree;
 use derive_builder::Builder;
 use mangadex_api::MangaDexClient;
-use mangadex_api_types::{MangaFeedSortOrder, OrderDirection, Language};
+use mangadex_api_types_rust::{MangaFeedSortOrder, OrderDirection, Language};
 use serde::{Deserialize, Serialize};
 use tokio::{
     sync::Mutex,

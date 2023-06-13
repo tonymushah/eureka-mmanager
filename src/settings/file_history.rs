@@ -1,6 +1,6 @@
 use std::{io::{Write}};
 
-use mangadex_api_types::RelationshipType;
+use mangadex_api_types_rust::RelationshipType;
 use serde::{Serialize, Deserialize};
 
 use super::{files_dirs::DirsOptions};

@@ -1,6 +1,6 @@
 use std::{io::Result, collections::HashMap, vec, cmp::Ordering};
 
-use mangadex_api_schema::{v5::{ChapterAttributes, MangaAggregate, manga_aggregate::{ChapterAggregate, VolumeAggregate}}, ApiObject};
+use mangadex_api_schema_rust::{v5::{ChapterAttributes, MangaAggregate, manga_aggregate::{ChapterAggregate, VolumeAggregate}}, ApiObject};
 
 type ChapterHashMap = HashMap<String, Vec<ApiObject<ChapterAttributes>>>;
 
@@ -37,12 +37,12 @@ fn chap_hashmapentry_to_chapter_aggregate(input : (String, Vec<ApiObject<Chapter
             d.iter().map(|d_| d_.id).collect()
         }
     };
-    let chapter : ChapterAggregate = serde_json::from_str::<ChapterAggregate>(serde_json::json!({
-        "chapter" : input.0,
-        "id" : id.id,
-        "others" : others,
-        "count" : input.1.len() as u32
-    }).to_string().as_str())?;
+    let chapter : ChapterAggregate = ChapterAggregate {
+        chapter : input.0,
+        id : id.id,
+        others,
+        count : input.1.len() as u32
+    };
     Ok(chapter)
 }
 
@@ -68,11 +68,11 @@ fn group_chapter_to_chapter_aggregate(input : Vec<ApiObject<ChapterAttributes>>)
 
 fn chapter_volume_hashmap_entry_to_volume_aggregate((volume, chapters) : (String, Vec<ApiObject<ChapterAttributes>>)) -> Result<VolumeAggregate>{
     let chapters = group_chapter_to_chapter_aggregate(chapters)?;
-    Ok(serde_json::from_str::<VolumeAggregate>(serde_json::json!({
-        "volume" : volume,
-        "count" : chapters.len() as u32,
-        "chapters" : chapters
-    }).to_string().as_str())?)
+    Ok(VolumeAggregate {
+        volume,
+        count : chapters.len() as u32,
+        chapters
+    })
 }
 
 pub type ChapterVolumeHashMap = HashMap<String, Vec<ApiObject<ChapterAttributes>>>;
@@ -121,9 +121,9 @@ pub fn group_chapter_to_volume_aggregate(input : Vec<ApiObject<ChapterAttributes
 pub async fn aggregate_manga_chapters(manga_id : String) -> Result<MangaAggregate>{
     let data : Vec<ApiObject<ChapterAttributes>> = (crate::utils::manga::get_all_downloaded_chapter_data(manga_id).await)?;
     let volumes = group_chapter_to_volume_aggregate(data)?;
-    Ok(serde_json::from_str::<MangaAggregate>(serde_json::json!({
-        "volumes" : volumes
-    }).to_string().as_str())?)
+    Ok(MangaAggregate {
+        volumes : volumes
+    })
 }
 
 /*pub fn chapter_vec_to_chapter_aggregate_vec(input : Vec<ApiObject<ChapterAttributes>>) -> Result<()> {
