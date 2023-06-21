@@ -21,8 +21,7 @@ pub async fn cover_download_by_cover(
     client: HttpClientRef,
 ) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
-    let http_client = get_reqwest_client(&client).await;
-    let (filename, bytes) = client
+    let (filename, bytes_) = client
         .download()
         .cover()
         .build()?
@@ -34,26 +33,32 @@ pub async fn cover_download_by_cover(
     let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
     let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id).as_str());
 
-    let mut file = File::create(file_path)?;
-    let _ = file.write_all(&bytes);
-    let mut files = File::create(json_cover)?;
+    if let Some(bytes) = bytes_ {
+        let mut file = File::create(file_path)?;
+        let _ = file.write_all(&bytes);
+        let mut files = File::create(json_cover)?;
+        let http_client = get_reqwest_client(&client).await;
+        let resps = utils::send_request(
+            http_client.get(format!(
+                "{}/cover/{}",
+                mangadex_api::constants::API_URL,
+                cover_id
+            )),
+            5,
+        )
+        .await?;
 
-    let resps = utils::send_request(
-        http_client.get(format!(
-            "{}/cover/{}",
-            mangadex_api::constants::API_URL,
-            cover_id
-        )),
-        5,
-    )
-    .await?;
-
-    files.write_all(&resps.bytes().await?)?;
-    Ok(serde_json::json!({
-        "result" : "ok",
-        "type": "cover",
-        "downloded" : cover_id
-    }))
+        files.write_all(&resps.bytes().await?)?;
+        Ok(serde_json::json!({
+            "result" : "ok",
+            "type": "cover",
+            "downloded" : cover_id
+        }))
+    } else {
+        Err(anyhow::Error::msg(format!(
+            "Empty byte found for {filename}"
+        )))
+    }
 }
 
 pub async fn cover_download_by_manga_id(
@@ -90,7 +95,7 @@ pub async fn cover_download_quality_by_manga_id(
     let client = MangaDexClient::new_with_http_client_ref(client);
     let cover_id = Uuid::parse_str(manga_id)?;
     // The data should be streamed rather than downloading the data all at once.
-    let (filename, bytes) = client
+    let (filename, bytes_) = client
         .download()
         .cover()
         .quality(quality)
@@ -103,26 +108,32 @@ pub async fn cover_download_quality_by_manga_id(
     let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
     let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id).as_str());
 
-    let mut file = File::create(file_path)?;
-    let _ = file.write_all(&bytes);
-    let mut files = File::create(json_cover)?;
-    let http_client = get_reqwest_client(&client).await;
-    let resps = utils::send_request(
-        http_client.get(format!(
-            "{}/cover/{}",
-            mangadex_api::constants::API_URL,
-            cover_id
-        )),
-        5,
-    )
-    .await?;
+    if let Some(bytes) = bytes_ {
+        let mut file = File::create(file_path)?;
+        let _ = file.write_all(&bytes);
+        let mut files = File::create(json_cover)?;
+        let http_client = get_reqwest_client(&client).await;
+        let resps = utils::send_request(
+            http_client.get(format!(
+                "{}/cover/{}",
+                mangadex_api::constants::API_URL,
+                cover_id
+            )),
+            5,
+        )
+        .await?;
 
-    files.write_all(&resps.bytes().await?)?;
-    Ok(serde_json::json!({
-        "result" : "ok",
-        "type": "cover",
-        "downloded" : cover_id
-    }))
+        files.write_all(&resps.bytes().await?)?;
+        Ok(serde_json::json!({
+            "result" : "ok",
+            "type": "cover",
+            "downloded" : cover_id
+        }))
+    } else {
+        Err(anyhow::Error::msg(format!(
+            "Empty byte found for {filename}"
+        )))
+    }
 }
 
 pub async fn cover_download_quality_by_cover(
@@ -132,7 +143,7 @@ pub async fn cover_download_quality_by_cover(
 ) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
 
-    let (filename, bytes) = client
+    let (filename, bytes_) = client
         .download()
         .cover()
         .quality(quality)
@@ -145,35 +156,38 @@ pub async fn cover_download_quality_by_cover(
     let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
     let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id).as_str());
 
-    let mut file = File::create(file_path)?;
-    let _ = file.write_all(&bytes);
-    let mut files = File::create(json_cover)?;
-    let http_client = get_reqwest_client(&client).await;
-    let resps = utils::send_request(
-        http_client.get(format!(
-            "{}/cover/{}",
-            mangadex_api::constants::API_URL,
-            cover_id
-        )),
-        5,
-    )
-    .await?;
+    if let Some(bytes) = bytes_ {
+        let mut file = File::create(file_path)?;
+        let _ = file.write_all(&bytes);
+        let mut files = File::create(json_cover)?;
+        let http_client = get_reqwest_client(&client).await;
+        let resps = utils::send_request(
+            http_client.get(format!(
+                "{}/cover/{}",
+                mangadex_api::constants::API_URL,
+                cover_id
+            )),
+            5,
+        )
+        .await?;
 
-    files.write_all(&resps.bytes().await?)?;
-
-    info!("downloaded {}", filename.as_str());
-    //    info!("downloaded {}", filename.as_str());
-    Ok(serde_json::json!({
-        "result" : "ok",
-        "type": "cover",
-        "downloded" : cover_id
-    }))
+        files.write_all(&resps.bytes().await?)?;
+        Ok(serde_json::json!({
+            "result" : "ok",
+            "type": "cover",
+            "downloded" : cover_id
+        }))
+    } else {
+        Err(anyhow::Error::msg(format!(
+            "Empty byte found for {filename}"
+        )))
+    }
 }
 
 pub async fn all_covers_download_quality_by_manga_id(
     manga_id: &str,
     limit: u32,
-    client: HttpClientRef
+    client: HttpClientRef,
 ) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
     let manga_id = Uuid::parse_str(manga_id)?;
@@ -190,7 +204,12 @@ pub async fn all_covers_download_quality_by_manga_id(
     let mut vecs: Vec<String> = Vec::new();
     for cover_to_use in covers.data {
         // The data should be streamed rather than downloading the data all at once.
-        let (filename, bytes) = client.download().cover().build()?.via_cover_api_object(cover_to_use.clone()).await?;
+        let (filename, bytes_) = client
+            .download()
+            .cover()
+            .build()?
+            .via_cover_api_object(cover_to_use.clone())
+            .await?;
         // This is where you would download the file but for this example, we're just printing the raw data.
         let files_dirs = settings::files_dirs::DirsOptions::new()?;
         let file_dirs_clone = files_dirs.clone();
@@ -198,24 +217,26 @@ pub async fn all_covers_download_quality_by_manga_id(
         let json_cover =
             file_dirs_clone.covers_add(format!("{}.json", cover_to_use.id.hyphenated()).as_str());
 
-        let mut file = File::create(file_path)?;
-        let _ = file.write_all(&bytes);
-        let mut files = File::create(json_cover)?;
+        if let Some(bytes) = bytes_ {
+            let mut file = File::create(file_path)?;
+            let _ = file.write_all(&bytes);
+            let mut files = File::create(json_cover)?;
 
-        let resps = utils::send_request(
-            http_client.get(format!(
-                "{}/cover/{}",
-                mangadex_api::constants::API_URL,
-                cover_to_use.id.hyphenated()
-            )),
-            5,
-        )
-        .await?;
+            let resps = utils::send_request(
+                http_client.get(format!(
+                    "{}/cover/{}",
+                    mangadex_api::constants::API_URL,
+                    cover_to_use.id.hyphenated()
+                )),
+                5,
+            )
+            .await?;
 
-        files.write_all(&resps.bytes().await?)?;
+            files.write_all(&resps.bytes().await?)?;
 
-        vecs.push(format!("{}", cover_to_use.id.hyphenated()));
-        info!("downloaded {}", filename.as_str());
+            vecs.push(format!("{}", cover_to_use.id.hyphenated()));
+            info!("downloaded {}", filename.as_str());
+        }
     }
     let jsons = serde_json::json!({
         "result" : "ok",

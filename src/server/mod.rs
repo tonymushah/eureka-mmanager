@@ -1,21 +1,34 @@
-
 use std::sync::Arc;
 
-use actix_web::dev::{self, Server, ServiceResponse};
+use crate::methods::delete::{delete_chapter_by_id, delete_manga_chapters_by_id};
+use crate::methods::get::{
+    aggregate_manga, find_all_downloaded_chapter, find_all_downloaded_manga, find_chapter_by_id,
+    find_chapters_data_by_id, find_chapters_data_img_by_id, find_chapters_data_saver_by_id,
+    find_chapters_data_saver_img_by_id, find_cover_by_id, find_cover_image_by_id, find_manga_by_id,
+    find_manga_chapters_by_id, find_manga_cover_by_id, find_manga_covers_by_id, hello,
+};
+use crate::methods::patch::{
+    patch_all_chapter, patch_all_chapter_manga, patch_all_manga_cover, update_chapter_by_id,
+    update_chapter_manga_by_id, update_cover_by_id,
+};
+use crate::methods::put::{
+    download_chapter_byid, download_chapter_data_byid, download_chapter_data_saver_byid,
+    download_cover, download_cover_quality, download_manga_by_id, download_manga_cover,
+    download_manga_cover_quality, download_manga_covers,
+};
+use actix_web::body::MessageBody;
+use actix_web::dev::{self, Server, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::http::header::{self};
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::web;
 use actix_web::{
-    http::StatusCode, App, HttpServer,
+    http::StatusCode,
+    App,
+    HttpServer,
     //web
 };
+use actix_web::{web, Error};
 use futures::lock::Mutex;
-use mangadex_api::{HttpClientRef, HttpClient};
-use crate::methods::get::{find_all_downloaded_manga, find_cover_by_id, find_chapters_data_saver_img_by_id, find_manga_by_id, find_cover_image_by_id, find_manga_cover_by_id, find_manga_covers_by_id, find_chapters_data_by_id, find_chapters_data_saver_by_id, find_chapters_data_img_by_id, find_chapter_by_id, find_all_downloaded_chapter, find_manga_chapters_by_id, hello, aggregate_manga};
-use crate::methods::patch::{update_cover_by_id, update_chapter_by_id, patch_all_chapter, patch_all_chapter_manga, update_chapter_manga_by_id, patch_all_manga_cover};
-use crate::methods::delete::{delete_chapter_by_id, delete_manga_chapters_by_id};
-use crate::methods::put::{download_chapter_data_saver_byid, download_chapter_data_byid, download_chapter_byid, download_cover_quality, download_cover, download_manga_cover_quality, download_manga_cover, download_manga_covers, download_manga_by_id};
-
+use mangadex_api::{HttpClient, HttpClientRef};
 
 /*use self::state::AppState;
 use std::collections::HashMap;
@@ -28,8 +41,8 @@ pub mod state;
 ///
 
 #[derive(Clone)]
-pub struct AppState{
-    pub http_client : HttpClientRef
+pub struct AppState {
+    pub http_client: HttpClientRef,
 }
 
 fn not_found_message<B>(
@@ -51,60 +64,70 @@ fn not_found_message<B>(
     Ok(ErrorHandlerResponse::Response(res))
 }
 
+pub fn get_actix_app() -> App<
+    impl ServiceFactory<
+            ServiceRequest,
+            Config = (),
+            Response = ServiceResponse<impl MessageBody>,
+            Error = Error,
+            InitError = (),
+        > + 'static,
+> {
+    let state = AppState {
+        http_client: Arc::new(Mutex::new(HttpClient::default())),
+    };
+    App::new()
+        .app_data(web::Data::new(state.clone()))
+        .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
+        /*
+            get Methods
+        */
+        .service(find_manga_by_id)
+        .service(find_cover_by_id)
+        .service(find_cover_image_by_id)
+        .service(find_manga_cover_by_id)
+        .service(find_manga_covers_by_id)
+        .service(find_chapters_data_by_id)
+        .service(find_chapters_data_saver_by_id)
+        .service(find_chapters_data_img_by_id)
+        .service(find_chapters_data_saver_img_by_id)
+        .service(find_chapter_by_id)
+        .service(find_all_downloaded_chapter)
+        .service(find_all_downloaded_manga)
+        .service(find_manga_chapters_by_id)
+        .service(aggregate_manga)
+        .service(hello)
+        /*
+            patch methods
+        */
+        .service(update_cover_by_id)
+        .service(update_chapter_by_id)
+        .service(patch_all_chapter)
+        .service(patch_all_chapter_manga)
+        .service(update_chapter_manga_by_id)
+        .service(patch_all_manga_cover)
+        /*
+            delete methods
+        */
+        .service(delete_chapter_by_id)
+        .service(delete_manga_chapters_by_id)
+        /*
+            put methods
+        */
+        .service(download_manga_by_id)
+        .service(download_manga_covers)
+        .service(download_manga_cover)
+        .service(download_manga_cover_quality)
+        .service(download_cover)
+        .service(download_cover_quality)
+        .service(download_chapter_byid)
+        .service(download_chapter_data_byid)
+        .service(download_chapter_data_saver_byid)
+}
+
 /// Get the server handle
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
-    let state = AppState {
-        http_client : Arc::new(Mutex::new(HttpClient::default()))
-    };
-    Ok(HttpServer::new(move|| {
-        App::new()
-            .app_data(web::Data::new(state.clone()))
-            .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
-            /*
-                get Methods
-            */
-            .service(find_manga_by_id)
-            .service(find_cover_by_id)
-            .service(find_cover_image_by_id)
-            .service(find_manga_cover_by_id)
-            .service(find_manga_covers_by_id)
-            .service(find_chapters_data_by_id)
-            .service(find_chapters_data_saver_by_id)
-            .service(find_chapters_data_img_by_id)
-            .service(find_chapters_data_saver_img_by_id)
-            .service(find_chapter_by_id)
-            .service(find_all_downloaded_chapter)
-            .service(find_all_downloaded_manga)
-            .service(find_manga_chapters_by_id)
-            .service(aggregate_manga)
-            .service(hello)
-            /*
-                patch methods
-            */
-            .service(update_cover_by_id)
-            .service(update_chapter_by_id)
-            .service(patch_all_chapter)
-            .service(patch_all_chapter_manga)
-            .service(update_chapter_manga_by_id)
-            .service(patch_all_manga_cover)
-            /*
-                delete methods
-            */
-            .service(delete_chapter_by_id)
-            .service(delete_manga_chapters_by_id)
-            /*
-                put methods
-            */
-            .service(download_manga_by_id)
-            .service(download_manga_covers)
-            .service(download_manga_cover)
-            .service(download_manga_cover_quality)
-            .service(download_cover)
-            .service(download_cover_quality)
-            .service(download_chapter_byid)
-            .service(download_chapter_data_byid)
-            .service(download_chapter_data_saver_byid)
-    })
-    .bind((address, port))?
-    .run())
+    Ok(HttpServer::new(move || get_actix_app())
+        .bind((address, port))?
+        .run())
 }
