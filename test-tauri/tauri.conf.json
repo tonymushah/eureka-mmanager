@@ -1,9 +1,10 @@
 {
   "build": {
-    "beforeBuildCommand": "cd frontend && pnpm build",
-    "beforeDevCommand": "cd frontend && pnpm dev",
+    "beforeBuildCommand": "npm build",
+    "beforeDevCommand": "pnpm dev",
     "devPath": "http://localhost:5173/",
-    "distDir": "./dist"
+    "distDir": "./dist",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "mdx-manager-test",
@@ -11,7 +12,12 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false
+      "all": false,
+      "http": {
+        "all": true,
+        "request": true,
+        "scope": ["mangadex://localhost/**"]
+      }
     },
     "bundle": {
       "active": true,

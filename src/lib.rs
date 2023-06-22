@@ -17,6 +17,8 @@ pub mod server;
 pub mod r#static;
 #[cfg(feature = "feeds")]
 pub mod feeds;
+#[cfg(feature = "tauri")]
+pub mod tauri;
 /// url not found handler
 ///
 ///

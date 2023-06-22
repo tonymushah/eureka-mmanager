@@ -30,6 +30,8 @@ use actix_web::{web, Error};
 use futures::lock::Mutex;
 use mangadex_api::{HttpClient, HttpClientRef};
 
+pub mod app;
+
 /*use self::state::AppState;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -39,6 +41,7 @@ pub mod state;
 /// url not found handler
 ///
 ///
+/// 
 
 #[derive(Clone)]
 pub struct AppState {

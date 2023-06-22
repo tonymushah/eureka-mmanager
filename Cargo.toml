@@ -44,10 +44,14 @@ binary_search_tree = { version = "0.2.2", optional = true }
 actix-web-actors = { version = "4", optional = true }
 surrealdb = { version = "1.0.0-beta.9", features = ["kv-rocksdb"], optional = true }
 derive_builder = { version = "0.11.2", optional = true }
-tauri = { version = "1.4", optional = true, features = ["reqwest-client"] }
+tauri = { version = "1.4", optional = true, features = ["reqwest-client", "http-api"] }
 actix-service = { version = "2", optional = true }
 actix-http = { version = "3.3", optional = true }
 actix-router = { version = "0", optional = true }
+tokio-stream = { version = "0.1", optional = true }
+async-stream = { version = "0.3", optional = true }
+bytes = { version = "1.4", optional = true }
+http = { version = "0.2", optional = true }
 
 [features]
 default = ["feeds", "tauri"]
@@ -55,4 +59,4 @@ recommendation = ["dep:linfa-linear"]
 feeds = ["dep:binary_search_tree", "dep:derive_builder"]
 feeds_rt = ["feeds", "dep:actix"]
 websockets = ["dep:actix", "dep:actix-web-actors"]
-tauri = ["dep:tauri", "dep:actix-service", "dep:actix-http", "dep:actix-router"]
+tauri = ["dep:tauri", "dep:actix-service", "dep:actix-http", "dep:actix-router", "dep:tokio-stream", "dep:async-stream", "dep:bytes", "dep:http"]
