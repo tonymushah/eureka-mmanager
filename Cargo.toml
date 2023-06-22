@@ -39,11 +39,13 @@ binary_search_tree = { version = "0.2.2", optional = true }
 actix-web-actors = { version = "4", optional = true }
 surrealdb = { version = "1.0.0-beta.9", features = ["kv-rocksdb"], optional = true }
 derive_builder = { version = "0.11.2", optional = true }
-
+tauri = { version = "1.4", optional = true, features = ["reqwest-client"] }
+actix-service = { version = "2", optional = true }
 
 [features]
-default = ["feeds"]
+default = ["feeds", "tauri"]
 recommendation = ["dep:linfa-linear"]
 feeds = ["dep:binary_search_tree", "dep:derive_builder"]
 feeds_rt = ["feeds", "dep:actix"]
 websockets = ["dep:actix", "dep:actix-web-actors"]
+tauri = ["dep:tauri", "dep:actix-service"]
