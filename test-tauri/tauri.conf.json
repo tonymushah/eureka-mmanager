@@ -1,9 +1,9 @@
 {
   "build": {
-    "beforeBuildCommand": "",
-    "beforeDevCommand": "",
-    "devPath": "dist",
-    "distDir": "n"
+    "beforeBuildCommand": "cd frontend && pnpm build",
+    "beforeDevCommand": "cd frontend && pnpm dev",
+    "devPath": "http://localhost:5173/",
+    "distDir": "./dist"
   },
   "package": {
     "productName": "mdx-manager-test",
