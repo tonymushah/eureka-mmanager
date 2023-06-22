@@ -19,8 +19,8 @@ use crate::{
 /// puting chapter data in a json data
 async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chapter_top_dir : &String) -> anyhow::Result<()>{
     let http_client = client.lock().await.client.clone();
-    if Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() == false {
-        let get_chapter = send_request(http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated().to_string())), 5).await?;
+    if !Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() {
+        let get_chapter = send_request(http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated())), 5).await?;
         if get_chapter.status().is_client_error() || get_chapter.status().is_server_error() {
             return anyhow::Result::Err(anyhow::Error::msg(format!("can't download the chapter {} data", chapter_id)));
         }
@@ -31,7 +31,7 @@ async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chap
     }
     match is_chapter_manga_there(format!("{}", chapter_id)) {
         Ok(data) => {
-            if data == false {
+            if !data {
                 patch_manga_by_chapter(format!("{}", chapter_id), client).await?;
             }
         }
@@ -60,8 +60,8 @@ where
                     Ok(file) => {
                         let res_length = res.content_length();
                         // The data should be streamed rather than downloading the data all at once.
-                        if Path::new(path_to_use.as_str()).exists() == false
-                            || res_length.is_none() == true
+                        if !Path::new(path_to_use.as_str()).exists()
+                            || res_length.is_none()
                             || file.metadata()?.len()
                                 != match res_length {
                                     Some(d) => {
@@ -85,7 +85,7 @@ where
                                         }
                                         core::result::Result::Ok(_) => {
                                             info!("downloaded {} ", &filename);
-                                            files_.push(format!("{}", &filename));
+                                            files_.push((&filename).to_string());
                                         }
                                     };
                                 }
@@ -109,7 +109,7 @@ where
                                     }
                                     core::result::Result::Ok(_) => {
                                         info!("downloaded {} ", &filename);
-                                        files_.push(format!("{}", &filename));
+                                        files_.push((&filename).to_string());
                                     }
                                 };
                             }
@@ -141,7 +141,7 @@ pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyho
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data", chapter_top_dir);
-    std::fs::create_dir_all(format!("{}", chapter_dir))?;
+    std::fs::create_dir_all(&chapter_dir)?;
     info!("chapter dir created");
     let at_home = client
         .at_home()

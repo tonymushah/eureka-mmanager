@@ -48,7 +48,7 @@ pub fn get_params(request: HttpRequest) -> HashMap<String, String> {
     return match query_string_to_hash_map(request.query_string()) {
         Ok(value) => value,
         Err(error) => {
-            println!("{}", error.to_string());
+            println!("{}", error);
             HashMap::new()
         }
     };

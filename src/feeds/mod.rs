@@ -3,12 +3,9 @@ use std::{str::FromStr, sync::Arc};
 use binary_search_tree::BinarySearchTree;
 use derive_builder::Builder;
 use mangadex_api::MangaDexClient;
-use mangadex_api_types_rust::{MangaFeedSortOrder, OrderDirection, Language};
+use mangadex_api_types_rust::{Language, MangaFeedSortOrder, OrderDirection};
 use serde::{Deserialize, Serialize};
-use tokio::{
-    sync::Mutex,
-    task::{LocalSet},
-};
+use tokio::{sync::Mutex, task::LocalSet};
 use uuid::Uuid;
 
 #[cfg(feature = "feeds_rt")]
@@ -20,26 +17,19 @@ async fn collect_feed(
     manga_id: String,
     feed_: Arc<Mutex<BinarySearchTree<ChapterFeed>>>,
     client: Arc<MangaDexClient>,
-    translated_lang : Option<Language>
+    translated_lang: Option<Language>,
 ) -> anyhow::Result<Uuid> {
     let id = format!("urn:uuid:{}", manga_id);
     let id = uuid::Uuid::from_str(id.as_str())?;
-    let builder = client
-        .manga();
+    let builder = client.manga();
     let mut feeds_build = builder
         .feed()
         .manga_id(&id)
         .order(MangaFeedSortOrder::ReadableAt(OrderDirection::Descending));
-    match translated_lang {
-        Some(d_) => {
-            feeds_build = feeds_build.add_translated_language(d_)
-        },
-        None => ()
+    if let Some(d_) = translated_lang {
+        feeds_build = feeds_build.add_translated_language(d_)
     }
-    let feeds = feeds_build
-        .build()?
-        .send()
-        .await??;
+    let feeds = feeds_build.build()?.send().await??;
     for feed in feeds.data {
         feed_.lock().await.insert(ChapterFeed::new(feed));
     }
@@ -52,10 +42,14 @@ pub struct MangaDownloadFeedError {
     error: String,
 }
 
-type MangaDownloadFeed = (Arc<Mutex<BinarySearchTree<ChapterFeed>>>, Arc<Mutex<Vec<MangaDownloadFeedError>>>);
+type MangaDownloadFeed = (
+    Arc<Mutex<BinarySearchTree<ChapterFeed>>>,
+    Arc<Mutex<Vec<MangaDownloadFeedError>>>,
+);
 
-pub async fn get_downloaded_manga_feed(translated_lang : Option<Language>) -> anyhow::Result<MangaDownloadFeed>
-{
+pub async fn get_downloaded_manga_feed(
+    translated_lang: Option<Language>,
+) -> anyhow::Result<MangaDownloadFeed> {
     let manga_id = get_all_downloaded_manga()?;
     let chapter_data: Arc<Mutex<BinarySearchTree<ChapterFeed>>> =
         Arc::new(Mutex::new(BinarySearchTree::new()));
@@ -68,7 +62,9 @@ pub async fn get_downloaded_manga_feed(translated_lang : Option<Language>) -> an
         let err = Arc::clone(&errors);
         handles.spawn_local(async move {
             let id_ = id.clone();
-            match tokio::spawn(async move { collect_feed(id_, sr, cli, translated_lang).await }).await {
+            match tokio::spawn(async move { collect_feed(id_, sr, cli, translated_lang).await })
+                .await
+            {
                 Ok(t) => {
                     let id_ = id.clone();
                     match t {
@@ -81,7 +77,7 @@ pub async fn get_downloaded_manga_feed(translated_lang : Option<Language>) -> an
                             {
                                 Ok(d) => err.lock().await.push(d),
                                 Err(e_) => {
-                                    eprintln!("{}", e_.to_string())
+                                    eprintln!("{}", e_)
                                 }
                             }
                         }
@@ -96,7 +92,7 @@ pub async fn get_downloaded_manga_feed(translated_lang : Option<Language>) -> an
                     {
                         Ok(d) => err.lock().await.push(d),
                         Err(e_) => {
-                            eprintln!("{}", e_.to_string())
+                            eprintln!("{}", e_)
                         }
                     }
                 }

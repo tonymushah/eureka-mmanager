@@ -60,7 +60,7 @@ pub async fn download_manga_cover_quality(path_var: web::Path<(String, u32)>, da
     let id = (*(path_var.0)).to_string();
     let quality = path_var.1;
     let response = this_api_result!(
-        cover_download_quality_by_manga_id(format!("{id}").as_str(), match quality {
+        cover_download_quality_by_manga_id(id.to_string().as_str(), match quality {
             256 => CoverQuality::Size256,
             512 => CoverQuality::Size512,
             _ => CoverQuality::Default
@@ -86,7 +86,7 @@ async fn download_cover_quality(path_var: web::Path<(String, u32)>, data: web::D
     let id = (*(path_var.0)).to_string();
     let quality = path_var.1;
     let response =
-        this_api_result!(cover_download_quality_by_cover(format!("{id}").as_str(), match quality {
+        this_api_result!(cover_download_quality_by_cover(id.to_string().as_str(), match quality {
             256 => CoverQuality::Size256,
             512 => CoverQuality::Size512,
             _ => CoverQuality::Default

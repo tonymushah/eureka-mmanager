@@ -1,16 +1,11 @@
+use crate::settings::files_dirs::DirsOptions;
+use crate::utils::manga::find_and_delete_all_downloades_by_manga_id;
 use crate::{this_api_option, this_api_result};
-use crate::utils::manga::{
-    find_and_delete_all_downloades_by_manga_id
-};
-use actix_web::http::header::{ContentType};
-use actix_web::{
-    delete, web, HttpResponse,
-    Responder,
-};
+use actix_web::http::header::ContentType;
+use actix_web::{delete, web, HttpResponse, Responder};
 use mangadex_api_schema_rust::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
-use crate::settings::files_dirs::DirsOptions;
 use std::path::Path;
 
 // NOTE all delete methods
@@ -18,26 +13,25 @@ use std::path::Path;
 /// delete a chapter from the api
 #[delete("/chapter/{id}")]
 pub async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
-    let jsons: serde_json::Value;
-    let chapter_path = this_api_result!(DirsOptions::new()).chapters_add(format!("{}", id).as_str());
-    if Path::new(chapter_path.as_str()).exists() == true {
+    let chapter_path =
+        this_api_result!(DirsOptions::new()).chapters_add(format!("{}", id).as_str());
+    if Path::new(chapter_path.as_str()).exists() {
         this_api_result!(std::fs::remove_dir_all(chapter_path));
-        jsons = serde_json::json!({
+        let jsons: serde_json::Value = serde_json::json!({
             "result" : "ok"
         });
+        HttpResponse::Ok()
+            .content_type(ContentType::json())
+            .body(jsons.to_string())
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
             "message" : format!("can't find chapter {}", id)
         });
-        return HttpResponse::InternalServerError()
+        HttpResponse::InternalServerError()
             .content_type(ContentType::json())
-            .body(jsons.to_string());
+            .body(jsons.to_string())
     }
-
-    HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(jsons.to_string())
 }
 
 /// delete a  manga
@@ -74,15 +68,11 @@ pub async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responde
         this_api_result!(DirsOptions::new()).mangas_add(format!("{}.json", id).as_str()),
     ));
     this_api_result!(std::fs::remove_file(filename_path1));
-    match serde_json::from_str(jsons1.as_str()) {
-        Ok(getted) => {
-            let cover_data: ApiData<ApiObject<CoverAttributes>> = getted;
-            let filename = cover_data.data.attributes.file_name;
-            let filename_path2 =
-                file_dir_clone2.covers_add(format!("images/{}", filename).as_str());
-            this_api_result!(std::fs::remove_file(filename_path2));
-        }
-        Err(_) => {}
+    if let Ok(getted) = serde_json::from_str(jsons1.as_str()) {
+        let cover_data: ApiData<ApiObject<CoverAttributes>> = getted;
+        let filename = cover_data.data.attributes.file_name;
+        let filename_path2 = file_dir_clone2.covers_add(format!("images/{}", filename).as_str());
+        this_api_result!(std::fs::remove_file(filename_path2));
     };
 
     HttpResponse::Ok().content_type(ContentType::json()).body(

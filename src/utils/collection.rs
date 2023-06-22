@@ -21,44 +21,44 @@ impl<T> Collection<T>
         offset: usize,
     ) -> Result<Collection<T>, std::io::Error> {
         if offset > to_use.len() {
-            return Err(std::io::Error::new(
+            Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "the offset is greater than the vector length",
-            ));
+            ))
         } else {
             let (_, right) = to_use.split_at(offset);
             let data;
             if right.len() <= limit {
                 data = right.to_vec();
-                return Ok(Collection {
-                    data: data,
+                Ok(Collection {
+                    data,
                     limit,
                     offset,
                     total: to_use.len(),
-                });
+                })
             } else {
                 let (left1, _) = right.split_at(limit);
                 data = left1.to_vec();
-                return Ok(Collection {
-                    data: data,
+                Ok(Collection {
+                    data,
                     limit,
                     offset,
                     total: to_use.len(),
-                });
+                })
             }
         }
     }
     pub fn get_data(self) -> Vec<T> {
-        return self.data;
+        self.data
     }
     pub fn get_total(self) -> usize {
-        return self.total;
+        self.total
     }
     pub fn get_offset(self) -> usize {
-        return self.offset;
+        self.offset
     }
     pub fn get_limit(self) -> usize {
-        return self.limit;
+        self.limit
     }
     pub fn convert_to<S, F>(&mut self, f: F) -> Result<Collection<S>, std::io::Error>
     where

@@ -18,21 +18,21 @@ impl DirsOptions{
         anyhow::Ok(instance)
     }
     pub fn data_dir_add(&self, path: &str) -> String{
-        return format!("{}/{}", self.data_dir, path);
+        format!("{}/{}", self.data_dir, path)
     }
     pub fn chapters_add(&self, path: &str) -> String {
         let chapters_path = self.chapters.as_str();
         let chapters_path_defpath = self.data_dir_add(chapters_path);
-        return format!("{}/{}", chapters_path_defpath, path);
+        format!("{}/{}", chapters_path_defpath, path)
     }
     pub fn mangas_add(&self, path: &str) -> String {
         let mangas_path = self.mangas.as_str();
         let mangas_path_defpath = self.data_dir_add(mangas_path);
-        return format!("{}/{}", mangas_path_defpath, path);
+        format!("{}/{}", mangas_path_defpath, path)
     }
     pub fn covers_add(&self, path: &str) -> String {
         let covers_path = self.covers.as_str();
         let covers_path_defpath = self.data_dir_add(covers_path);
-        return format!("{}/{}", covers_path_defpath, path);
+        format!("{}/{}", covers_path_defpath, path)
     }
 }

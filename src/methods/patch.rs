@@ -45,7 +45,7 @@ pub async fn update_cover_by_id(id: web::Path<String>) -> impl Responder {
 
     HttpResponse::Ok()
         .content_type(ContentType::json())
-        .body(jsons.to_string())
+        .body(jsons)
 }
 
 /// update a chapter by his id
@@ -74,14 +74,14 @@ pub async fn update_chapter_by_id(id: web::Path<String>) -> impl Responder {
 
     HttpResponse::Ok()
         .content_type(ContentType::json())
-        .body(jsons.to_string())
+        .body(jsons)
 }
 
 /// update all chapters data
 #[patch("/chapter/all")]
 pub async fn patch_all_chapter(data: web::Data<AppState>) -> impl Responder {
     let path = this_api_result!(DirsOptions::new()).chapters_add("");
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
         let mut vecs: Vec<serde_json::Value> = Vec::new();
         for files in list_dir {
@@ -118,7 +118,7 @@ pub async fn patch_all_chapter(data: web::Data<AppState>) -> impl Responder {
 pub async fn patch_all_chapter_manga(data: web::Data<AppState>) -> impl Responder {
     let path = this_api_result!(DirsOptions::new()).chapters_add("");
     //info!("{}", path);
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
         let mut vecs: Vec<serde_json::Value> = Vec::new();
         for files in list_dir {
@@ -129,7 +129,7 @@ pub async fn patch_all_chapter_manga(data: web::Data<AppState>) -> impl Responde
             .to_string();
             let id_clone = id.clone();
             let id_clone_clone = id.clone();
-            if this_api_result!(is_chapter_manga_there(id)) == false {
+            if !this_api_result!(is_chapter_manga_there(id)) {
                 vecs.push(this_api_result!(
                     patch_manga_by_chapter(id_clone, data.http_client.clone()).await
                 ));
@@ -164,7 +164,7 @@ pub async fn update_chapter_manga_by_id(id: web::Path<String>, data: web::Data<A
     let path = this_api_result!(DirsOptions::new())
         .chapters_add(format!("chapters/{}/data.json", id).as_str());
 
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         HttpResponse::Ok()
             .content_type(ContentType::json())
             .body(this_api_result!(patch_manga_by_chapter(id.to_string(), data.http_client.clone()).await).to_string())
@@ -183,7 +183,7 @@ pub async fn update_chapter_manga_by_id(id: web::Path<String>, data: web::Data<A
 #[patch("/manga/all/cover")]
 pub async fn patch_all_manga_cover(data: web::Data<AppState>) -> impl Responder {
     let path = this_api_result!(DirsOptions::new()).mangas_add("");
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
         let mut vecs: Vec<serde_json::Value> = Vec::new();
         for files in list_dir {

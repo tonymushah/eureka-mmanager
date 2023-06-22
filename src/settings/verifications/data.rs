@@ -24,16 +24,16 @@ pub fn verify_data_dir() -> anyhow::Result<String, String> {
             return Err("can't load the file dir api".into());
         }
     };
-    if std::path::Path::new(dirs_options.data_dir_add("").as_str()).exists() == false {
+    if !std::path::Path::new(dirs_options.data_dir_add("").as_str()).exists() {
         return Err("the data dir doesn't exist".to_string());
     }
-    if std::path::Path::new(dirs_options.chapters_add("").as_str()).exists() == false {
+    if !std::path::Path::new(dirs_options.chapters_add("").as_str()).exists() {
         return Err("the chapters dir doesn't exist".to_string());
     }
-    if std::path::Path::new(dirs_options.covers_add("").as_str()).exists() == false {
+    if !std::path::Path::new(dirs_options.covers_add("").as_str()).exists() {
         return Err("the covers dir doesn't exist".to_string());
     }
-    if std::path::Path::new(dirs_options.mangas_add("").as_str()).exists() == false {
+    if !std::path::Path::new(dirs_options.mangas_add("").as_str()).exists() {
         return Err("the mangas dir doesn't exist".to_string());
     }
     Ok("the data dir is operational".to_string())

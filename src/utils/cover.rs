@@ -5,7 +5,7 @@ use mangadex_api_schema_rust::{v5::CoverAttributes, ApiObject, ApiData};
 use crate::settings::files_dirs::DirsOptions;
 
 pub fn is_cover_image_there(cover_id : String) -> Result<bool, std::io::Error>{
-    if cover_id.is_empty() == false {
+    if !cover_id.is_empty() {
         let path = match DirsOptions::new(){
             core::result::Result::Ok(data) => data,
             Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
@@ -22,23 +22,23 @@ pub fn is_cover_image_there(cover_id : String) -> Result<bool, std::io::Error>{
             std::io::Result::Ok(false)
         }
     }else{
-        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the cover_id should'nt be empty"));
+        Err(std::io::Error::new(std::io::ErrorKind::Other, "the cover_id should'nt be empty"))
     }
 }
 
 pub fn is_cover_there(cover_id : String) -> Result<bool, std::io::Error>{
-    if cover_id.is_empty() == false {
+    if !cover_id.is_empty() {
         let path = match DirsOptions::new(){
             core::result::Result::Ok(data) => data,
             Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
         }.covers_add(format!("{}.json", cover_id).as_str());
         if Path::new(path.as_str()).exists() {
-            return is_cover_image_there(cover_id);
+            is_cover_image_there(cover_id)
         }else{
             std::io::Result::Ok(false)
         }
     }else{
-        return Err(std::io::Error::new(std::io::ErrorKind::Other, "the cover_id should'nt be empty"));
+        Err(std::io::Error::new(std::io::ErrorKind::Other, "the cover_id should'nt be empty"))
     }
 }
 
@@ -47,7 +47,7 @@ pub fn get_cover_data(cover_id : String) -> Result<ApiData<ApiObject<CoverAttrib
     let cover_id_clone = cover_id.clone();
     match is_cover_there(cover_id) {
         core::result::Result::Ok(is_there) => {
-            if is_there == true{
+            if is_there{
                 let path = match DirsOptions::new(){
                     core::result::Result::Ok(data) => data,
                     Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
@@ -73,7 +73,7 @@ pub fn get_all_cover() -> Result<Vec<String>, std::io::Error>{
         }
     };
     let path = file_dirs.covers_add("");
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let list_dir = (std::fs::read_dir(path.as_str()))?;
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
@@ -84,7 +84,6 @@ pub fn get_all_cover() -> Result<Vec<String>, std::io::Error>{
                         Err(_) => continue,
                     }
                     .is_file()
-                        == true
                     {
                         vecs.push(
                             match file.file_name().to_str() {
@@ -99,11 +98,11 @@ pub fn get_all_cover() -> Result<Vec<String>, std::io::Error>{
                 Err(_) => continue,
             }
         }
-        return std::io::Result::Ok(vecs);
+        std::io::Result::Ok(vecs)
     } else {
-        return Err(std::io::Error::new(
+        Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "can't find the cover directory",
-        ));
+        ))
     }
 }

@@ -28,13 +28,13 @@ pub fn initialise_settings_dir() -> anyhow::Result<()> {
 }
 
 pub fn verify_settings_dir() -> anyhow::Result<String, String> {
-    if std::path::Path::new("./settings").exists() == false {
+    if !std::path::Path::new("./settings").exists() {
         return Err("the dir settings doesn't exist".to_string());
     }
-    if std::path::Path::new("./settings/files-dirs.json").exists() == false {
+    if !std::path::Path::new("./settings/files-dirs.json").exists() {
         return Err("the files-dirs.json in the settings dir doesn't exist".to_string());
     }
-    if std::path::Path::new("./settings/server-options.json").exists() == false {
+    if !std::path::Path::new("./settings/server-options.json").exists() {
         return Err("the server-options.json in the settings dir doesn't exist".to_string());
     }
     Ok("the dir settings is operationnal".to_string())

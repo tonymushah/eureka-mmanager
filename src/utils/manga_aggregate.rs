@@ -122,7 +122,7 @@ pub async fn aggregate_manga_chapters(manga_id : String) -> Result<MangaAggregat
     let data : Vec<ApiObject<ChapterAttributes>> = (crate::utils::manga::get_all_downloaded_chapter_data(manga_id).await)?;
     let volumes = group_chapter_to_volume_aggregate(data)?;
     Ok(MangaAggregate {
-        volumes : volumes
+        volumes
     })
 }
 

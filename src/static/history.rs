@@ -18,18 +18,18 @@ pub fn get_history_w_file_by_rel(
     let history = get_history()?;
     match history.get_mut(&(relationship_type)) {
         None => {
-            return Err(std::io::Error::new(
+            Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!(
                     "value of {}",
                     serde_json::to_string(&relationship_type)?
-                        .replace("\"", "")
+                        .replace('\"', "")
                         .as_str()
                 ),
-            ));
+            ))
         }
-        Some(data) => return Ok(data),
-    };
+        Some(data) => Ok(data),
+    }
 }
 pub fn get_history_w_file_by_rel_or_init(relationship_type: RelationshipType) -> Result<&'static mut HistoryWFile, std::io::Error>{
     let history = get_history()?;

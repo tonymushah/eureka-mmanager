@@ -5,7 +5,7 @@ pub fn query_string_to_hash_map(to_use: &str) -> Result<HashMap<String, String>,
     let mut to_return : HashMap<String, String> = HashMap::new();
     let query_part: Vec<&str> = to_use.split('&').collect();
     for parts in query_part {
-        let query_part_parsed = match parts.split_once("=") {
+        let query_part_parsed = match parts.split_once('=') {
             None => continue,
             Some(value) => value
         };

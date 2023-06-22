@@ -40,11 +40,11 @@ pub async fn hello(/*request: HttpRequest*/) -> impl Responder {
 pub async fn find_manga_by_id(id: web::Path<String>) -> impl Responder {
     let file_dirs = this_api_result!(DirsOptions::new());
     let path = file_dirs.mangas_add(format!("{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
         return HttpResponse::Ok()
             .content_type(ContentType::json())
-            .body(jsons.to_string());
+            .body(jsons);
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
@@ -64,11 +64,11 @@ pub async fn find_manga_by_id(id: web::Path<String>) -> impl Responder {
 pub async fn find_cover_by_id(id: web::Path<String>) -> impl Responder {
     let file_dirs = this_api_result!(DirsOptions::new());
     let path = file_dirs.covers_add(format!("{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
         HttpResponse::Ok()
             .content_type(ContentType::json())
-            .body(jsons.to_string())
+            .body(jsons)
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
@@ -86,14 +86,13 @@ pub async fn find_cover_by_id(id: web::Path<String>) -> impl Responder {
 #[get("/cover/{id}/image")]
 pub async fn find_cover_image_by_id(id: web::Path<String>) -> impl Responder {
     let file_dirs = this_api_result!(DirsOptions::new());
-    let file_dir_clone = file_dirs.clone();
     let path = file_dirs.covers_add(format!("{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
         let cover_data: ApiData<ApiObject<CoverAttributes>> =
             this_api_result!(serde_json::from_str(jsons.as_str()));
         let filename = cover_data.data.attributes.file_name;
-        let filename_path = file_dir_clone.covers_add(format!("images/{}", filename).as_str());
+        let filename_path = file_dirs.covers_add(format!("images/{}", filename).as_str());
         HttpResponse::Ok()
             .content_type(ContentType::jpeg())
             .body(this_api_result!(std::fs::read(filename_path)))
@@ -114,9 +113,8 @@ pub async fn find_cover_image_by_id(id: web::Path<String>) -> impl Responder {
 #[get("/manga/{id}/cover")]
 pub async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
     let file_dirs = this_api_result!(DirsOptions::new());
-    let file_dir_clone = file_dirs.clone();
     let path = file_dirs.mangas_add(format!("{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
         let manga_data: ApiData<ApiObject<MangaAttributes>> =
             this_api_result!(serde_json::from_str(jsons.as_str()));
@@ -130,7 +128,7 @@ pub async fn find_manga_cover_by_id(id: web::Path<String>) -> impl Responder {
         )
         .id;
         let filename_path =
-            file_dir_clone.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
+            file_dirs.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
         let data = this_api_result!(std::fs::read_to_string(filename_path));
         HttpResponse::Ok()
             .content_type(ContentType::json())
@@ -186,14 +184,14 @@ pub async fn find_chapters_data_by_id(id: web::Path<String>) -> impl Responder {
     let file_dirs = this_api_result!(DirsOptions::new());
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
             let filename_os = this_api_result!(files).file_name().clone();
             let filename =
                 this_api_option!(filename_os.to_str(), format!("can't reconize file")).to_string();
-            if filename.ends_with(".json") == false {
+            if !filename.ends_with(".json") {
                 vecs.push(filename);
             }
         }
@@ -224,14 +222,14 @@ pub async fn find_chapters_data_saver_by_id(id: web::Path<String>) -> impl Respo
     let file_dirs = this_api_result!(DirsOptions::new());
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data-saver", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
             let filename_os = this_api_result!(files).file_name().clone();
             let filename =
                 this_api_option!(filename_os.to_str(), format!("can't reconize file")).to_string();
-            if filename.ends_with(".json") == false {
+            if !filename.ends_with(".json") {
                 vecs.push(filename);
             }
         }
@@ -261,7 +259,7 @@ pub async fn find_chapters_data_img_by_id(data: web::Path<(String, String)>) -> 
     let (id, filename) = data.into_inner();
     let file_dirs = this_api_result!(DirsOptions::new());
     let path = file_dirs.chapters_add(format!("{}/data/{}", id, filename).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         HttpResponse::Ok()
             .content_type(ContentType::jpeg())
             .body(this_api_result!(std::fs::read(path)))
@@ -286,7 +284,7 @@ pub async fn find_chapters_data_saver_img_by_id(
     let (id, filename) = data.into_inner();
     let file_dirs = this_api_result!(DirsOptions::new());
     let path = file_dirs.chapters_add(format!("{}/data-saver/{}", id, filename).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         HttpResponse::Ok()
             .content_type(ContentType::jpeg())
             .body(this_api_result!(std::fs::read(path)))
@@ -310,23 +308,23 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
     let file_dirs = this_api_result!(DirsOptions::new());
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data.json", id).as_str());
-    if Path::new(path.as_str()).exists() == true {
+    if Path::new(path.as_str()).exists() {
         let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
         let history_ = this_api_result!(get_history_w_file_by_rel_or_init(mangadex_api_types_rust::RelationshipType::Chapter));
 
         let uuid_str = format!("urn:uuid:{}", id);
         match uuid::Uuid::from_str(uuid_str.as_str()) {
             Ok(uuid_data) => {
-                if history_.get_history().is_in(uuid_data) == true {
+                if history_.get_history().is_in(uuid_data) {
                     HttpResponse::Ok()
                         .insert_header(("X-DOWNLOAD-FAILED", "true"))
                         .content_type(ContentType::json())
-                        .body(jsons.to_string())
+                        .body(jsons)
                 } else {
                     HttpResponse::Ok()
                         .insert_header(("X-DOWNLOAD-FAILED", "false"))
                         .content_type(ContentType::json())
-                        .body(jsons.to_string())
+                        .body(jsons)
                 }
             }
             Err(error) => {
@@ -335,7 +333,7 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
                     .insert_header(("X-DOWNLOAD-FAILED", "false"))
                     .insert_header(("EUREKA-UUID-PARSING-ERROR", "true"))
                     .content_type(ContentType::json())
-                    .body(jsons.to_string())
+                    .body(jsons)
             }
         }
     } else {
@@ -443,7 +441,7 @@ pub async fn aggregate_manga(
     let mut volumes_t : HashMap<String, serde_json::Value> = HashMap::new();
     for volume in aggregate.volumes {
         let mut volumes__ : HashMap<String, ChapterAggregate> = HashMap::new();
-        for chapter in (&volume).chapters.clone() {
+        for chapter in volume.chapters.clone() {
             volumes__.insert(chapter.chapter.clone(), chapter);
         }
         volumes_t.insert((volume).volume.clone(), serde_json::json!({

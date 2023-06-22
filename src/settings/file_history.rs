@@ -14,13 +14,13 @@ pub struct HistoryEntry{
 
 impl HistoryEntry{
     pub fn new(id: uuid::Uuid, data_type: RelationshipType) -> HistoryEntry{
-        return HistoryEntry { id: id, data_type: data_type };
+        HistoryEntry { id, data_type }
     }
     pub fn get_id(&self) -> uuid::Uuid{
-        return self.id;
+        self.id
     }
     pub fn get_data_type(&self) -> RelationshipType{
-        return self.data_type;
+        self.data_type
     }
     pub fn set_id(&mut self, id: uuid::Uuid){
         self.id = id;
@@ -38,26 +38,22 @@ pub struct History{
 
 impl History{
     pub fn new(data_type: RelationshipType) -> History{
-        return History { history_list: Vec::new(), data_type: data_type };
+        History { history_list: Vec::new(), data_type }
     }
     pub fn get_history_list_mut(&mut self)-> &mut Vec<uuid::Uuid>{
-        return &mut (self.history_list);
+        &mut (self.history_list)
     }
     pub fn get_history_list(&mut self)-> &Vec<uuid::Uuid>{
-        return &(self.history_list);
+        &(self.history_list)
     }
     pub fn get_data_type_mut(&mut self)-> &mut RelationshipType{
-        return &mut (self.data_type);
+        &mut (self.data_type)
     }
     pub fn get_data_type(&mut self)-> &RelationshipType{
-        return &(self.data_type);
+        &(self.data_type)
     }
     pub fn is_this_type(&self, to_use_rel: RelationshipType)-> bool{
-        if self.data_type == to_use_rel {
-            return true
-        }else{
-            return false;
-        }
+        self.data_type == to_use_rel
     }
     pub fn is_in(&self, id: uuid::Uuid)->bool{
         self.history_list.iter().any(|to_use| id.cmp(to_use).is_eq())
@@ -75,14 +71,14 @@ impl History{
     }
     pub fn add(&mut self, to_add: HistoryEntry)-> Result<(), std::io::Error>{
         let result = self.is_entry_in(to_add);
-        if result? == false {
+        if !(result?) {
             self.history_list.push(to_add.id);
         }
         Ok(())
     }
     pub fn remove_uuid(&mut self, uuid : uuid::Uuid)-> Result<(), std::io::Error>{
         let result = self.is_in(uuid);
-        if result == true{
+        if result{
             self.history_list.remove(match self.history_list.iter().position(|data| data.cmp(&uuid).is_eq()) {
                 Some(data) => data,
                 None => {
@@ -96,11 +92,11 @@ impl History{
     }
     pub fn add_uuid(&mut self, to_add: uuid::Uuid) -> Result<(), std::io::Error>{
         let result = self.is_in(to_add);
-        if result == false {
+        if !result {
             self.history_list.push(to_add);
-            return Ok(());
+            Ok(())
         }else {
-            return Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, format!("the uuid {} is already there", to_add))); 
+            Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, format!("the uuid {} is already there", to_add)))
         }
     }
 }
@@ -112,16 +108,16 @@ pub struct HistoryWFile{
 
 impl HistoryWFile{
     pub fn new(data_type: RelationshipType, file: String) -> HistoryWFile{
-        return HistoryWFile{
+        HistoryWFile{
             history : History::new(data_type),
-            file : file
-        };
+            file
+        }
     }
     pub fn get_history(&mut self) -> &mut History{
-        return &mut (self.history); 
+        &mut (self.history)
     }
     pub fn get_file(self) -> String{
-        return self.file;
+        self.file
     }
     pub fn commit(&mut self) -> Result<(), std::io::Error>{
         let history_string_value = serde_json::to_string(&(self.history))?;
@@ -146,7 +142,7 @@ impl HistoryWFile{
 }
 
 pub fn init_history(relationship_type: RelationshipType, dir_options: &DirsOptions) -> Result<HistoryWFile, std::io::Error>{
-    let path: String = dir_options.data_dir_add(format!("history/{}.json", serde_json::to_string(&relationship_type)?).replace("\"", "").as_str());
+    let path: String = dir_options.data_dir_add(format!("history/{}.json", serde_json::to_string(&relationship_type)?).replace('\"', "").as_str());
     let path_clone = path.clone();
     let history = match HistoryWFile::from_file(path) {
         Ok(data) => data,
@@ -164,7 +160,7 @@ pub fn init_history_dir() -> Result<(), std::io::Error>{
             return Err(std::io::Error::new(std::io::ErrorKind::Other, error.to_string()));
         }
     };
-    let path: String = dir_options.data_dir_add(format!("history").as_str());
+    let path: String = dir_options.data_dir_add("history".to_string().as_str());
     std::fs::create_dir_all(path)?;
     Ok(())
 }

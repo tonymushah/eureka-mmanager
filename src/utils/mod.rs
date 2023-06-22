@@ -23,7 +23,7 @@ pub async fn send_request(to_use_arg: reqwest::RequestBuilder, tries_limits: u16
         }.send().await;
         match resp {
             Err(_) => {
-                tries = tries + 1;
+                tries += 1;
                 info!("tries {}", tries);
             },
             core::result::Result::Ok(data) => {

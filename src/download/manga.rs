@@ -31,7 +31,7 @@ pub async fn download_manga(client : HttpClientRef, mangaid: uuid::Uuid) -> Resu
             return Err(std::io::Error::new(std::io::ErrorKind::Other, error.to_string()));
         }
     }))?;
-    match cover_download_by_manga_id(format!("{}", id).as_str(), client.clone()).await {
+    match cover_download_by_manga_id(id.to_string().as_str(), client.clone()).await {
         Ok(_) => (),
         Err(error ) => {
             return Err(std::io::Error::new(std::io::ErrorKind::Other, error.to_string()));

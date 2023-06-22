@@ -77,7 +77,7 @@ pub fn get_actix_app() -> App<
         http_client: Arc::new(Mutex::new(HttpClient::default())),
     };
     App::new()
-        .app_data(web::Data::new(state.clone()))
+        .app_data(web::Data::new(state))
         .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
         /*
             get Methods
@@ -127,7 +127,7 @@ pub fn get_actix_app() -> App<
 
 /// Get the server handle
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
-    Ok(HttpServer::new(move || get_actix_app())
+    Ok(HttpServer::new(get_actix_app)
         .bind((address, port))?
         .run())
 }
