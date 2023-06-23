@@ -1,7 +1,8 @@
+use futures::StreamExt;
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
 use log::{info, warn};
-use mangadex_api::{v5::MangaDexClient, utils::get_reqwest_client, HttpClientRef};
+use mangadex_api::{v5::MangaDexClient, utils::{download::chapter::DownloadMode}, HttpClientRef};
 use serde_json::json;
 use std::fs::File;
 use std::io::Write;
@@ -12,7 +13,7 @@ use crate::{
     settings::{
         self, file_history::HistoryEntry,
     },
-    utils::{self, chapter::{is_chapter_manga_there, patch_manga_by_chapter}, send_request},
+    utils::{chapter::{is_chapter_manga_there, patch_manga_by_chapter}, send_request},
     r#static::history::{commit_rel, insert_in_history, remove_in_history}
 };
 
@@ -44,87 +45,8 @@ async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chap
     anyhow::Ok(())
 }
 
-async fn download_chapter_file<U>(
-    http_client : &reqwest::Client,
-    page_url : U,
-    path_to_use : &String,
-    files_ : &mut Vec<String>,
-    filename : &String
-) -> anyhow::Result<()>
-where 
-    U : reqwest::IntoUrl
-{
-    match utils::send_request(http_client.get(page_url), 5).await {
-            Ok(res) => {
-                match File::open(path_to_use) {
-                    Ok(file) => {
-                        let res_length = res.content_length();
-                        // The data should be streamed rather than downloading the data all at once.
-                        if !Path::new(path_to_use.as_str()).exists()
-                            || res_length.is_none()
-                            || file.metadata()?.len()
-                                != match res_length {
-                                    Some(d) => {
-                                        //info!("data length : {}", d);
-                                        d
-                                    }
-                                    None => 0,
-                                }
-                        {
-                            match res.bytes().await {
-                                core::result::Result::Err(error) => {
-                                    //info!("error on fetching data : {}", error.to_string());
-                                    return Err(anyhow::Error::new(error));
-                                }
-                                core::result::Result::Ok(bytes) => {
-                                    let mut file = File::create(path_to_use)?;
-                                    match file.write_all(&bytes) {
-                                        core::result::Result::Err(error) => {
-                                            //info!(" at file write_all : {}", error.to_string());
-                                            return Err(anyhow::Error::new(error));
-                                        }
-                                        core::result::Result::Ok(_) => {
-                                            info!("downloaded {} ", &filename);
-                                            files_.push((&filename).to_string());
-                                        }
-                                    };
-                                }
-                            };
-                            // This is where you would download the file but for this example,
-                            // we're just printing the raw data.
-                        }
-                    }
-                    Err(_) => {
-                        match res.bytes().await {
-                            core::result::Result::Err(error) => {
-                                //info!("error on fetching data : {}", error.to_string());
-                                return Err(anyhow::Error::new(error));
-                            }
-                            core::result::Result::Ok(bytes) => {
-                                let mut file = File::create(path_to_use)?;
-                                match file.write_all(&bytes) {
-                                    core::result::Result::Err(error) => {
-                                        //info!(" at file write_all : {}", error.to_string());
-                                        return Err(anyhow::Error::new(error));
-                                    }
-                                    core::result::Result::Ok(_) => {
-                                        info!("downloaded {} ", &filename);
-                                        files_.push((&filename).to_string());
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-            Err(error) => {
-                return Err(anyhow::Error::new(error));
-            }
-        };
-    anyhow::Ok(())
-}
-
 pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyhow::Result<serde_json::Value> {
+    
     let chapter_id = Uuid::parse_str(chapter_id)?;
     let history_entry =
         HistoryEntry::new(chapter_id, mangadex_api_types_rust::RelationshipType::Chapter);
@@ -137,84 +59,172 @@ pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyho
         }
     };
     commit_rel(history_entry.get_data_type())?;
+    
     let client = MangaDexClient::new_with_http_client_ref(client_.clone());
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data", chapter_top_dir);
     std::fs::create_dir_all(&chapter_dir)?;
     info!("chapter dir created");
-    let at_home = client
-        .at_home()
-        .server()
-        .chapter_id(&chapter_id)
-        .build()?
-        .send()
-        .await?;
-    let http_client = get_reqwest_client(&client).await;
+    
     verify_chapter_and_manga(&chapter_id, client_, &chapter_top_dir).await?;
+    
     let mut files_: Vec<String> = Vec::new();
-    // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
-    let page_filenames = at_home.chapter.data;
-    for filename in page_filenames {
-        let path_to_use = format!("{}/{}", chapter_dir, &filename);
-        // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
-        let page_url = at_home.base_url.join(&format!(
-            "/{quality_mode}/{chapter_hash}/{page_filename}",
-            quality_mode = "data",
-            chapter_hash = at_home.chapter.hash,
-            page_filename = filename
-        ))?;
-        download_chapter_file(&http_client, page_url, &path_to_use, &mut files_, &filename).await?;
+
+    let stream = client.download().chapter(chapter_id).report(true).build()?.download_stream_with_checker(|filename, response| {
+        let pre_file = match File::open(format!("{}/{}", chapter_dir.clone(), filename.filename.clone())){
+            Ok(d) => d,
+            Err(_) => return false
+        };
+        let content_length = match response.content_length() {
+            None => return false,
+            Some(ctt_lgth) => ctt_lgth
+        };
+        let pre_file_metadata = match pre_file.metadata() {
+            Ok(metadata) => metadata,
+            Err(_) => return false
+        };
+        content_length == pre_file_metadata.len() 
+    }).await?;
+    let mut has_error = false;
+    tokio::pin!(stream);
+    let mut errors: Vec<String> = Vec::new();
+    while let Some((result, index, len)) = stream.next().await {
+        info!("{} - {}", index, len);
+        match result {
+            Ok((filename, bytes_)) => {
+                if let Some(bytes) = bytes_ {
+                    match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone())){
+                        Ok(mut file) => match file.write_all(&bytes) {
+                            Ok(_) => {
+                                info!("Downloaded {filename}");
+                                files_.push(filename);
+                            },
+                            Err(e) => {
+                                log::error!("{}", e.to_string());
+                                errors.push(filename);
+                            }
+                        },
+                        Err(e) => {
+                            log::error!("{}", e.to_string());
+                            errors.push(filename);
+                        }
+                    }
+                }else {
+                    info!("Skipped {}", filename);
+                }
+            },
+            Err(error) => {
+                log::error!("{}", error.to_string());
+                has_error = true;
+            },
+        }
+    }
+    if !errors.is_empty() {
+        has_error = true;
     }
     let jsons = json!({
         "result" : "ok",
         "dir" : chapter_dir,
-        "downloaded" : files_
+        "downloaded" : files_,
+        "errors" : errors
     });
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
     let _ = file.write_all(jsons.to_string().as_bytes());
-    remove_in_history(&history_entry)?;
-    commit_rel(history_entry.get_data_type())?;
+    if !has_error {
+        remove_in_history(&history_entry)?;
+        commit_rel(history_entry.get_data_type())?;
+    }
+    
     Ok(jsons)
 }
 pub async fn download_chapter_saver(chapter_id: &str, client_: HttpClientRef) -> anyhow::Result<serde_json::Value> {
+    let chapter_id = Uuid::parse_str(chapter_id)?;
+    let history_entry =
+        HistoryEntry::new(chapter_id, mangadex_api_types_rust::RelationshipType::Chapter);
+    match insert_in_history(&history_entry) {
+        Ok(_) => (),
+        Err(error) => {
+            if error.kind() != std::io::ErrorKind::AlreadyExists {
+                return Err(anyhow::Error::new(error));
+            }
+        }
+    };
+    commit_rel(history_entry.get_data_type())?;
+
     let client = MangaDexClient::new_with_http_client_ref(client_.clone());
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let chapter_id = Uuid::parse_str(chapter_id)?;
     let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
     let chapter_dir = format!("{}/data-saver", chapter_top_dir);
     std::fs::create_dir_all(format!("{}/data-saver", chapter_top_dir))?;
     info!("chapter dir created");
-    let at_home = client
-        .at_home()
-        .server()
-        .chapter_id(&chapter_id)
-        .build()?
-        .send()
-        .await?;
-    let http_client = get_reqwest_client(&client).await;
-    verify_chapter_and_manga(&chapter_id, client_, &chapter_top_dir).await?;
     let mut files_: Vec<String> = Vec::new();
-    // Original quality. Use `.data.attributes.data_saver` for smaller, compressed images.
-    let page_filenames = at_home.chapter.data_saver;
-    for filename in page_filenames {
-        let path_to_use = format!("{}/{}", chapter_dir, &filename);
-        // If using the data-saver option, use "/data-saver/" instead of "/data/" in the URL.
-        let page_url = at_home.base_url.join(&format!(
-            "/{quality_mode}/{chapter_hash}/{page_filename}",
-            quality_mode = "data-saver",
-            chapter_hash = at_home.chapter.hash,
-            page_filename = filename
-        ))?;
-        download_chapter_file(&http_client, page_url, &path_to_use, &mut files_, &filename).await?;
+
+    let stream = client.download().chapter(chapter_id).report(true).mode(DownloadMode::DataSaver).build()?.download_stream_with_checker(|filename, response| {
+        let pre_file = match File::open(format!("{}/{}", chapter_dir.clone(), filename.filename.clone())){
+            Ok(d) => d,
+            Err(_) => return false
+        };
+        let content_length = match response.content_length() {
+            None => return false,
+            Some(ctt_lgth) => ctt_lgth
+        };
+        let pre_file_metadata = match pre_file.metadata() {
+            Ok(metadata) => metadata,
+            Err(_) => return false
+        };
+        content_length == pre_file_metadata.len() 
+    }).await?;
+    let mut has_error = false;
+    tokio::pin!(stream);
+    let mut errors: Vec<String> = Vec::new();
+    while let Some((result, index, len)) = stream.next().await {
+        info!("{} - {}", index, len);
+        match result {
+            Ok((filename, bytes_)) => {
+                if let Some(bytes) = bytes_ {
+                    match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone())){
+                        Ok(mut file) => match file.write_all(&bytes) {
+                            Ok(_) => {
+                                info!("Downloaded {filename}");
+                                files_.push(filename);
+                            },
+                            Err(e) => {
+                                log::error!("{}", e.to_string());
+                                errors.push(filename);
+                            }
+                        },
+                        Err(e) => {
+                            log::error!("{}", e.to_string());
+                            errors.push(filename);
+                        }
+                    }
+                }else {
+                    info!("Skipped {}", filename);
+                }
+            },
+            Err(error) => {
+                log::error!("{}", error.to_string());
+                has_error = true;
+            },
+        }
+    }
+    if !errors.is_empty() {
+        has_error = true;
     }
     let jsons = json!({
         "result" : "ok",
         "dir" : chapter_dir,
-        "downloaded" : files_
+        "downloaded" : files_,
+        "errors" : errors
     });
     let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
     let _ = file.write_all(jsons.to_string().as_bytes());
+    if !has_error {
+        remove_in_history(&history_entry)?;
+        commit_rel(history_entry.get_data_type())?;
+    }
+    
     Ok(jsons)
 }
 

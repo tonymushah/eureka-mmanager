@@ -29,9 +29,6 @@ use actix_web::{
 use actix_web::{web, Error};
 use futures::lock::Mutex;
 use mangadex_api::{HttpClient, HttpClientRef};
-
-pub mod app;
-
 /*use self::state::AppState;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -133,4 +130,9 @@ pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> 
     Ok(HttpServer::new(get_actix_app)
         .bind((address, port))?
         .run())
+}
+
+#[cfg(feature = "unix-socket-support")]
+pub fn launch_async_server_with_unix_socket(){
+
 }

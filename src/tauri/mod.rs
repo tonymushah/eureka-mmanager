@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use actix_http::Request;
 use actix_service::IntoServiceFactory;
 use actix_service::Service;
@@ -8,7 +6,6 @@ use actix_web::dev::{AppConfig, ServiceFactory, ServiceResponse};
 use crate::server::get_actix_app;
 
 use self::bindings::request::HttpRequestBuilder;
-use self::private::From;
 pub mod bindings;
 pub(crate) async fn try_init_service<R, S, B, E>(
     app: R,
@@ -22,7 +19,7 @@ where
     srv.new_service(AppConfig::default()).await
 }
 
-pub async fn get_app_service() -> Result<
+pub async fn get_app_service<T>() -> Result<
     impl actix_service::Service<
         actix_http::Request,
         Response = actix_web::dev::ServiceResponse<impl actix_web::body::MessageBody>,
@@ -43,19 +40,23 @@ where
     >,
     I: actix_web::body::MessageBody,
 {
+    #[allow(dead_code)]
     s: tokio::sync::Mutex<Option<T>>,
 }
 // remember to call `.manage(MyState::default())`
 #[tauri::command]
-async fn command_name<T, I>(request : HttpRequestBuilder ,state: tauri::State<'_, ActixTauriState<T, I>>) -> Result<(), String>
+#[allow(dead_code)]
+async fn command_name<T, I>(_request : HttpRequestBuilder ,_state: tauri::State<'_, ActixTauriState<T, I>>) -> Result<(), String>
 where
     T: actix_service::Service<
         actix_http::Request,
         Response = actix_web::dev::ServiceResponse<I>,
         Error = actix_web::Error,
-    > + Send + Sync,
+    > + Send,
     I: actix_web::body::MessageBody,
 {
+    // let service : T = get_app_service().await.unwrap();
+    // state.s.lock().await.replace(service);
     todo!()
 }
 

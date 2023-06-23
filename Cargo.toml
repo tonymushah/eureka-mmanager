@@ -48,15 +48,16 @@ tauri = { version = "1.4", optional = true, features = ["reqwest-client", "http-
 actix-service = { version = "2", optional = true }
 actix-http = { version = "3.3", optional = true }
 actix-router = { version = "0", optional = true }
-tokio-stream = { version = "0.1", optional = true }
-async-stream = { version = "0.3", optional = true }
-bytes = { version = "1.4", optional = true }
+tokio-stream = { version = "0.1"}
+async-stream = { version = "0.3"}
+bytes = { version = "1.4"}
 http = { version = "0.2", optional = true }
 
 [features]
-default = ["feeds", "tauri"]
+default = ["unix-socket-support"]
 recommendation = ["dep:linfa-linear"]
 feeds = ["dep:binary_search_tree", "dep:derive_builder"]
 feeds_rt = ["feeds", "dep:actix"]
 websockets = ["dep:actix", "dep:actix-web-actors"]
-tauri = ["dep:tauri", "dep:actix-service", "dep:actix-http", "dep:actix-router", "dep:tokio-stream", "dep:async-stream", "dep:bytes", "dep:http"]
+tauri = ["dep:tauri", "dep:actix-service", "dep:actix-http", "dep:actix-router", "dep:http"]
+unix-socket-support = []
