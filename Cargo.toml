@@ -20,7 +20,7 @@ reqwest = { version = "0.11.14", features = [
     "json",
     "multipart",
     "rustls-tls",
-    "blocking"
+    "blocking",
 ] }
 serde = { version = "1.0.136", features = ["derive"] }
 thiserror = "1.0.30"
@@ -54,10 +54,10 @@ bytes = { version = "1.4"}
 http = { version = "0.2", optional = true }
 
 [features]
-default = ["unix-socket-support"]
+default = []
 recommendation = ["dep:linfa-linear"]
 feeds = ["dep:binary_search_tree", "dep:derive_builder"]
 feeds_rt = ["feeds", "dep:actix"]
 websockets = ["dep:actix", "dep:actix-web-actors"]
 tauri = ["dep:tauri", "dep:actix-service", "dep:actix-http", "dep:actix-router", "dep:http"]
-unix-socket-support = []
+unix-socket-support = ["reqwest/socks"]

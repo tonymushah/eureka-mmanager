@@ -6,8 +6,9 @@ use std::io::Write;
 use anyhow::Ok;
 use log::info;
 use mangadex_api::utils::download::cover::CoverQuality;
-use mangadex_api::utils::get_reqwest_client;
 use mangadex_api::{v5::MangaDexClient, HttpClientRef};
+use mangadex_api_schema_rust::{ApiData, ApiObject};
+use mangadex_api_schema_rust::v5::CoverAttributes;
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
 
@@ -16,28 +17,14 @@ use crate::{
     utils,
 };
 
-pub async fn cover_download_by_cover(
+pub async fn download_cover_data(
     cover_id: &str,
     client: HttpClientRef,
-) -> anyhow::Result<serde_json::Value> {
-    let client = MangaDexClient::new_with_http_client_ref(client);
-    let (filename, bytes_) = client
-        .download()
-        .cover()
-        .build()?
-        .via_cover_id(Uuid::parse_str(cover_id)?)
-        .await?;
-    // This is where you would download the file but for this example, we're just printing the raw data.
+) -> anyhow::Result<()> {
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let file_dirs_clone = files_dirs.clone();
-    let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
-    let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id).as_str());
-
-    if let Some(bytes) = bytes_ {
-        let mut file = File::create(file_path)?;
-        let _ = file.write_all(&bytes);
-        let mut files = File::create(json_cover)?;
-        let http_client = get_reqwest_client(&client).await;
+    let json_cover = files_dirs.covers_add(format!("{}.json", cover_id).as_str());
+    let mut files = File::create(json_cover)?;
+        let http_client = &client.lock().await.client;
         let resps = utils::send_request(
             http_client.get(format!(
                 "{}/cover/{}",
@@ -47,14 +34,53 @@ pub async fn cover_download_by_cover(
             5,
         )
         .await?;
+    let bytes = resps.bytes().await?;
+    let bytes_string = match String::from_utf8(bytes.to_vec()) {
+        core::result::Result::Ok(s) => s,
+        Err(e) => {
+            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))
+        }
+    };
+    match serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str()) {
+        core::result::Result::Ok(_) => (),
+        Err(_error) => {
+            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("this response format is invalid for {cover_id}"))));
+        }
+    }
+    files.write_all(&bytes)?;
+    Ok(())
+}
 
-        files.write_all(&resps.bytes().await?)?;
+pub async fn cover_download_by_cover(
+    cover_id: &str,
+    client: HttpClientRef,
+) -> anyhow::Result<serde_json::Value> {
+    let client = MangaDexClient::new_with_http_client_ref(client);
+
+    let (filename, bytes_) = client
+        .download()
+        .cover()
+        .build()?
+        .via_cover_id(Uuid::parse_str(cover_id)?)
+        .await?;
+
+    // This is where you would download the file but for this example, we're just printing the raw data.
+    let files_dirs = settings::files_dirs::DirsOptions::new()?;
+    let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
+
+    if let Some(bytes) = bytes_ {
+        let mut file = File::create(file_path)?;
+        let _ = file.write_all(&bytes);
+
+        download_cover_data(cover_id, client.get_http_client().clone()).await?;
+        
         Ok(serde_json::json!({
             "result" : "ok",
             "type": "cover",
             "downloded" : cover_id
         }))
     } else {
+        
         Err(anyhow::Error::msg(format!(
             "Empty byte found for {filename}"
         )))
@@ -93,37 +119,30 @@ pub async fn cover_download_quality_by_manga_id(
     client: HttpClientRef,
 ) -> anyhow::Result<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
-    let cover_id = Uuid::parse_str(manga_id)?;
+    let manga_id = Uuid::parse_str(manga_id)?;
     // The data should be streamed rather than downloading the data all at once.
+    let cover = client.manga().get().manga_id(&manga_id).build()?.send().await?;
+    let cover_id = match cover.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::CoverArt) {
+        Some(d) => d.id,
+        None => {
+            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::NotFound, "manga id not found")));
+        }
+    };
     let (filename, bytes_) = client
         .download()
         .cover()
         .quality(quality)
         .build()?
-        .via_manga_id(cover_id)
+        .via_cover_id(cover_id)
         .await?;
     // This is where you would download the file but for this example, we're just printing the raw data.
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let file_dirs_clone = files_dirs.clone();
     let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
-    let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id).as_str());
 
     if let Some(bytes) = bytes_ {
         let mut file = File::create(file_path)?;
         let _ = file.write_all(&bytes);
-        let mut files = File::create(json_cover)?;
-        let http_client = get_reqwest_client(&client).await;
-        let resps = utils::send_request(
-            http_client.get(format!(
-                "{}/cover/{}",
-                mangadex_api::constants::API_URL,
-                cover_id
-            )),
-            5,
-        )
-        .await?;
-
-        files.write_all(&resps.bytes().await?)?;
+        download_cover_data(format!("{cover_id}").as_str(), client.get_http_client().clone()).await?;
         Ok(serde_json::json!({
             "result" : "ok",
             "type": "cover",
@@ -152,26 +171,12 @@ pub async fn cover_download_quality_by_cover(
         .await?;
     // This is where you would download the file but for this example, we're just printing the raw data.
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let file_dirs_clone = files_dirs.clone();
     let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
-    let json_cover = file_dirs_clone.covers_add(format!("{}.json", cover_id).as_str());
 
     if let Some(bytes) = bytes_ {
         let mut file = File::create(file_path)?;
         let _ = file.write_all(&bytes);
-        let mut files = File::create(json_cover)?;
-        let http_client = get_reqwest_client(&client).await;
-        let resps = utils::send_request(
-            http_client.get(format!(
-                "{}/cover/{}",
-                mangadex_api::constants::API_URL,
-                cover_id
-            )),
-            5,
-        )
-        .await?;
-
-        files.write_all(&resps.bytes().await?)?;
+        download_cover_data(cover_id, client.get_http_client().clone()).await?;
         Ok(serde_json::json!({
             "result" : "ok",
             "type": "cover",
@@ -200,7 +205,6 @@ pub async fn all_covers_download_quality_by_manga_id(
         .build()?
         .send()
         .await?;
-    let http_client = get_reqwest_client(&client).await;
     let mut vecs: Vec<String> = Vec::new();
     for cover_to_use in covers.data {
         // The data should be streamed rather than downloading the data all at once.
@@ -212,27 +216,12 @@ pub async fn all_covers_download_quality_by_manga_id(
             .await?;
         // This is where you would download the file but for this example, we're just printing the raw data.
         let files_dirs = settings::files_dirs::DirsOptions::new()?;
-        let file_dirs_clone = files_dirs.clone();
         let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
-        let json_cover =
-            file_dirs_clone.covers_add(format!("{}.json", cover_to_use.id.hyphenated()).as_str());
 
         if let Some(bytes) = bytes_ {
             let mut file = File::create(file_path)?;
             let _ = file.write_all(&bytes);
-            let mut files = File::create(json_cover)?;
-
-            let resps = utils::send_request(
-                http_client.get(format!(
-                    "{}/cover/{}",
-                    mangadex_api::constants::API_URL,
-                    cover_to_use.id.hyphenated()
-                )),
-                5,
-            )
-            .await?;
-
-            files.write_all(&resps.bytes().await?)?;
+            download_cover_data(format!("{}",cover_to_use.id.clone()).as_str(), client.get_http_client().clone()).await?;
 
             vecs.push(format!("{}", cover_to_use.id.hyphenated()));
             info!("downloaded {}", filename.as_str());

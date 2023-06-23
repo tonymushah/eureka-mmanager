@@ -191,7 +191,9 @@ pub fn get_manga_data_by_ids(
 ) -> Result<Vec<ApiObject<MangaAttributes>>, std::io::Error> {
     let mut datas: Vec<ApiObject<MangaAttributes>> = Vec::new();
     for id in manga_ids {
-        datas.push(get_manga_data_by_id(id)?);
+        if let Ok(data) = get_manga_data_by_id(id) {
+            datas.push(data);
+        }
     }
     Ok(datas)
 }

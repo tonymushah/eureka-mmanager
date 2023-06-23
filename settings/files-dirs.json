@@ -1,6 +1,6 @@
 {
 	"chapters":"chapters",
 	"covers":"covers",
-	"data_dir":"mangadex/data",
+	"data_dir":"data",
 	"mangas":"mangas"
 }
