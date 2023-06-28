@@ -1,6 +1,9 @@
+use async_stream::stream;
+use futures::Stream;
 use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
+use tokio_stream::StreamExt;
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io::ErrorKind;
@@ -8,7 +11,7 @@ use std::path::Path;
 
 use crate::settings::files_dirs::DirsOptions;
 
-use super::chapter::{get_all_chapter, get_chapter_by_id, get_chapters_by_vec_id};
+use super::chapter::{get_all_chapter, get_chapter_by_id, get_chapters_by_stream_id};
 use super::collection::Collection;
 use super::cover::{get_all_cover, get_cover_data, is_cover_there};
 
@@ -23,57 +26,63 @@ pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> anyh
     Ok(is)
 }
 
-pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result<Vec<String>> {
-    let mut vecs: Vec<String> = Vec::new();
-    for chap in get_all_chapter()? {
-        if let Ok(d) = is_chap_related_to_manga(chap.clone(), manga_id.clone()).await {
-            if d {
-                vecs.push(chap);
+pub async fn find_all_downloades_by_manga_id(manga_id: String) -> anyhow::Result<impl Stream<Item = String>> {
+    let stream = get_all_chapter()?;
+    let mut stream = Box::pin(stream);
+    let output = stream! {
+            while let Some(chap) = stream.next().await {
+                if let Ok(d) = is_chap_related_to_manga(chap.clone(), manga_id.clone()).await {
+                    if d {
+                        yield chap;
+                    }
+                };
             }
         };
-    }
-    Ok(vecs)
+    Ok(output)
 }
 
 pub async fn find_and_delete_all_downloades_by_manga_id(
     manga_id: String,
 ) -> anyhow::Result<serde_json::Value> {
     let mut vecs: Vec<String> = Vec::new();
-    for files in get_all_chapter()? {
+    let mut stream = Box::pin(get_all_chapter()?);
+    while let Some(files) = stream.next().await {
         let to_use = files;
         let to_insert = to_use.clone();
         let to_remove = to_use.clone();
-        if is_chap_related_to_manga(to_use, manga_id.clone()).await? {
-            vecs.push(to_insert);
-            std::fs::remove_dir_all(DirsOptions::new()?.chapters_add(to_remove.as_str()))?
+        if let Ok(d) = is_chap_related_to_manga(to_use, manga_id.clone()).await{
+            if d {
+                vecs.push(to_insert);
+                std::fs::remove_dir_all(DirsOptions::new()?.chapters_add(to_remove.as_str()))?
+            }
         }
     }
     Ok(serde_json::json!(vecs))
 }
 
-pub fn get_downloaded_cover_of_a_manga(manga_id: String) -> Result<Vec<String>, std::io::Error> {
-    let vecs: Vec<String> = get_all_cover()?;
-    let mut related_covers: Vec<String> = Vec::new();
-    vecs.iter().for_each(|data| {
-        let manga_id = manga_id.clone();
-        let data = data.clone();
-        let data_clone = data.clone();
-        if let core::result::Result::Ok(result) = is_cover_related_to_manga(manga_id, data) {
-            if result {
-                related_covers.push(data_clone);
+pub fn get_downloaded_cover_of_a_manga(manga_id: String) -> Result<impl Stream<Item = String>, std::io::Error> {
+    let mut vecs = Box::pin(get_all_cover()?);
+    std::io::Result::Ok(stream! {
+        while let Some(data) = vecs.next().await {
+            let manga_id = manga_id.clone();
+            let data = data.clone();
+            let data_clone = data.clone();
+            if let core::result::Result::Ok(result) = is_cover_related_to_manga(manga_id, data) {
+                if result {
+                    yield data_clone;
+                }
             }
         }
-    });
-    std::io::Result::Ok(related_covers)
+    })
 }
 
-pub fn get_downloaded_cover_of_a_manga_collection(
+pub async fn get_downloaded_cover_of_a_manga_collection(
     manga_id: String,
     offset: usize,
     limit: usize,
 ) -> Result<Collection<String>, std::io::Error> {
-    let mut downloaded_covers = get_downloaded_cover_of_a_manga(manga_id)?;
-    Collection::new(&mut downloaded_covers, limit, offset)
+    let mut downloaded_covers = Box::pin(get_downloaded_cover_of_a_manga(manga_id)?);
+    Collection::from_async_stream(&mut downloaded_covers, limit, offset).await
 }
 
 pub fn is_manga_cover_there(manga_id: String) -> Result<bool, std::io::Error> {
@@ -186,19 +195,34 @@ pub fn get_manga_data_by_id(
     }
 }
 
-pub fn get_manga_data_by_ids(
-    manga_ids: Vec<String>,
-) -> Result<Vec<ApiObject<MangaAttributes>>, std::io::Error> {
-    let mut datas: Vec<ApiObject<MangaAttributes>> = Vec::new();
-    for id in manga_ids {
-        if let Ok(data) = get_manga_data_by_id(id) {
-            datas.push(data);
+pub fn get_manga_data_by_ids<T>(
+    mut manga_ids: T,
+) -> Result<impl Stream<Item = ApiObject<MangaAttributes>>, std::io::Error> 
+where
+    T : Stream<Item = String> + std::marker::Unpin
+{
+    Ok(stream! {
+        while let Some(id) = manga_ids.next().await{
+            if let Ok(data) = get_manga_data_by_id(id) {
+                yield data;
+            }
         }
-    }
-    Ok(datas)
+    })
 }
 
-pub fn get_all_downloaded_manga() -> Result<Vec<String>, std::io::Error> {
+pub fn get_manga_data_by_ids_old(
+    manga_ids: Vec<String>,
+) -> Result<impl Stream<Item = ApiObject<MangaAttributes>>, std::io::Error> {
+    Ok(stream! {
+        for id in manga_ids {
+            if let Ok(data) = get_manga_data_by_id(id) {
+                yield data;
+            }
+        }
+    })
+}
+
+pub fn get_all_downloaded_manga() -> Result<impl Stream<Item = String>, std::io::Error> {
     let file_dirs = match DirsOptions::new() {
         core::result::Result::Ok(data) => data,
         Err(error) => {
@@ -211,23 +235,15 @@ pub fn get_all_downloaded_manga() -> Result<Vec<String>, std::io::Error> {
     let path = file_dirs.mangas_add("");
     if Path::new(path.as_str()).exists() {
         let list_dir = (std::fs::read_dir(path.as_str()))?;
-        let mut vecs: Vec<String> = Vec::new();
-        for files in list_dir {
-            vecs.push(
-                match (files)?.file_name().to_str() {
-                    Some(data) => data,
-                    None => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "can't recongnize file",
-                        ))
+        Ok(stream! {
+            for files in list_dir {
+                if let Ok(file_) = files {
+                    if let Some(data) = file_.file_name().to_str() {
+                        yield data.to_string().replace(".json", "")
                     }
                 }
-                .to_string()
-                .replace(".json", ""),
-            );
-        }
-        Ok(vecs)
+            }
+        })
     } else {
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
@@ -236,18 +252,15 @@ pub fn get_all_downloaded_manga() -> Result<Vec<String>, std::io::Error> {
     }
 }
 
-pub fn get_downloaded_manga(
+pub async fn get_downloaded_manga(
     offset: usize,
     limit: usize,
     title__: Option<String>,
 ) -> Result<Collection<String>, std::io::Error> {
-    let mut vecs = get_all_downloaded_manga()?;
-    let manga_data = get_manga_data_by_ids(vecs.clone())?;
-    match title__ {
-        None => (),
-        Some(title) => {
-            vecs = manga_data
-                .iter()
+    let vecs = Box::pin(get_all_downloaded_manga()?);
+    let manga_data = Box::pin(get_manga_data_by_ids(vecs)?);
+    if let Some(title) = title__ {
+        let mut data : Vec<String> = manga_data
                 .filter(|data| {
                     for title_ in data.attributes.title.values() {
                         if title_
@@ -269,13 +282,11 @@ pub fn get_downloaded_manga(
                     }
                     false
                 })
-                .map(|d| d.id.to_string())
-                .collect();
-        }
+                .map(|d| d.id.to_string()).collect().await;
+        Collection::new(&mut data, limit, offset)
+    }else {
+        Err(std::io::Error::new(ErrorKind::NotFound, "the title__ is None"))
     }
-
-    let collection: Collection<String> = Collection::new(&mut vecs, limit, offset)?;
-    std::io::Result::Ok(collection)
 }
 
 pub async fn get_downloaded_chapter_of_a_manga(
@@ -284,16 +295,20 @@ pub async fn get_downloaded_chapter_of_a_manga(
     limit: usize,
 ) -> Result<Collection<String>, std::io::Error> {
     let all_downloaded = get_all_downloaded_chapter_data(manga_id).await;
-    let mut data = match all_downloaded {
-        core::result::Result::Ok(data) => data.iter().map(|d| d.id.to_string()).collect(),
+    let mut data = Box::pin(match all_downloaded {
+        core::result::Result::Ok(data) => {
+            data
+        },
         Err(error) => {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 error.to_string(),
             ));
         }
-    };
-    let to_use: Collection<String> = Collection::new(&mut data, limit, offset)?;
+    });
+    let to_use: Collection<String> = Collection::from_async_stream(&mut data, limit, offset).await?.convert_to(|d| {
+        d.id.to_string()
+    })?;
     std::io::Result::Ok(to_use)
 }
 
@@ -320,8 +335,8 @@ pub fn is_manga_there(manga_id: String) -> Result<bool, std::io::Error> {
 
 pub async fn get_all_downloaded_chapter_data(
     manga_id: String,
-) -> Result<Vec<ApiObject<ChapterAttributes>>, std::io::Error> {
-    let data = match find_all_downloades_by_manga_id(manga_id).await {
+) -> Result<impl Stream<Item = ApiObject<ChapterAttributes>>, std::io::Error> {
+    let data = Box::pin(match find_all_downloades_by_manga_id(manga_id).await {
         anyhow::Result::Ok(d) => d,
         Err(e) => {
             return Err(std::io::Error::new(
@@ -329,10 +344,12 @@ pub async fn get_all_downloaded_chapter_data(
                 e.to_string(),
             ))
         }
-    };
-    match get_chapters_by_vec_id(data) {
-        anyhow::Result::Ok(mut data) => {
-            data.sort_by(|a, b| {
+    });
+    match get_chapters_by_stream_id(data) {
+        anyhow::Result::Ok(data) => {
+            let data = Box::pin(data);
+            let mut data_vec : Vec<ApiObject<ChapterAttributes>> = data.collect().await;
+            data_vec.sort_by(|a, b| {
                 let a = match a.attributes.chapter.clone() {
                     None => return Ordering::Equal,
                     Some(d) => d,
@@ -351,7 +368,11 @@ pub async fn get_all_downloaded_chapter_data(
                 };
                 a_chp.cmp(&b_chp)
             });
-            core::result::Result::Ok(data)
+            core::result::Result::Ok(stream! {
+                for chapter in data_vec {
+                    yield chapter
+                }
+            })
         }
         Err(e) => Err(std::io::Error::new(
             std::io::ErrorKind::Other,

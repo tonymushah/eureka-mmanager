@@ -1,3 +1,5 @@
+use tokio_stream::{Stream, StreamExt};
+
 #[derive(Clone, serde::Serialize)]
 pub struct Collection<T>
     where 
@@ -77,5 +79,13 @@ impl<T> Collection<T>
             limit: self.limit,
             total: self.total,
         })
+    }
+    pub async fn from_async_stream<S>(stream : S, limit: usize, offset: usize) -> Result<Collection<T>, std::io::Error>
+        where S : Stream<Item = T>
+    {
+        let stream = stream;
+        tokio::pin!(stream);
+        let mut to_use : Vec<T> = stream.collect().await;
+        Self::new(&mut to_use, limit, offset)
     }
 }

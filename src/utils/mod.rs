@@ -7,6 +7,7 @@ pub mod query;
 pub mod cover;
 pub mod chapter;
 pub mod manga_aggregate;
+pub mod fs;
 #[cfg(feature = "feeds")]
 pub mod feed;
 

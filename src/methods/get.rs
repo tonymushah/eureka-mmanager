@@ -11,11 +11,9 @@ use crate::{this_api_option, this_api_result};
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use log::info;
-use mangadex_api_schema_rust::v5::manga_aggregate::{ChapterAggregate};
 use mangadex_api_schema_rust::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
-use std::collections::HashMap;
 use std::num::ParseIntError;
 use std::path::Path;
 use std::str::{FromStr};
@@ -167,7 +165,7 @@ pub async fn find_manga_covers_by_id(
         format!("{}", id),
         offset,
         limit
-    ));
+    ).await);
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
@@ -363,7 +361,7 @@ pub async fn find_all_downloaded_chapter(request: HttpRequest) -> impl Responder
             .parse();
     let limit = this_api_result!(limit);
     //let include_failed : Result<boolean, ParseBoolError> =
-    let getted = this_api_result!(get_all_downloaded_chapters(offset, limit));
+    let getted = this_api_result!(get_all_downloaded_chapters(offset, limit).await);
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
@@ -390,7 +388,7 @@ pub async fn find_all_downloaded_manga(request: HttpRequest) -> impl Responder {
     let limit = this_api_result!(limit);
     let title = get_query_hash_value_or_else(&query, "title".to_string(), "".to_string());
     let title = if title.is_empty() {None} else {Some(title)};
-    let getted = this_api_result!(get_downloaded_manga(offset, limit, title));
+    let getted = this_api_result!(get_downloaded_manga(offset, limit, title).await);
 
 
     HttpResponse::Ok().content_type(ContentType::json()).body(
@@ -438,22 +436,10 @@ pub async fn aggregate_manga(
     id : web::Path<String>
 ) -> impl Responder {
     let aggregate = this_api_result!(crate::utils::manga_aggregate::aggregate_manga_chapters(id.to_string()).await);
-    let mut volumes_t : HashMap<String, serde_json::Value> = HashMap::new();
-    for volume in aggregate.volumes {
-        let mut volumes__ : HashMap<String, ChapterAggregate> = HashMap::new();
-        for chapter in volume.chapters.clone() {
-            volumes__.insert(chapter.chapter.clone(), chapter);
-        }
-        volumes_t.insert((volume).volume.clone(), serde_json::json!({
-            "volume" : volume.volume,
-            "count" : volume.count,
-            "chapters" : volumes__
-        }));
-    }
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
-            "volumes" : volumes_t
+            "volumes" : aggregate.volumes
         })
         .to_string(),
     )

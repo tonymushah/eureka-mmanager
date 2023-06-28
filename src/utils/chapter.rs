@@ -1,5 +1,6 @@
 use std::{fs::File, io::{ErrorKind, Write}, path::Path};
-
+use async_stream::stream;
+use tokio_stream::{Stream, StreamExt};
 use log::info;
 use mangadex_api::{HttpClientRef};
 use mangadex_api_schema_rust::{ApiObject, ApiData, v5::ChapterAttributes};
@@ -120,15 +121,32 @@ pub fn get_chapter_by_id<T>(chap_id: T) -> anyhow::Result<ApiObject<ChapterAttri
     anyhow::Ok(data.data)
 }
 
-pub fn get_chapters_by_vec_id(chap_ids: Vec<String>) -> anyhow::Result<Vec<ApiObject<ChapterAttributes>>> {
-    let mut datas : Vec<ApiObject<ChapterAttributes>> = Vec::new();
-    for id in chap_ids {
-        if let Ok(data_) = get_chapter_by_id(id) {
-            datas.push(data_);
+pub  fn get_chapters_by_stream_id<T>(mut chap_ids: T) -> anyhow::Result<impl Stream<Item = ApiObject<ChapterAttributes>>> 
+    where T : Stream<Item = String> + std::marker::Unpin
+{
+    anyhow::Ok(
+        stream! {
+            while let Some(id) = chap_ids.next().await {
+                if let Ok(data_) = get_chapter_by_id(id) {
+                    yield data_;
+                }
+            }
         }
-    }
-    anyhow::Ok(datas)
+    )
 }
+
+pub  fn get_chapters_by_vec_id(chap_ids: Vec<String>) -> anyhow::Result<impl Stream<Item = ApiObject<ChapterAttributes>>> {
+    anyhow::Ok(
+        stream! {
+            for id in chap_ids {
+                if let Ok(data_) = get_chapter_by_id(id) {
+                    yield data_;
+                }
+            }
+        }
+    )
+}
+
 
 #[cfg(test)]
 mod tests{
@@ -144,15 +162,16 @@ mod tests{
     #[tokio::test]
     pub async fn test_get_chapters_by_vec_ids(){
         let manga_id = "17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8".to_string();
-        let manga_downloads = find_all_downloades_by_manga_id(manga_id).await.unwrap();
-        let datas = get_chapters_by_vec_id(manga_downloads).unwrap();
-        for chap in datas {
-            println!("{}", serde_json::to_string(&chap).unwrap())
+        let manga_downloads = Box::pin(find_all_downloades_by_manga_id(manga_id).await.unwrap());
+        let datas = get_chapters_by_stream_id(manga_downloads).unwrap();
+        tokio::pin!(datas);
+        while let Some(chap) = datas.next().await{
+            println!("{}", serde_json::to_string(&chap).unwrap());
         }
     }
 }
 
-pub fn get_all_chapter()-> Result<Vec<String>, std::io::Error>{
+pub fn get_all_chapter()-> Result<impl Stream<Item = String>, std::io::Error>{
     let file_dirs = match DirsOptions::new() {
         core::result::Result::Ok(data) => data,
         Err(error) => {
@@ -166,16 +185,17 @@ pub fn get_all_chapter()-> Result<Vec<String>, std::io::Error>{
     let path = file_dirs.chapters_add("");
     if Path::new(path.as_str()).exists() {
         let list_dir = (std::fs::read_dir(path.as_str()))?;
-        let mut vecs: Vec<String> = Vec::new();
-        for files in list_dir {
-                if let Some(data) = (files)?.file_name().to_str() {
-                    if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
-                        vecs.push(data.to_string());
+        std::io::Result::Ok(async_stream::stream! {
+            for files in list_dir {
+                if let Ok(files) = files {
+                    if let Some(data) = files.file_name().to_str() {
+                        if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
+                            yield data.to_string()
+                        }
                     }
                 }
-            
-        }
-        std::io::Result::Ok(vecs)
+            }
+        })
     } else {
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
@@ -184,11 +204,12 @@ pub fn get_all_chapter()-> Result<Vec<String>, std::io::Error>{
     }
 }
 
-pub fn get_all_downloaded_chapters(
+pub async fn get_all_downloaded_chapters(
     offset: usize,
     limit: usize,
 ) -> Result<Collection<String>, std::io::Error> {
-    let mut vecs: Vec<String> = get_all_chapter()?;
-        let collection: Collection<String> = Collection::new(&mut vecs, limit, offset)?;
+    let stream = get_all_chapter()?;
+
+        let collection: Collection<String> = Collection::from_async_stream(stream, limit, offset).await?;
         std::io::Result::Ok(collection)
 }
