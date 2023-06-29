@@ -89,34 +89,33 @@ pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyho
     let mut has_error = false;
     tokio::pin!(stream);
     let mut errors: Vec<String> = Vec::new();
-    while let Some((result, index, len)) = stream.next().await {
-        info!("{} - {}", index, len);
+    while let Some((result, index, len, opt_filename)) = stream.next().await {
         match result {
             Ok((filename, bytes_)) => {
                 if let Some(bytes) = bytes_ {
                     match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone())){
                         Ok(mut file) => match file.write_all(&bytes) {
                             Ok(_) => {
-                                info!("Downloaded {filename}");
+                                info!("{index} - {len} : Downloaded {filename}");
                                 files_.push(filename);
                             },
                             Err(e) => {
-                                log::error!("{}", e.to_string());
+                                log::error!("{index} - {len} : {}", e.to_string());
                                 errors.push(filename);
                             }
                         },
                         Err(e) => {
-                            log::error!("{}", e.to_string());
+                            log::error!("{index} - {len} : {}", e.to_string());
                             errors.push(filename);
                         }
                     }
                 }else {
-                    info!("Skipped {}", filename);
+                    info!("{index} - {len} : Skipped {}", filename);
                 }
             },
             Err(error) => {
-                log::error!("{}", error.to_string());
-                has_error = true;
+                log::error!("{index} - {len} : {}", error.to_string());
+                errors.push(opt_filename);
             },
         }
     }
@@ -178,34 +177,33 @@ pub async fn download_chapter_saver(chapter_id: &str, client_: HttpClientRef) ->
     let mut has_error = false;
     tokio::pin!(stream);
     let mut errors: Vec<String> = Vec::new();
-    while let Some((result, index, len)) = stream.next().await {
-        info!("{} - {}", index, len);
+    while let Some((result, index, len, opt_filename)) = stream.next().await {
         match result {
             Ok((filename, bytes_)) => {
                 if let Some(bytes) = bytes_ {
                     match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone())){
                         Ok(mut file) => match file.write_all(&bytes) {
                             Ok(_) => {
-                                info!("Downloaded {filename}");
+                                info!("{index} - {len} : Downloaded {filename}");
                                 files_.push(filename);
                             },
                             Err(e) => {
-                                log::error!("{}", e.to_string());
+                                log::error!("{index} - {len} : {}", e.to_string());
                                 errors.push(filename);
                             }
                         },
                         Err(e) => {
-                            log::error!("{}", e.to_string());
+                            log::error!("{index} - {len} : {}", e.to_string());
                             errors.push(filename);
                         }
                     }
                 }else {
-                    info!("Skipped {}", filename);
+                    info!("{index} - {len} : Skipped {}", filename);
                 }
             },
             Err(error) => {
-                log::error!("{}", error.to_string());
-                has_error = true;
+                log::error!("{index} - {len} : {}", error.to_string());
+                errors.push(opt_filename);
             },
         }
     }
