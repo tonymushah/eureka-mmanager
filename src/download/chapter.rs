@@ -71,7 +71,7 @@ pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyho
     
     let mut files_: Vec<String> = Vec::new();
 
-    let stream = client.download().chapter(chapter_id).report(true).build()?.download_stream_with_checker(|filename, response| {
+    let stream = client.download().chapter(chapter_id).report(true).mode(DownloadMode::Normal).build()?.download_stream_with_checker(|filename, response| {
         let pre_file = match File::open(format!("{}/{}", chapter_dir.clone(), filename.filename.clone())){
             Ok(d) => d,
             Err(_) => return false
