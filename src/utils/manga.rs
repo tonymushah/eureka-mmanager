@@ -236,11 +236,9 @@ pub fn get_all_downloaded_manga() -> Result<impl Stream<Item = String>, std::io:
     if Path::new(path.as_str()).exists() {
         let list_dir = (std::fs::read_dir(path.as_str()))?;
         Ok(stream! {
-            for files in list_dir {
-                if let Ok(file_) = files {
-                    if let Some(data) = file_.file_name().to_str() {
-                        yield data.to_string().replace(".json", "")
-                    }
+            for file_ in list_dir.flatten() {
+                if let Some(data) = file_.file_name().to_str() {
+                    yield data.to_string().replace(".json", "")
                 }
             }
         })

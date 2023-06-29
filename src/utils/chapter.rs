@@ -186,12 +186,10 @@ pub fn get_all_chapter()-> Result<impl Stream<Item = String>, std::io::Error>{
     if Path::new(path.as_str()).exists() {
         let list_dir = (std::fs::read_dir(path.as_str()))?;
         std::io::Result::Ok(async_stream::stream! {
-            for files in list_dir {
-                if let Ok(files) = files {
-                    if let Some(data) = files.file_name().to_str() {
-                        if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
-                            yield data.to_string()
-                        }
+            for files in list_dir.flatten() {
+                if let Some(data) = files.file_name().to_str() {
+                    if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
+                        yield data.to_string()
                     }
                 }
             }

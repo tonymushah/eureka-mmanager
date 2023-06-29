@@ -1,6 +1,7 @@
 use std::{io::Result, collections::HashMap, vec, cmp::Ordering};
 
 use mangadex_api_schema_rust::{v5::{ChapterAttributes, MangaAggregate, manga_aggregate::{ChapterAggregate, VolumeAggregate}}, ApiObject};
+use tokio_stream::StreamExt;
 
 type ChapterHashMap = HashMap<String, Vec<ApiObject<ChapterAttributes>>>;
 
@@ -119,8 +120,9 @@ pub fn group_chapter_to_volume_aggregate(input : Vec<ApiObject<ChapterAttributes
 }
 
 pub async fn aggregate_manga_chapters(manga_id : String) -> Result<MangaAggregate>{
-    let data : Vec<ApiObject<ChapterAttributes>> = (crate::utils::manga::get_all_downloaded_chapter_data(manga_id).await)?;
-    let volumes = group_chapter_to_volume_aggregate(data)?;
+    let data  = Box::pin((crate::utils::manga::get_all_downloaded_chapter_data(manga_id).await)?);
+    let chapters : Vec<ApiObject<ChapterAttributes>> = data.collect().await;
+    let volumes = group_chapter_to_volume_aggregate(chapters)?;
     Ok(MangaAggregate {
         volumes
     })
@@ -142,7 +144,7 @@ mod tests{
     #[tokio::test]
     async fn test_to_volume_hash_map(){
         let manga_id = "d58eb211-a1ae-426c-b504-fc88253de600".to_string();
-        let data : Vec<ApiObject<ChapterAttributes>> = (get_all_downloaded_chapter_data(manga_id).await).unwrap();
+        let data : Vec<ApiObject<ChapterAttributes>> = (get_all_downloaded_chapter_data(manga_id).await).unwrap().collect().await;
         for (volume, chapters) in group_chapter_to_volume_hash_map(data).unwrap(){
             println!("\"{}\" : {}", volume, serde_json::to_string(&(group_chapter_to_chapter_aggregate(chapters).unwrap())).unwrap());
         }
