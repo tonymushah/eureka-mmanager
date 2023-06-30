@@ -2338,6 +2338,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2720,6 +2729,7 @@ dependencies = [
  "fern",
  "futures",
  "http",
+ "itertools 0.11.0",
  "linfa-linear",
  "log",
  "mangadex-api",
@@ -4346,7 +4356,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6252ed50d005e1dc2b77ed140f1c230299e0566492470eba40ba34e18cbcfa10"
 dependencies = [
  "Inflector",
- "itertools",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 1.0.109",

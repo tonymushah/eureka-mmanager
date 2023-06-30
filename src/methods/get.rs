@@ -10,6 +10,7 @@ use crate::utils::manga::{
 use crate::{this_api_option, this_api_result};
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use itertools::Itertools;
 use log::info;
 use mangadex_api_schema_rust::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
@@ -193,6 +194,7 @@ pub async fn find_chapters_data_by_id(id: web::Path<String>) -> impl Responder {
                 vecs.push(filename);
             }
         }
+        vecs = vecs.into_iter().unique().collect();
         HttpResponse::Ok().content_type(ContentType::json()).body(
             serde_json::json!({
                 "result" : "ok",
@@ -231,6 +233,7 @@ pub async fn find_chapters_data_saver_by_id(id: web::Path<String>) -> impl Respo
                 vecs.push(filename);
             }
         }
+        vecs = vecs.into_iter().unique().collect();
         HttpResponse::Ok().content_type(ContentType::json()).body(
             serde_json::json!({
                 "result" : "ok",
