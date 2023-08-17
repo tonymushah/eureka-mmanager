@@ -6,12 +6,12 @@ use crate::download::cover::{
 use crate::download::manga::download_manga;
 use crate::server::AppState;
 use crate::this_api_result;
-use actix_web::http::header::{ContentType};
+use actix_web::http::header::ContentType;
 use actix_web::{
     put, web, HttpResponse,
     Responder,
 };
-use log::{info};
+use log::info;
 use mangadex_api::utils::download::cover::CoverQuality;
 
 // NOTE All download methods

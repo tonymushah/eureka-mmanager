@@ -31,6 +31,8 @@ use futures::lock::Mutex;
 use mangadex_api::{HttpClient, HttpClientRef};
 #[cfg(feature = "unix-socket-support")]
 mod unix;
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::Client;
 #[cfg(feature = "unix-socket-support")]
 pub use unix::launch_async_server_with_unix_socket;
 /*use self::state::AppState;
@@ -42,7 +44,7 @@ pub mod state;
 /// url not found handler
 ///
 ///
-/// 
+///
 
 #[derive(Clone)]
 pub struct AppState {
@@ -68,7 +70,9 @@ fn not_found_message<B>(
     Ok(ErrorHandlerResponse::Response(res))
 }
 
-pub fn get_actix_app() -> App<
+pub fn get_actix_app(
+    client: Client,
+) -> App<
     impl ServiceFactory<
             ServiceRequest,
             Config = (),
@@ -78,7 +82,7 @@ pub fn get_actix_app() -> App<
         > + 'static,
 > {
     let state = AppState {
-        http_client: Arc::new(Mutex::new(HttpClient::default())),
+        http_client: Arc::new(Mutex::new(HttpClient::new(client))),
     };
     App::new()
         .app_data(web::Data::new(state))
@@ -131,7 +135,21 @@ pub fn get_actix_app() -> App<
 
 /// Get the server handle
 pub fn launch_async_server(address: &str, port: u16) -> std::io::Result<Server> {
-    Ok(HttpServer::new(get_actix_app)
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "User-Agent",
+        HeaderValue::from_static("special-eureka-manager/0.4.0"),
+    );
+    let client = match Client::builder().default_headers(headers).build() {
+        Ok(c) => c,
+        Err(e) => {
+            return std::io::Result::Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                e.to_string(),
+            ))
+        }
+    };
+    Ok(HttpServer::new(move|| get_actix_app(client.clone()))
         .bind((address, port))?
         .run())
 }

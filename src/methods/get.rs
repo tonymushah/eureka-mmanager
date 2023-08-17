@@ -1,6 +1,6 @@
 use crate::methods::get_params;
 use crate::settings::files_dirs::DirsOptions;
-use crate::r#static::history::{get_history_w_file_by_rel_or_init};
+use crate::r#static::history::get_history_w_file_by_rel_or_init;
 use crate::utils::chapter::get_all_downloaded_chapters;
 use crate::utils::query::get_query_hash_value_or_else;
 use crate::utils::manga::{
@@ -17,7 +17,7 @@ use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
 use std::num::ParseIntError;
 use std::path::Path;
-use std::str::{FromStr};
+use std::str::FromStr;
 
 /// try if the app is ok
 /// # How to use
