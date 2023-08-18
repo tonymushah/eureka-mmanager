@@ -193,7 +193,7 @@ pub fn get_all_chapter(parameters : Option<GetAllChapter>)-> ManagerCoreResult<i
                             if 
                                 Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() 
                                 && 
-                                chapter_history.is_in(
+                                !chapter_history.is_in(
                                     match uuid::Uuid::parse_str(data){
                                         Ok(o) => o,
                                         Err(_) => uuid::Uuid::NAMESPACE_DNS
