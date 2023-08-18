@@ -72,16 +72,11 @@ pub async fn cover_download_by_manga_id(
     manga_id: &str,
     client: HttpClientRef,
 ) -> ManagerCoreResult<serde_json::Value> {
-
     let client = MangaDexClient::new_with_http_client_ref(client);
-    let manga_id = Uuid::parse_str(manga_id)?;
-    println!("{:#?}", client.get_http_client().lock().await);
-    println!("using mangadex-api");
-    println!("{}", manga_id);
     let manga = client
         .manga()
         .get()
-        .manga_id(manga_id)
+        .manga_id(Uuid::parse_str(manga_id)?)
         .build()?
         .send()
         .await?;

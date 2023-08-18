@@ -15,10 +15,8 @@ pub async fn download_manga(client : HttpClientRef, mangaid: uuid::Uuid) -> Mana
     let id = format!("{}", mangaid);
     let http_client = client.lock().await.client.clone();
     let resp = send_request(http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)), 5).await?;
-    println!("{:#?}", resp);
     let bytes = resp.bytes().await?;
     let bytes_string = String::from_utf8(bytes.to_vec())?;
-    println!("{}", bytes_string);
     serde_json::from_str::<ApiData<ApiObject<MangaAttributes>>>(bytes_string.as_str())?;
     let mut file = (File::create(
         DirsOptions::new()?

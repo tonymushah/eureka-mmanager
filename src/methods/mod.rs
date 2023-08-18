@@ -47,8 +47,7 @@ macro_rules! this_api_option {
 pub fn get_params(request: HttpRequest) -> HashMap<String, String> {
     return match query_string_to_hash_map(request.query_string()) {
         Ok(value) => value,
-        Err(error) => {
-            println!("{}", error);
+        Err(_) => {
             HashMap::new()
         }
     };
