@@ -1,6 +1,7 @@
 use std::{io::Result, collections::HashMap, vec, cmp::Ordering};
 
 use mangadex_api_schema_rust::{v5::{ChapterAttributes, MangaAggregate, manga_aggregate::{ChapterAggregate, VolumeAggregate}}, ApiObject};
+use mangadex_api_types_rust::ResultType;
 use tokio_stream::StreamExt;
 
 use crate::core::ManagerCoreResult;
@@ -126,6 +127,7 @@ pub async fn aggregate_manga_chapters(manga_id : String) -> ManagerCoreResult<Ma
     let chapters : Vec<ApiObject<ChapterAttributes>> = data.collect().await;
     let volumes = group_chapter_to_volume_aggregate(chapters)?;
     Ok(MangaAggregate {
+        result : ResultType::Ok,
         volumes
     })
 }

@@ -6,7 +6,7 @@ use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{ApiObject, ApiData, v5::ChapterAttributes};
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id, core::{ManagerCoreResult, Error}};
+use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id, core::{ManagerCoreResult, Error}, methods::get::GetChapterQuery, r#static::history::get_history_w_file_by_rel_or_init};
 
 use crate::r#static::history::{insert_in_history, commit_rel, remove_in_history};
 
@@ -159,43 +159,77 @@ mod tests{
     }
 }
 
-pub fn get_all_chapter()-> Result<impl Stream<Item = String>, std::io::Error>{
-    let file_dirs = match DirsOptions::new() {
-        core::result::Result::Ok(data) => data,
-        Err(error) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                error.to_string(),
-            ))
-        }
-    };
+#[derive(Clone)]
+pub struct GetAllChapter{
+    pub include_fails : bool,
+    pub only_fails : bool
+}
+
+impl Default for GetAllChapter{
+    fn default() -> Self {
+        Self { include_fails: true, only_fails : false }
+    }
+}
+
+impl From<GetChapterQuery> for GetAllChapter{
+    fn from(value: GetChapterQuery) -> Self {
+        Self { include_fails: value.include_fails.unwrap_or(true), only_fails: value.only_fails.unwrap_or(false) }
+    }
+}
+
+pub fn get_all_chapter(parameters : Option<GetAllChapter>)-> ManagerCoreResult<impl Stream<Item = String>>{
+    let parameters = parameters.unwrap_or_default();
+    let file_dirs = DirsOptions::new()?;
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add("");
     if Path::new(path.as_str()).exists() {
-        let list_dir = (std::fs::read_dir(path.as_str()))?;
-        std::io::Result::Ok(async_stream::stream! {
-            for files in list_dir.flatten() {
-                if let Some(data) = files.file_name().to_str() {
-                    if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
-                        yield data.to_string()
+        let chapter_history = get_history_w_file_by_rel_or_init(RelationshipType::Chapter)?.get_history();
+        let list_dir = std::fs::read_dir(path.as_str())?;
+        Ok(async_stream::stream! {
+            if !parameters.only_fails {
+                for files in list_dir.flatten() {
+                    if let Some(data) = files.file_name().to_str() {
+                        if !parameters.include_fails{
+                            if 
+                                Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() 
+                                && 
+                                chapter_history.is_in(
+                                    match uuid::Uuid::parse_str(data){
+                                        Ok(o) => o,
+                                        Err(_) => uuid::Uuid::NAMESPACE_DNS
+                                }) 
+                            {
+                                yield data.to_string()
+                            }
+                        }else if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
+                            yield data.to_string()
+                        }
+                    }
+                }
+            }else{
+                for entry in chapter_history.clone().into_iter(){
+                    if Path::new(format!("{}/data.json", file_dirs.chapters_add(entry.to_string().as_str())).as_str()).exists() {
+                        yield entry.to_string()
                     }
                 }
             }
         })
     } else {
-        Err(std::io::Error::new(
+        Err(Error::Io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "can't find the manga directory",
-        ))
+            "can't find the chapter directory",
+        )))
     }
 }
 
-pub async fn get_all_downloaded_chapters(
-    offset: usize,
-    limit: usize,
-) -> ManagerCoreResult<Collection<String>> {
-    let stream = get_all_chapter()?;
-
-        let collection: Collection<String> = Collection::from_async_stream(stream, limit, offset).await?;
+pub async fn get_all_downloaded_chapters(parameters : Option<GetChapterQuery>) -> ManagerCoreResult<Collection<String>> {
+    if let Some(param) = parameters{
+        let stream = get_all_chapter(Some(GetAllChapter::from(param.clone())))?;
+        let collection: Collection<String> = Collection::from_async_stream(stream, param.clone().limit.unwrap_or(10), param.offset.unwrap_or(0)).await?;
         Ok(collection)
+    }else{
+        let stream = get_all_chapter(None)?;
+        let collection: Collection<String> = Collection::from_async_stream(stream, 10, 0).await?;
+        Ok(collection)
+    }
 }

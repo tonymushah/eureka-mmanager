@@ -83,7 +83,7 @@ pub async fn cover_download_by_manga_id(
     let manga = client
         .manga()
         .get()
-        .manga_id(&manga_id)
+        .manga_id(manga_id)
         .build()?
         .send()
         .await?;
@@ -108,7 +108,7 @@ pub async fn cover_download_quality_by_manga_id(
     let client = MangaDexClient::new_with_http_client_ref(client);
     let manga_id = Uuid::parse_str(manga_id)?;
     // The data should be streamed rather than downloading the data all at once.
-    let cover = client.manga().get().manga_id(&manga_id).build()?.send().await?;
+    let cover = client.manga().get().manga_id(manga_id).build()?.send().await?;
     let cover_id = match cover.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::CoverArt) {
         Some(d) => d.id,
         None => {

@@ -14,7 +14,7 @@ use crate::settings::files_dirs::DirsOptions;
 
 use super::chapter::{get_all_chapter, get_chapter_by_id, get_chapters_by_stream_id};
 use super::collection::Collection;
-use super::cover::{get_all_cover, is_cover_there};
+use super::cover::{get_all_cover, is_cover_there, get_cover_data};
 
 pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> ManagerCoreResult<bool> {
     let chapter: ApiObject<ChapterAttributes> = get_chapter_by_id(chap_id)?;
@@ -30,7 +30,7 @@ pub async fn is_chap_related_to_manga(chap_id: String, manga_id: String) -> Mana
 pub async fn find_all_downloades_by_manga_id(
     manga_id: String,
 ) -> ManagerCoreResult<impl Stream<Item = String>> {
-    let stream = get_all_chapter()?;
+    let stream = get_all_chapter(None)?;
     let mut stream = Box::pin(stream);
     let output = stream! {
         while let Some(chap) = stream.next().await {
@@ -48,7 +48,7 @@ pub async fn find_and_delete_all_downloades_by_manga_id(
     manga_id: String,
 ) -> ManagerCoreResult<serde_json::Value> {
     let mut vecs: Vec<String> = Vec::new();
-    let mut stream = Box::pin(get_all_chapter()?);
+    let mut stream = Box::pin(get_all_chapter(None)?);
     while let Some(files) = stream.next().await {
         let to_use = files;
         let to_insert = to_use.clone();
@@ -138,8 +138,12 @@ pub fn is_cover_related_to_manga(
     manga_id: String,
     cover_id: String,
 ) -> ManagerCoreResult<bool> {
-    let manga_id_clone = manga_id.clone();
-    is_manga_there(manga_id)
+    match get_cover_data(cover_id)?.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::Manga && rel.id.to_string() == manga_id){
+        None => Ok(false),
+        Some(_) => {
+            is_manga_there(manga_id)
+        }
+    }
 }
 
 pub fn get_manga_data_by_id(

@@ -1,9 +1,9 @@
-use std::{io::{Write}};
+use std::io::Write;
 
 use mangadex_api_types_rust::RelationshipType;
 use serde::{Serialize, Deserialize};
 
-use super::{files_dirs::DirsOptions};
+use super::files_dirs::DirsOptions;
 use crate::r#static::history::init_static_history;
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
@@ -98,6 +98,16 @@ impl History{
         }else {
             Err(std::io::Error::new(std::io::ErrorKind::AlreadyExists, format!("the uuid {} is already there", to_add)))
         }
+    }
+}
+
+impl IntoIterator for History {
+    type Item = uuid::Uuid;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>; 
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.history_list.into_iter()
     }
 }
 

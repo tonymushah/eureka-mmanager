@@ -1,3 +1,4 @@
+use crate::core::Error;
 use crate::methods::get_params;
 use crate::settings::files_dirs::DirsOptions;
 use crate::r#static::history::get_history_w_file_by_rel_or_init;
@@ -15,6 +16,7 @@ use log::info;
 use mangadex_api_schema_rust::v5::{CoverAttributes, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
+use serde_qs::actix::QsQuery;
 use std::num::ParseIntError;
 use std::path::Path;
 use std::str::FromStr;
@@ -349,30 +351,33 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+pub struct GetChapterQuery{
+    pub offset : Option<usize>,
+    pub limit : Option<usize>,
+    pub include_fails : Option<bool>,
+    pub only_fails : Option<bool>
+}
+
+impl Default for GetChapterQuery{
+    fn default() -> Self {
+        Self { offset: Some(0), limit: Some(10), include_fails : None, only_fails: None }
+    }
+}
+
 /// get all dowloaded chapter
 #[get("/chapter")]
-pub async fn find_all_downloaded_chapter(request: HttpRequest) -> impl Responder {
-    let query = get_params(request);
-    let offset: Result<usize, ParseIntError> =
-        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
-            .as_str()
-            .parse();
-    let offset = this_api_result!(offset);
-    let limit: Result<usize, ParseIntError> =
-        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
-            .as_str()
-            .parse();
-    let limit = this_api_result!(limit);
+pub async fn find_all_downloaded_chapter(query : QsQuery<GetChapterQuery>) -> Result<impl Responder, Error> {
     //let include_failed : Result<boolean, ParseBoolError> =
-    let getted = this_api_result!(get_all_downloaded_chapters(offset, limit).await);
-    HttpResponse::Ok().content_type(ContentType::json()).body(
+    let getted = get_all_downloaded_chapters(Some(query.into_inner())).await?;
+    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
             "type" : "collection",
             "data" : getted
         })
         .to_string(),
-    )
+    ))
 }
 
 /// find all downloaded manga
@@ -392,7 +397,6 @@ pub async fn find_all_downloaded_manga(request: HttpRequest) -> impl Responder {
     let title = get_query_hash_value_or_else(&query, "title".to_string(), "".to_string());
     let title = if title.is_empty() {None} else {Some(title)};
     let getted = this_api_result!(get_downloaded_manga(offset, limit, title).await);
-
 
     HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({

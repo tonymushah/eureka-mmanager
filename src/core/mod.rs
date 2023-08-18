@@ -28,8 +28,10 @@ pub enum Error {
     ChapterDownloadBuilderError(#[from] mangadex_api::utils::download::chapter::ChapterDownloadBuilderError),
     #[error("An error occured when building mangadex_api::utils::download::cover::CoverDownload \n Details : {0}")]
     CoverDownloadBuilderError(#[from] mangadex_api::utils::download::cover::CoverDownloadBuilderError),
-    #[error("An error occured when building mangadex_api::v5::manga::get::GetMangaBuilderError \n Details : {0}")]
-    GetMangaBuilderError(#[from] mangadex_api::v5::manga::get::GetMangaBuilderError)
+    #[error("An error occured when building mangadex_api::v5::manga::get::GetManga \n Details : {0}")]
+    GetMangaBuilderError(#[from] mangadex_api::v5::manga::get::GetMangaBuilderError),
+    #[error("An error occured when building mangadex_api::v5::cover::list::ListCover \n Details : {0}")]
+    ListCoverBuilderError(#[from] mangadex_api::v5::cover::list::ListCoverBuilderError)
 }
 
 impl ResponseError for Error {
@@ -79,9 +81,22 @@ impl ResponseError for Error {
                 message : e.to_string(),
                 result : "error".to_string()
             }),
-            Error::ChapterDownloadBuilderError(_) => todo!(),
-            Error::CoverDownloadBuilderError(_) => todo!(),
-            Error::GetMangaBuilderError(_) => todo!(),
+            Error::ChapterDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
+                message : e.to_string(),
+                result : "error".to_string()
+            }),
+            Error::CoverDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
+                message : e.to_string(),
+                result : "error".to_string()
+            }),
+            Error::GetMangaBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
+                message : e.to_string(),
+                result : "error".to_string()
+            }),
+            Error::ListCoverBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
+                message : e.to_string(),
+                result : "error".to_string()
+            }),
         }
     }
 }
