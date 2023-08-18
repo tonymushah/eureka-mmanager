@@ -12,10 +12,7 @@ use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
 
 use crate::core::{ManagerCoreResult, Error};
-use crate::{
-    settings::{self},
-    utils,
-};
+use crate::settings::{self};
 
 pub async fn download_cover_data(
     cover_id: &str,
@@ -25,15 +22,12 @@ pub async fn download_cover_data(
     let json_cover = files_dirs.covers_add(format!("{}.json", cover_id).as_str());
     let mut files = File::create(json_cover)?;
         let http_client = &client.lock().await.client;
-        let resps = utils::send_request(
+        let resps = 
             http_client.get(format!(
                 "{}/cover/{}",
                 mangadex_api::constants::API_URL,
                 cover_id
-            )),
-            5,
-        )
-        .await?;
+            )).send().await?;
     let bytes = resps.bytes().await?;
     let bytes_string =String::from_utf8(bytes.to_vec())?;
     serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str())?;
@@ -80,6 +74,8 @@ pub async fn cover_download_by_manga_id(
 ) -> ManagerCoreResult<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
     let manga_id = Uuid::parse_str(manga_id)?;
+    println!("{:#?}", client);
+    println!("using mangadex-api");
     let manga = client
         .manga()
         .get()

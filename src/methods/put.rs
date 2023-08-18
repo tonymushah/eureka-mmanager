@@ -110,7 +110,7 @@ async fn download_chapter_byid(id: web::Path<String>, data: web::Data<AppState>)
 /// download chapter data by id
 #[put("/chapter/{id}/data")]
 async fn download_chapter_data_byid(id: web::Path<String>, data: web::Data<AppState>) -> impl Responder {
-    format!("Start downloading manga {id}");
+    format!("Start downloading chapter {id}");
     let response = this_api_result!(download_chapter(format!("{id}").as_str(), data.http_client.clone()).await);
     HttpResponse::Ok()
         .content_type(ContentType::json())
