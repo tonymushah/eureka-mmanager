@@ -1,5 +1,5 @@
-use std::io::{ErrorKind};
-use log::{info};
+use std::io::ErrorKind;
+use log::info;
 
 pub mod collection;
 pub mod manga;

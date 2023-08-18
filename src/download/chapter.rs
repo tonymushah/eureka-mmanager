@@ -2,9 +2,9 @@ use futures::StreamExt;
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
 use log::{info, warn};
-use mangadex_api::{v5::MangaDexClient, utils::{download::chapter::DownloadMode}, HttpClientRef};
+use mangadex_api::{v5::MangaDexClient, utils::download::chapter::DownloadMode, HttpClientRef};
 use serde_json::json;
-use std::fs::File;
+use std::{fs::File, io::ErrorKind};
 use std::io::Write;
 use std::path::Path;
 use uuid::Uuid;
@@ -14,16 +14,16 @@ use crate::{
         self, file_history::HistoryEntry,
     },
     utils::{chapter::{is_chapter_manga_there, patch_manga_by_chapter}, send_request},
-    r#static::history::{commit_rel, insert_in_history, remove_in_history}
+    r#static::history::{commit_rel, insert_in_history, remove_in_history}, core::ManagerCoreResult
 };
 
 /// puting chapter data in a json data
-async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chapter_top_dir : &String) -> anyhow::Result<()>{
+async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chapter_top_dir : &String) -> ManagerCoreResult<()>{
     let http_client = client.lock().await.client.clone();
     if !Path::new(format!("{}/data.json", chapter_top_dir).as_str()).exists() {
         let get_chapter = send_request(http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated())), 5).await?;
         if get_chapter.status().is_client_error() || get_chapter.status().is_server_error() {
-            return anyhow::Result::Err(anyhow::Error::msg(format!("can't download the chapter {} data", chapter_id)));
+            return Err(crate::core::Error::Io(std::io::Error::new(ErrorKind::Other ,format!("can't download the chapter {} data", chapter_id))));
         }
         let bytes_ = get_chapter.bytes().await?;
         let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
@@ -42,10 +42,10 @@ async fn verify_chapter_and_manga(chapter_id: &Uuid, client: HttpClientRef, chap
             patch_manga_by_chapter(format!("{}", chapter_id), client).await?;
         }
     }
-    anyhow::Ok(())
+    Ok(())
 }
 
-pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyhow::Result<serde_json::Value> {
+pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> ManagerCoreResult<serde_json::Value> {
     
     let chapter_id = Uuid::parse_str(chapter_id)?;
     let history_entry =
@@ -54,7 +54,7 @@ pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyho
         Ok(_) => (),
         Err(error) => {
             if error.kind() != std::io::ErrorKind::AlreadyExists {
-                return Err(anyhow::Error::new(error));
+                return Err(crate::core::Error::Io(error));
             }
         }
     };
@@ -137,7 +137,7 @@ pub async fn download_chapter(chapter_id: &str, client_: HttpClientRef) -> anyho
     
     Ok(jsons)
 }
-pub async fn download_chapter_saver(chapter_id: &str, client_: HttpClientRef) -> anyhow::Result<serde_json::Value> {
+pub async fn download_chapter_saver(chapter_id: &str, client_: HttpClientRef) -> ManagerCoreResult<serde_json::Value> {
     let chapter_id = Uuid::parse_str(chapter_id)?;
     let history_entry =
         HistoryEntry::new(chapter_id, mangadex_api_types_rust::RelationshipType::Chapter);
@@ -145,7 +145,7 @@ pub async fn download_chapter_saver(chapter_id: &str, client_: HttpClientRef) ->
         Ok(_) => (),
         Err(error) => {
             if error.kind() != std::io::ErrorKind::AlreadyExists {
-                return Err(anyhow::Error::new(error));
+                return Err(crate::core::Error::Io(error));
             }
         }
     };

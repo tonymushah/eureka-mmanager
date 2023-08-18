@@ -1,13 +1,12 @@
-use crate::settings::file_history::{load_history};
-use crate::settings::{
-    verifications::{
+use crate::settings::file_history::load_history;
+use crate::settings::verifications::{
         data::{initialise_data_dir, verify_data_dir}, 
         settings::{initialise_settings_dir, verify_settings_dir}
-    }
-};
-use actix_web::dev::{Server};
+    };
+use actix_web::dev::Server;
 use log::{info, warn};
 use settings::server_options;
+mod r#core;
 
 mod methods;
 pub mod download;

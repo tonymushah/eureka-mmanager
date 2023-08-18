@@ -2,36 +2,36 @@ use std::{fs::File, io::{ErrorKind, Write}, path::Path};
 use async_stream::stream;
 use tokio_stream::{Stream, StreamExt};
 use log::info;
-use mangadex_api::{HttpClientRef};
+use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{ApiObject, ApiData, v5::ChapterAttributes};
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id};
+use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, utils::manga::is_manga_cover_there, download::manga::download_manga, download::cover::cover_download_by_manga_id, core::{ManagerCoreResult, Error}};
 
 use crate::r#static::history::{insert_in_history, commit_rel, remove_in_history};
 
 use super::{manga::is_manga_there, collection::Collection};
 
-pub fn is_chapter_manga_there(chap_id: String) -> Result<bool, std::io::Error>{
+pub fn is_chapter_manga_there(chap_id: String) -> ManagerCoreResult<bool>{
     if !chap_id.is_empty() {
         let path = match DirsOptions::new(){
             core::result::Result::Ok(data) => data,
-            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+            Err(e) => return ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))
         }.chapters_add(format!("{}/data.json", chap_id).as_str());
         let chap_data : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_reader(File::open(path)?)?;
         let manga_id : uuid::Uuid = match chap_data.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::Manga){
             Some(data) => data.id,
             None => {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, "Seems like your chapter has no manga related to him"));
+                return ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, "Seems like your chapter has no manga related to him")));
             }
         };
         is_manga_there(format!("{}", manga_id))
     }else{
-        Err(std::io::Error::new(std::io::ErrorKind::Other, "the chap_id should'nt be empty"))
+        ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, "the chap_id should'nt be empty")))
     }
 }
 
-pub async fn update_chap_by_id(id: String, client : HttpClientRef) -> anyhow::Result<serde_json::Value> {
+pub async fn update_chap_by_id(id: String, client : HttpClientRef) -> ManagerCoreResult<serde_json::Value> {
     let files_dirs : DirsOptions = DirsOptions::new()?;
     let path = files_dirs.chapters_add(format!("{}/data.json", id).as_str());
 
@@ -58,28 +58,16 @@ pub async fn update_chap_by_id(id: String, client : HttpClientRef) -> anyhow::Re
         Ok(serde_json::from_str(jsons.as_str())?)
 }
 
-pub async fn patch_manga_by_chapter(chap_id: String, client : HttpClientRef) -> anyhow::Result<serde_json::Value> {
+pub async fn patch_manga_by_chapter(chap_id: String, client : HttpClientRef) -> ManagerCoreResult<serde_json::Value> {
     let path = DirsOptions::new()?.chapters_add(format!("{}/data.json", chap_id).as_str());
-    let chapter : ApiData<ApiObject<ChapterAttributes>> = match serde_json::from_str(&(
-            match std::fs::read_to_string(path.as_str()){
-                core::result::Result::Ok(data) => data,
-                Err(_) => {
-                    return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, format!("can't find or read file {}", path).as_str())));
-                }
-            }
-        )){
-            core::result::Result::Ok(data) => data,
-            Err(_) => {
-                return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, "Can't covert to json")));
-            }
-        };
+    let chapter : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_str(&(std::fs::read_to_string(path.as_str()))?)?;
     let manga =  match chapter
         .data
         .relationships
         .iter()
         .find(|related| related.type_ == RelationshipType::Manga){
             None => {
-                return Err(anyhow::Error::new(std::io::Error::new(ErrorKind::Other, format!("can't find manga in the chapter {}", chap_id).as_str())));
+                return Err(Error::Io(std::io::Error::new(ErrorKind::Other, format!("can't find manga in the chapter {}", chap_id).as_str())));
             },
             Some(data) => data
         };
@@ -110,7 +98,7 @@ pub async fn patch_manga_by_chapter(chap_id: String, client : HttpClientRef) -> 
     Ok(jsons)
 }
 
-pub fn get_chapter_by_id<T>(chap_id: T) -> anyhow::Result<ApiObject<ChapterAttributes>> 
+pub fn get_chapter_by_id<T>(chap_id: T) -> ManagerCoreResult<ApiObject<ChapterAttributes>> 
     where
         T : ToString
 {
@@ -118,13 +106,13 @@ pub fn get_chapter_by_id<T>(chap_id: T) -> anyhow::Result<ApiObject<ChapterAttri
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data.json", chap_id.to_string()).as_str());
     let data : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_reader(File::open(path)?)?;
-    anyhow::Ok(data.data)
+    Ok(data.data)
 }
 
-pub  fn get_chapters_by_stream_id<T>(mut chap_ids: T) -> anyhow::Result<impl Stream<Item = ApiObject<ChapterAttributes>>> 
+pub  fn get_chapters_by_stream_id<T>(mut chap_ids: T) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>>> 
     where T : Stream<Item = String> + std::marker::Unpin
 {
-    anyhow::Ok(
+    Ok(
         stream! {
             while let Some(id) = chap_ids.next().await {
                 if let Ok(data_) = get_chapter_by_id(id) {
@@ -135,8 +123,8 @@ pub  fn get_chapters_by_stream_id<T>(mut chap_ids: T) -> anyhow::Result<impl Str
     )
 }
 
-pub  fn get_chapters_by_vec_id(chap_ids: Vec<String>) -> anyhow::Result<impl Stream<Item = ApiObject<ChapterAttributes>>> {
-    anyhow::Ok(
+pub  fn get_chapters_by_vec_id(chap_ids: Vec<String>) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>>> {
+    Ok(
         stream! {
             for id in chap_ids {
                 if let Ok(data_) = get_chapter_by_id(id) {
@@ -205,9 +193,9 @@ pub fn get_all_chapter()-> Result<impl Stream<Item = String>, std::io::Error>{
 pub async fn get_all_downloaded_chapters(
     offset: usize,
     limit: usize,
-) -> Result<Collection<String>, std::io::Error> {
+) -> ManagerCoreResult<Collection<String>> {
     let stream = get_all_chapter()?;
 
         let collection: Collection<String> = Collection::from_async_stream(stream, limit, offset).await?;
-        std::io::Result::Ok(collection)
+        Ok(collection)
 }

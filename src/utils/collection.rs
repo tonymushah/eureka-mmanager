@@ -1,5 +1,7 @@
 use tokio_stream::{Stream, StreamExt};
 
+use crate::core::ManagerCoreResult;
+
 #[derive(Clone, serde::Serialize)]
 pub struct Collection<T>
     where 
@@ -21,12 +23,12 @@ impl<T> Collection<T>
         to_use: &mut Vec<T>,
         limit: usize,
         offset: usize,
-    ) -> Result<Collection<T>, std::io::Error> {
+    ) -> ManagerCoreResult<Collection<T>> {
         if offset > to_use.len() {
-            Err(std::io::Error::new(
+            ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "the offset is greater than the vector length",
-            ))
+            )))
         } else {
             let (_, right) = to_use.split_at(offset);
             let data;
@@ -62,7 +64,7 @@ impl<T> Collection<T>
     pub fn get_limit(self) -> usize {
         self.limit
     }
-    pub fn convert_to<S, F>(&mut self, f: F) -> Result<Collection<S>, std::io::Error>
+    pub fn convert_to<S, F>(&mut self, f: F) -> ManagerCoreResult<Collection<S>>
     where
         F: Fn(T) -> S,
         S : Clone,
@@ -73,14 +75,14 @@ impl<T> Collection<T>
         for data in old_data {
             new_data.push(f(data));
         }
-        Ok(Collection {
+        ManagerCoreResult::Ok(Collection {
             data: new_data,
             offset: self.offset,
             limit: self.limit,
             total: self.total,
         })
     }
-    pub async fn from_async_stream<S>(stream : S, limit: usize, offset: usize) -> Result<Collection<T>, std::io::Error>
+    pub async fn from_async_stream<S>(stream : S, limit: usize, offset: usize) -> ManagerCoreResult<Collection<T>>
         where S : Stream<Item = T>
     {
         let stream = stream;

@@ -3,7 +3,6 @@
 use std::fs::File;
 use std::io::Write;
 
-use anyhow::Ok;
 use log::info;
 use mangadex_api::utils::download::cover::CoverQuality;
 use mangadex_api::{v5::MangaDexClient, HttpClientRef};
@@ -12,6 +11,7 @@ use mangadex_api_schema_rust::v5::CoverAttributes;
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
 
+use crate::core::{ManagerCoreResult, Error};
 use crate::{
     settings::{self},
     utils,
@@ -20,7 +20,7 @@ use crate::{
 pub async fn download_cover_data(
     cover_id: &str,
     client: HttpClientRef,
-) -> anyhow::Result<()> {
+) -> ManagerCoreResult<()> {
     let files_dirs = settings::files_dirs::DirsOptions::new()?;
     let json_cover = files_dirs.covers_add(format!("{}.json", cover_id).as_str());
     let mut files = File::create(json_cover)?;
@@ -35,18 +35,8 @@ pub async fn download_cover_data(
         )
         .await?;
     let bytes = resps.bytes().await?;
-    let bytes_string = match String::from_utf8(bytes.to_vec()) {
-        core::result::Result::Ok(s) => s,
-        Err(e) => {
-            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string())))
-        }
-    };
-    match serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str()) {
-        core::result::Result::Ok(_) => (),
-        Err(_error) => {
-            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("this response format is invalid for {cover_id}"))));
-        }
-    }
+    let bytes_string =String::from_utf8(bytes.to_vec())?;
+    serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str())?;
     files.write_all(&bytes)?;
     Ok(())
 }
@@ -54,7 +44,7 @@ pub async fn download_cover_data(
 pub async fn cover_download_by_cover(
     cover_id: &str,
     client: HttpClientRef,
-) -> anyhow::Result<serde_json::Value> {
+) -> ManagerCoreResult<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
 
     let (filename, bytes_) = client
@@ -80,17 +70,14 @@ pub async fn cover_download_by_cover(
             "downloded" : cover_id
         }))
     } else {
-        
-        Err(anyhow::Error::msg(format!(
-            "Empty byte found for {filename}"
-        )))
+        Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("Empty byte found for {filename}"))))
     }
 }
 
 pub async fn cover_download_by_manga_id(
     manga_id: &str,
     client: HttpClientRef,
-) -> anyhow::Result<serde_json::Value> {
+) -> ManagerCoreResult<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
     let manga_id = Uuid::parse_str(manga_id)?;
     let manga = client
@@ -107,7 +94,7 @@ pub async fn cover_download_by_manga_id(
         .find(|related| related.type_ == RelationshipType::CoverArt)
     {
         Some(data) => data,
-        None => return Err(anyhow::Error::msg("no cover art found for manga")),
+        None => return Err(Error::Io(std::io::Error::new(std::io::ErrorKind::NotFound, format!("no cover art found for manga {manga_id}")))),
     }
     .id;
     cover_download_by_cover(cover_id.to_string().as_str(), client.get_http_client()).await
@@ -117,7 +104,7 @@ pub async fn cover_download_quality_by_manga_id(
     manga_id: &str,
     quality: CoverQuality,
     client: HttpClientRef,
-) -> anyhow::Result<serde_json::Value> {
+) -> ManagerCoreResult<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
     let manga_id = Uuid::parse_str(manga_id)?;
     // The data should be streamed rather than downloading the data all at once.
@@ -125,7 +112,7 @@ pub async fn cover_download_quality_by_manga_id(
     let cover_id = match cover.data.relationships.iter().find(|rel| rel.type_ == RelationshipType::CoverArt) {
         Some(d) => d.id,
         None => {
-            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::NotFound, "manga id not found")));
+            return Err(Error::Io(std::io::Error::new(std::io::ErrorKind::NotFound, "manga id not found")));
         }
     };
     let (filename, bytes_) = client
@@ -149,9 +136,9 @@ pub async fn cover_download_quality_by_manga_id(
             "downloded" : cover_id
         }))
     } else {
-        Err(anyhow::Error::msg(format!(
+        Err(Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, format!(
             "Empty byte found for {filename}"
-        )))
+        ))))
     }
 }
 
@@ -159,7 +146,7 @@ pub async fn cover_download_quality_by_cover(
     cover_id: &str,
     quality: CoverQuality,
     client: HttpClientRef,
-) -> anyhow::Result<serde_json::Value> {
+) -> ManagerCoreResult<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
 
     let (filename, bytes_) = client
@@ -183,9 +170,9 @@ pub async fn cover_download_quality_by_cover(
             "downloded" : cover_id
         }))
     } else {
-        Err(anyhow::Error::msg(format!(
+        Err(Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, format!(
             "Empty byte found for {filename}"
-        )))
+        ))))
     }
 }
 
@@ -193,7 +180,7 @@ pub async fn all_covers_download_quality_by_manga_id(
     manga_id: &str,
     limit: u32,
     client: HttpClientRef,
-) -> anyhow::Result<serde_json::Value> {
+) -> ManagerCoreResult<serde_json::Value> {
     let client = MangaDexClient::new_with_http_client_ref(client);
     let manga_id = Uuid::parse_str(manga_id)?;
 
