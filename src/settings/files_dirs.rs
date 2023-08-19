@@ -11,13 +11,12 @@ pub struct DirsOptions{
 }
 
 impl DirsOptions{
-    pub fn new_() -> ManagerCoreResult<DirsOptions>{
-        let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string("./settings/files-dirs.json")?.as_str())?;
+    pub fn new_(path: &str) -> ManagerCoreResult<DirsOptions>{
+        let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string(path)?.as_str())?;
         Ok(instance)
     }
     pub fn new() -> ManagerCoreResult<DirsOptions>{
-        let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string("./settings/files-dirs.json")?.as_str())?;
-        ManagerCoreResult::Ok(instance)
+        ManagerCoreResult::Ok(DirsOptions::new_("./settings/files-dirs.json")?)
     }
     pub fn data_dir_add(&self, path: &str) -> String{
         format!("{}/{}", self.data_dir, path)

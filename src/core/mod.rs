@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use actix_web::ResponseError;
 
 #[derive(thiserror::Error, Debug)]
@@ -31,7 +33,16 @@ pub enum Error {
     #[error("An error occured when building mangadex_api::v5::manga::get::GetManga \n Details : {0}")]
     GetMangaBuilderError(#[from] mangadex_api::v5::manga::get::GetMangaBuilderError),
     #[error("An error occured when building mangadex_api::v5::cover::list::ListCover \n Details : {0}")]
-    ListCoverBuilderError(#[from] mangadex_api::v5::cover::list::ListCoverBuilderError)
+    ListCoverBuilderError(#[from] mangadex_api::v5::cover::list::ListCoverBuilderError),
+    #[error("An Download Tasks limit Exceded {current}/{limit}")]
+    DownloadTaskLimitExceded{
+        current : u16,
+        limit: u16
+    },
+    #[error("An error occured when converting into a int")]
+    TryIntError(#[from] TryFromIntError),
+    #[error("An error occured when sending data between an oneshot channel \n Details: {0}")]
+    OneshotRecvError(#[from] tokio::sync::oneshot::error::RecvError)
 }
 
 impl ResponseError for Error {
@@ -94,6 +105,18 @@ impl ResponseError for Error {
                 result : "error".to_string()
             }),
             Error::ListCoverBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
+                message : e.to_string(),
+                result : "error".to_string()
+            }),
+            Error::DownloadTaskLimitExceded { current, limit } => actix_web::HttpResponse::TooManyRequests().json(WhenError{
+                message : format!("Download task limit exceded {current}/{limit}"),
+                result : "error".to_string()
+            }),
+            Error::TryIntError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
+                message : e.to_string(),
+                result : "error".to_string()
+            }),
+            Error::OneshotRecvError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
                 message : e.to_string(),
                 result : "error".to_string()
             }),

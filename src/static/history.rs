@@ -1,23 +1,70 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    sync::Arc,
+};
 
 use mangadex_api_types_rust::RelationshipType;
+use tokio::sync::{Mutex, MutexGuard};
 
-use crate::settings::{
-    file_history::{init_history, HistoryEntry, HistoryWFile},
-    files_dirs::DirsOptions,
+use crate::{
+    core::{Error, ManagerCoreResult},
+    settings::{
+        file_history::{HistoryEntry, HistoryWFile},
+        files_dirs::DirsOptions,
+    }, server::traits::AccessHistory,
 };
 
 //use self::file_history::History;
 
-static mut HISTORY: once_cell::sync::OnceCell<Mutex<HashMap<RelationshipType, HistoryWFile>>> =
-    once_cell::sync::OnceCell::new();
+pub type InnerHistoryMap = HashMap<RelationshipType, HistoryWFile>;
+#[derive(Default, Clone)]
+pub struct HistoryMap(Arc<Mutex<InnerHistoryMap>>);
 
-pub fn get_history_w_file_by_rel(
-    relationship_type: RelationshipType,
-) -> Result<&'static mut HistoryWFile, std::io::Error> {
-    let history = get_history()?;
-    match history.get_mut(&(relationship_type)) {
-        None => {
+impl From<Arc<Mutex<InnerHistoryMap>>> for HistoryMap {
+    fn from(value: Arc<Mutex<InnerHistoryMap>>) -> Self {
+        Self(value)
+    }
+}
+
+impl Deref for HistoryMap {
+    type Target = Arc<Mutex<InnerHistoryMap>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl HistoryMap {
+    pub fn get_ref(&self) -> &Mutex<InnerHistoryMap> {
+        self.0.as_ref()
+    }
+    pub fn into_inner(&self) -> Arc<Mutex<InnerHistoryMap>> {
+        self.0
+    }
+    pub async fn get_history(&self) -> MutexGuard<'_, InnerHistoryMap> {
+        self.lock().await
+    }
+    pub async fn init_history(
+        &self,
+        dir_option: &DirsOptions,
+        relationship_type: RelationshipType,
+    ) -> ManagerCoreResult<()> {
+        let mut history = self.get_history().await;
+        history.insert(
+            relationship_type,
+            HistoryWFile::init(relationship_type, dir_option)?,
+        );
+        Ok(())
+    }
+    pub async fn get_history_w_file_by_rel(
+        &self,
+        relationship_type: RelationshipType,
+    ) -> std::io::Result<HistoryWFile> {
+        let history = self.get_history().await;
+        if let Some(data) = history.get(&relationship_type) {
+            Ok(Clone::clone(data))
+        } else {
             Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!(
@@ -28,153 +75,79 @@ pub fn get_history_w_file_by_rel(
                 ),
             ))
         }
-        Some(data) => Ok(data),
     }
-}
-pub fn get_history_w_file_by_rel_or_init(relationship_type: RelationshipType) -> Result<&'static mut HistoryWFile, std::io::Error>{
-    let history = get_history()?;
-    let dir_options: DirsOptions = match DirsOptions::new() {
-        Ok(data) => data,
-        Err(error) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                error.to_string(),
-            ))
-        }
-    };
-    let history_w_file = match get_history_w_file_by_rel(relationship_type) {
-        Ok(data) => data,
-        Err(error) => {
-            let to_use;
-            if error.kind() == std::io::ErrorKind::NotFound {
-                history.insert(
-                    relationship_type,
-                    init_history(relationship_type, &dir_options)?,
-                );
-                match get_history_w_file_by_rel(relationship_type) {
-                    Ok(data) => {
-                        to_use = data;
-                    }
-                    Err(err) => return Err(err),
-                };
-            } else {
-                return Err(error);
-            }
-            to_use
-        }
-    };
-    Ok(history_w_file)
-}
-
-pub fn insert_in_history(to_insert: &HistoryEntry) -> Result<(), std::io::Error> {
-    let history_w_file = get_history_w_file_by_rel_or_init(to_insert.get_data_type())?;
-    history_w_file.get_history().add_uuid(to_insert.get_id())?;
-    Ok(())
-}
-
-pub fn remove_in_history(to_remove: &HistoryEntry) -> Result<(), std::io::Error> {
-    let history_w_file = match get_history_w_file_by_rel(to_remove.get_data_type()) {
-        Ok(data) => data,
-        Err(error) => {
-            return Err(error);
-        }
-    };
-    history_w_file
-        .get_history()
-        .remove_uuid(to_remove.get_id())?;
-    Ok(())
-}
-
-pub fn commit_rel(relationship_type: RelationshipType) -> Result<(), std::io::Error> {
-    let history_w_file = match get_history_w_file_by_rel(relationship_type) {
-        Ok(data) => data,
-        Err(error) => {
-            return Err(error);
-        }
-    };
-    history_w_file.commit()?;
-    Ok(())
-}
-
-pub fn rollback_rel(relationship_type: RelationshipType) -> Result<(), std::io::Error> {
-    let history_w_file = match get_history_w_file_by_rel(relationship_type) {
-        Ok(data) => data,
-        Err(error) => {
-            return Err(error);
-        }
-    };
-    history_w_file.rollback()?;
-    Ok(())
-}
-
-pub fn init_static_history() -> Result<(), std::io::Error> {
-    let thread = std::thread::spawn(|| -> Result<(), std::io::Error> { unsafe {
-        let dir_options: DirsOptions = match DirsOptions::new() {
+    pub async fn get_history_w_file_by_rel_or_init(
+        &self,
+        relationship_type: RelationshipType,
+        dir_options: &DirsOptions,
+    ) -> ManagerCoreResult<HistoryWFile> {
+        let mut history = self.get_history().await;
+        let history_w_file = match self.get_history_w_file_by_rel(relationship_type).await {
             Ok(data) => data,
             Err(error) => {
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, error.to_string()));
-            }
-        };
-        let mut instance: HashMap<RelationshipType, HistoryWFile> = HashMap::new();
-        instance.insert(
-            RelationshipType::Manga,
-            match init_history(RelationshipType::Manga, &dir_options) {
-                Ok(data) => data,
-                Err(error) => {
-                    return Err(error);
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    history.insert(
+                        relationship_type,
+                        HistoryWFile::init(relationship_type, &dir_options)?,
+                    );
+                    self.get_history_w_file_by_rel(relationship_type).await?
+                } else {
+                    return Err(Error::Io(error));
                 }
-            },
-        );
-        match HISTORY.get() {
-            None => {
-                match HISTORY.set(Mutex::new(instance)) {
-                    Ok(a) => return Ok(a),
-                    Err(_) => {
-                        return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Error on initing static history"
-                    ))},
-                };
-            },
-            Some(_) => ()
+            }
         };
+        Ok(history_w_file)
+    }
+    pub async fn insert_in_history(
+        &self,
+        to_insert: &HistoryEntry,
+        dir_options: &DirsOptions,
+    ) -> ManagerCoreResult<()> {
+        let mut history_w_file = self
+            .get_history_w_file_by_rel_or_init(to_insert.get_data_type(), dir_options)
+            .await?;
+        history_w_file.get_history().add_uuid(to_insert.get_id())?;
         Ok(())
-    }})
-    .join();
-    match thread {
-        Ok(getted) => getted?,
-        Err(_) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Error on initing static history",
-            ));
-        }
     }
-    Ok(())
-}
-
-pub fn get_history() -> Result<&'static mut HashMap<RelationshipType, HistoryWFile>, std::io::Error>
-{
-    let to_return: &mut HashMap<RelationshipType, HistoryWFile>;
-    unsafe {
-        let data = match HISTORY.get_mut() {
-            Some(data) => data,
-            None => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::NotFound,
-                    "the history is not initialized",
-                ))
-            }
-        };
-        to_return = match data.get_mut() {
-            Ok(data) => data,
-            Err(error) => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    error.to_string(),
-                ))
+    pub async fn remove_in_history(
+        &self,
+        to_remove: &HistoryEntry,
+        dir_options: &DirsOptions,
+    ) -> ManagerCoreResult<()> {
+        let mut history_w_file = self
+            .get_history_w_file_by_rel_or_init(to_remove.get_data_type(), dir_options)
+            .await?;
+        history_w_file
+            .get_history()
+            .remove_uuid(to_remove.get_id())?;
+        Ok(())
+    }
+    pub async fn commit_rel(&self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
+        let mut history_w_file = self.get_history_w_file_by_rel(relationship_type).await?;
+        history_w_file.commit()?;
+        Ok(())
+    }
+    pub async fn rollback_rel(&self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
+        let mut history_w_file = self.get_history_w_file_by_rel(relationship_type).await?;
+        history_w_file.rollback()?;
+        Ok(())
+    }
+    pub fn init_history_dir(dir_options: &DirsOptions) -> Result<(), std::io::Error> {
+        let path: String = dir_options.data_dir_add("history".to_string().as_str());
+        std::fs::create_dir_all(path)?;
+        Ok(())
+    }
+    pub async fn init(dir_option: &DirsOptions, to_init : Option<Vec<RelationshipType>>) -> ManagerCoreResult<Self>{
+        let instance = Self::default();
+        if let Some(rels) = to_init {
+            for rel in rels {
+                instance.init_history(dir_option, rel).await?;
             }
         }
+        Ok(instance)
     }
-    Ok(to_return)
+    pub async fn load_history(dir_options: &DirsOptions, to_init : Option<Vec<RelationshipType>>) -> ManagerCoreResult<Self> {
+        Self::init_history_dir(dir_options)?;
+        Self::init(dir_options, to_init).await
+    }
 }
