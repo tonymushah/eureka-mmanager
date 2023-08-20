@@ -71,7 +71,7 @@ impl DownloadTaks {
         let (sender, receiver) = channel::<T::Output>();
         self.spawn(async {
             sender.send(task.await);
-        }).await;
+        }).await?;
         Ok(receiver.await?)
     }
     pub async fn lock_spawn_with_data<T>(&mut self, task : T) -> ManagerCoreResult<T::Output> 
@@ -86,3 +86,4 @@ impl DownloadTaks {
         Ok(receiver.await?)
     }
 }
+

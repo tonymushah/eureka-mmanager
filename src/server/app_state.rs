@@ -5,13 +5,15 @@ use crate::settings::file_history::{HistoryWFile, HistoryEntry};
 use crate::settings::files_dirs::DirsOptions;
 use crate::settings::server_options::ServerOptions;
 use crate::verify_all_fs;
+use futures::Future;
 use futures::lock::Mutex;
 use mangadex_api::{HttpClient, HttpClientRef, MangaDexClient};
 use mangadex_api_types_rust::RelationshipType;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
+use tokio::task::AbortHandle;
 
-use super::traits::AccessHistory;
+use super::traits::{AccessHistory, AccessDownloadTasks};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -110,5 +112,38 @@ impl AccessHistory for AppState {
     }
     async fn rollback_rel(&self, relationship_type: RelationshipType) -> ManagerCoreResult<()>{
         self.history.rollback_rel(relationship_type).await
+    }
+}
+
+#[async_trait::async_trait]
+impl AccessDownloadTasks for AppState {
+    async fn verify_limit(&self) -> bool{
+        self.download_tasks.verify_limit().await
+    }
+    async fn spawn<F>(&mut self, task : F) -> ManagerCoreResult<AbortHandle> 
+    where 
+        F : Future<Output = ()> + Send + 'static
+    {
+        self.download_tasks.spawn(task).await
+    }
+    async fn lock_spawn<F>(&mut self, task : F) -> AbortHandle
+    where 
+        F : Future<Output = ()> + Send + 'static
+    {
+        self.download_tasks.lock_spawn(task).await
+    }
+    async fn spawn_with_data<T>(&mut self, task : T) -> ManagerCoreResult<T::Output> 
+    where
+        T: Future + Send + 'static,
+        T::Output: Send + 'static
+    {
+        self.download_tasks.spawn_with_data(task).await
+    }
+    async fn lock_spawn_with_data<T>(&mut self, task : T) -> ManagerCoreResult<T::Output> 
+    where
+        T: Future + Send + 'static,
+        T::Output: Send + 'static
+    {
+        self.download_tasks.lock_spawn_with_data(task).await
     }
 }
