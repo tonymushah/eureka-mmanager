@@ -9,12 +9,48 @@ use std::path::Path;
 use std::{fs::File, io::ErrorKind};
 use uuid::Uuid;
 
+use crate::server::traits::{AccessDownloadTasks, AccessHistory};
+use crate::settings::files_dirs::DirsOptions;
 use crate::{
     core::ManagerCoreResult,
     r#static::history::{commit_rel, insert_in_history, remove_in_history},
     settings::{self, file_history::HistoryEntry},
     utils::chapter::{is_chapter_manga_there, patch_manga_by_chapter},
 };
+
+pub struct ChapterDownload<'a, H, D>
+where
+    H: AccessHistory,
+    D: AccessDownloadTasks,
+{
+    history: &'a H,
+    task_manager: &'a D,
+    pub dirs_options: DirsOptions,
+    pub http_client: HttpClientRef,
+    pub chapter_id: Uuid,
+}
+
+impl<'a, H, D> ChapterDownload<'a, H, D>
+where
+    H: AccessHistory,
+    D: AccessDownloadTasks,
+{
+    pub fn new(
+        chapter_id: Uuid,
+        history: &'a H,
+        task_manager: &'a D,
+        dirs_options: DirsOptions,
+        http_client: HttpClientRef,
+    ) -> Self {
+        Self {
+            history,
+            task_manager,
+            dirs_options,
+            http_client,
+            chapter_id,
+        }
+    }
+}
 
 /// puting chapter data in a json data
 async fn verify_chapter_and_manga(

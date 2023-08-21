@@ -5,7 +5,7 @@ use futures::Stream;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
 
-use crate::settings::files_dirs::DirsOptions;
+use crate::{settings::files_dirs::DirsOptions, download::chapter::ChapterDownload, server::traits::{AccessHistory, AccessDownloadTasks}};
 
 use super::{chapter::ChapterUtils, manga::MangaUtils};
 
@@ -22,7 +22,7 @@ impl CoverUtils {
             http_client_ref,
         }
     }
-    pub fn is_cover_there(&self, cover_id: String) -> Result<bool, std::io::Error> {
+    pub(self) fn is_cover_there(&self, cover_id: String) -> Result<bool, std::io::Error> {
         if !cover_id.is_empty() {
             let path = self
                 .dirs_options
@@ -39,7 +39,7 @@ impl CoverUtils {
             ))
         }
     }
-    pub fn is_cover_image_there(&self, cover_id: String) -> Result<bool, std::io::Error> {
+    pub(self) fn is_cover_image_there(&self, cover_id: String) -> Result<bool, std::io::Error> {
         if !cover_id.is_empty() {
             let path = self
                 .dirs_options
@@ -62,7 +62,7 @@ impl CoverUtils {
             ))
         }
     }
-    pub fn get_cover_data(
+    pub(self) fn get_cover_data(
         &self,
         cover_id: String,
     ) -> Result<ApiData<ApiObject<CoverAttributes>>, std::io::Error> {
@@ -109,6 +109,30 @@ impl CoverUtils {
             ))
         }
     }
+    pub fn with_id(&self, cover_id: String) -> CoverUtilsWithId {
+        CoverUtilsWithId { cover_utils: self.clone(), cover_id }
+    }
+}
+
+#[derive(Clone)]
+pub struct CoverUtilsWithId{
+    pub cover_utils : CoverUtils,
+    cover_id : String
+}
+
+impl CoverUtilsWithId {
+    pub fn new(cover_id : String, cover_utils : CoverUtils) -> Self{
+        Self { cover_utils, cover_id }
+    }
+    pub fn is_there(&self) -> Result<bool, std::io::Error> {
+        self.cover_utils.is_cover_there(self.cover_id.clone())
+    }
+    pub fn is_image_there(&self) -> Result<bool, std::io::Error> {
+        self.cover_utils.is_cover_image_there(self.cover_id.clone())
+    }
+    pub fn get_data(&self) -> Result<ApiData<ApiObject<CoverAttributes>>, std::io::Error> {
+        self.cover_utils.get_cover_data(self.cover_id.clone())
+    }
 }
 
 impl From<ChapterUtils> for CoverUtils {
@@ -132,5 +156,25 @@ impl From<MangaUtils> for CoverUtils {
 impl<'a> From<&'a MangaUtils> for CoverUtils {
     fn from(value: &'a MangaUtils) -> Self {
         Self::new(value.dirs_options, value.http_client_ref)
+    }
+}
+
+impl<'a, H, D> From<ChapterDownload<'a, H, D>> for CoverUtils
+where 
+    H : AccessHistory,
+    D : AccessDownloadTasks
+{
+    fn from(value: ChapterDownload<'a, H, D>) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+    }
+}
+
+impl<'a, H, D> From<&'a ChapterDownload<'a, H, D>> for CoverUtils
+where 
+    H : AccessHistory,
+    D : AccessDownloadTasks
+{
+    fn from(value: &'a ChapterDownload<'a, H, D>) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }

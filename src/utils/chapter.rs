@@ -6,7 +6,7 @@ use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{ApiObject, ApiData, v5::ChapterAttributes};
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, download::manga::download_manga, download::cover::cover_download_by_manga_id, core::{ManagerCoreResult, Error}, methods::get::GetChapterQuery, server::traits::AccessHistory};
+use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, download::manga::download_manga, download::{cover::cover_download_by_manga_id, chapter::ChapterDownload}, core::{ManagerCoreResult, Error}, methods::get::GetChapterQuery, server::traits::{AccessHistory, AccessDownloadTasks}};
 
 
 use super::{manga::MangaUtils, collection::Collection, cover::CoverUtils};
@@ -21,7 +21,8 @@ impl ChapterUtils {
     pub fn new(dirs_options : DirsOptions, http_client_ref : HttpClientRef) -> Self {
         Self { dirs_options, http_client_ref }
     }
-    pub fn is_chapter_manga_there(&self, chap_id: String) -> ManagerCoreResult<bool>{
+    pub(self) fn is_chapter_manga_there(&self, chap_id: String) -> ManagerCoreResult<bool>{
+        let manga_utils : MangaUtils = From::from(self);
         if !chap_id.is_empty() {
             let path = self.dirs_options.chapters_add(format!("{}/data.json", chap_id).as_str());
             let chap_data : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_reader(File::open(path)?)?;
@@ -31,15 +32,23 @@ impl ChapterUtils {
                     return ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, "Seems like your chapter has no manga related to him")));
                 }
             };
-            is_manga_there(format!("{}", manga_id))
+            Ok(manga_utils.with_id(format!("{}", manga_id)).is_there()?)
         }else{
             ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, "the chap_id should'nt be empty")))
         }
     }
-    pub async fn update_chap_by_id(&self, id: String) -> ManagerCoreResult<serde_json::Value> {
+    pub(self) async fn update_chap_by_id<'a, H, D>(&'a self, id: String, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value> 
+        where 
+            H : AccessHistory,
+            D : AccessDownloadTasks
+    {
         let path = self.dirs_options.chapters_add(format!("{}/data.json", id).as_str());
-
-            let http_client = self.http_client_ref.lock().await.client.clone();
+        let http_client = self.http_client_ref.lock().await.client.clone();
+        let mut hwf = history.get_history_w_file_by_rel_or_init(RelationshipType::Chapter).await?;
+        task_manager.lock_spawn_with_data(async move {
+            let chap_id = uuid::Uuid::parse_str(id.as_str())?;
+            hwf.get_history().add_uuid(chap_id)?;
+            hwf.commit()?;
             let get_chapter = http_client
                 .get(
                     format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", 
@@ -58,17 +67,22 @@ impl ChapterUtils {
             chapter_data.write_all(&bytes_)?;
             
             let jsons = std::fs::read_to_string(path.as_str())?;
-            
+            hwf.get_history().remove_uuid(chap_id)?;
+            hwf.commit()?;
             Ok(serde_json::from_str(jsons.as_str())?)
+        }).await?
+            
+            
     }
-    pub async fn patch_manga_by_chapter<H>(&self, chap_id: String, history : &H) -> ManagerCoreResult<serde_json::Value>
+    pub(self) async fn patch_manga_by_chapter<'a, H, D>(&'a self, chap_id: String, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value>
     where
-        H : AccessHistory
+        H : AccessHistory,
+        D: AccessDownloadTasks
     {
+        let manga_utils : MangaUtils = From::from(self);
         let path = self.dirs_options.chapters_add(format!("{}/data.json", chap_id).as_str());
-        let chapter : ApiData<ApiObject<ChapterAttributes>> = serde_json::from_str(&(std::fs::read_to_string(path.as_str()))?)?;
+        let chapter : ApiObject<ChapterAttributes> = self.get_chapter_by_id(chap_id)?;
         let manga =  match chapter
-            .data
             .relationships
             .iter()
             .find(|related| related.type_ == RelationshipType::Manga){
@@ -83,7 +97,7 @@ impl ChapterUtils {
         history.insert_in_history(&history_entry).await?;
         history.commit_rel(history_entry.get_data_type()).await?;
             download_manga(client.clone(), manga_id).await?;
-            match is_manga_cover_there(manga_id.to_string()) {
+            match manga_utils.with_id(manga_id.to_string()).is_cover_there() {
                 core::result::Result::Ok(getted) => {
                     if !getted{
                         cover_download_by_manga_id(manga_id.to_string().as_str(), client.clone()).await?;
@@ -103,7 +117,7 @@ impl ChapterUtils {
         history.commit_rel(history_entry.get_data_type()).await?;
         Ok(jsons)
     }
-    pub fn get_chapter_by_id<T>(&self, chap_id: T) -> ManagerCoreResult<ApiObject<ChapterAttributes>> 
+    pub(self) fn get_chapter_by_id<T>(&self, chap_id: T) -> ManagerCoreResult<ApiObject<ChapterAttributes>> 
     where
         T : ToString
     {
@@ -195,16 +209,51 @@ impl ChapterUtils {
         where 
             H : AccessHistory
     {
-    if let Some(param) = parameters{
-        let stream = self.get_all_chapter(Some(GetAllChapter::from(param.clone())), history).await?;
-        let collection: Collection<String> = Collection::from_async_stream(stream, param.clone().limit.unwrap_or(10), param.offset.unwrap_or(0)).await?;
-        Ok(collection)
-    }else{
-        let stream = self.get_all_chapter(None, history).await?;
-        let collection: Collection<String> = Collection::from_async_stream(stream, 10, 0).await?;
-        Ok(collection)
+        if let Some(param) = parameters{
+            let stream = self.get_all_chapter(Some(GetAllChapter::from(param.clone())), history).await?;
+            let collection: Collection<String> = Collection::from_async_stream(stream, param.clone().limit.unwrap_or(10), param.offset.unwrap_or(0)).await?;
+            Ok(collection)
+        }else{
+            let stream = self.get_all_chapter(None, history).await?;
+            let collection: Collection<String> = Collection::from_async_stream(stream, 10, 0).await?;
+            Ok(collection)
+        }
+    }
+    pub fn with_id(&self, chapter_id: String) -> ChapterUtilsWithID {
+        ChapterUtilsWithID { chapter_utils: self.clone(), chapter_id }
     }
 }
+
+#[derive(Clone)]
+pub struct ChapterUtilsWithID {
+    pub chapter_utils : ChapterUtils,
+    chapter_id : String
+}
+
+impl ChapterUtilsWithID {
+    pub fn new(chapter_id : String, chapter_utils : ChapterUtils) -> Self {
+        Self { chapter_utils, chapter_id }
+    }
+    pub fn is_manga_there(&self) -> ManagerCoreResult<bool>{
+        self.chapter_utils.is_chapter_manga_there(self.chapter_id.clone())
+    }
+    pub async fn update<'a, H, D>(&'a self, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value> 
+        where 
+            H : AccessHistory,
+            D : AccessDownloadTasks
+    {
+        self.chapter_utils.update_chap_by_id(self.chapter_id.clone(), history, task_manager).await
+    }
+    pub async fn patch_manga<'a, H, D>(&'a self, chap_id: String, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value>
+    where
+        H : AccessHistory,
+        D: AccessDownloadTasks 
+    {
+        self.chapter_utils.patch_manga_by_chapter(self.chapter_id.clone(), history, task_manager).await
+    }
+    pub fn get_chapter(&self) -> ManagerCoreResult<ApiObject<ChapterAttributes>> {
+        self.chapter_utils.get_chapter_by_id(self.chapter_id.clone())
+    }
 }
 
 impl From<MangaUtils> for ChapterUtils {
@@ -228,6 +277,26 @@ impl From<CoverUtils> for ChapterUtils {
 impl<'a> From<&'a CoverUtils> for ChapterUtils {
     fn from(value: &'a CoverUtils) -> Self {
         Self::new(value.dirs_options, value.http_client_ref)
+    }
+}
+
+impl<'a, H, D> From<ChapterDownload<'a, H, D>> for ChapterUtils
+where 
+    H : AccessHistory,
+    D : AccessDownloadTasks
+{
+    fn from(value: ChapterDownload<'a, H, D>) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+    }
+}
+
+impl<'a, H, D> From<&'a ChapterDownload<'a, H, D>> for ChapterUtils
+where 
+    H : AccessHistory,
+    D : AccessDownloadTasks
+{
+    fn from(value: &'a ChapterDownload<'a, H, D>) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }
 

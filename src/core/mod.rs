@@ -6,8 +6,6 @@ use actix_web::ResponseError;
 pub enum Error {
     #[error("An std::io::Error captured! \n Details : {0}")]
     Io(#[from] std::io::Error),
-    #[error("An internal actix error captured! \n Details : {0}")]
-    InternalServerError(#[from] actix_web::Error),
     #[error("An Error captured during sending a request \n Details : {0}")]
     ReqwestError(#[from] reqwest::Error),
     #[error("An Error captured from the `mangadex_api` crate \n Details : {0}")]
@@ -49,10 +47,6 @@ impl ResponseError for Error {
     fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
         match self {
             Error::Io(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::InternalServerError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
                 message : e.to_string(),
                 result : "error".to_string()
             }),

@@ -11,7 +11,8 @@ use std::path::Path;
 use tokio_stream::StreamExt;
 
 use crate::core::ManagerCoreResult;
-use crate::server::traits::AccessHistory;
+use crate::download::chapter::ChapterDownload;
+use crate::server::traits::{AccessHistory, AccessDownloadTasks};
 use crate::settings::files_dirs::DirsOptions;
 
 use super::chapter::ChapterUtils;
@@ -31,13 +32,13 @@ impl MangaUtils {
             http_client_ref,
         }
     }
-    pub async fn is_chap_related_to_manga(
+    async fn is_chap_related_to_manga(
         &self,
         chap_id: String,
         manga_id: String,
     ) -> ManagerCoreResult<bool> {
         let chapter_utils: ChapterUtils = From::from(self);
-        let chapter: ApiObject<ChapterAttributes> = chapter_utils.get_chapter_by_id(chap_id)?;
+        let chapter: ApiObject<ChapterAttributes> = chapter_utils.with_id(chap_id).get_chapter()?;
         let mut is = false;
         for relas in chapter.relationships {
             if relas.type_ == RelationshipType::Manga
@@ -48,7 +49,7 @@ impl MangaUtils {
         }
         Ok(is)
     }
-    pub fn find_all_downloades_by_manga_id<'a>(
+    pub(self) fn find_all_downloades_by_manga_id<'a>(
         &'a self,
         manga_id: String,
     ) -> ManagerCoreResult<impl Stream<Item = String> + 'a> {
@@ -68,7 +69,7 @@ impl MangaUtils {
         })
     }
 
-    pub async fn find_and_delete_all_downloades_by_manga_id<'a>(
+    pub(self) async fn find_and_delete_all_downloades_by_manga_id<'a>(
         &'a self,
         manga_id: String,
     ) -> ManagerCoreResult<serde_json::Value> {
@@ -83,7 +84,7 @@ impl MangaUtils {
         }
         Ok(serde_json::json!(vecs))
     }
-    pub fn get_downloaded_cover_of_a_manga<'a, H>(
+    pub(self) fn get_downloaded_cover_of_a_manga<'a, H>(
         &'a self,
         manga_id: String,
         history: &'a H,
@@ -108,7 +109,7 @@ impl MangaUtils {
             };
         })
     }
-    pub async fn get_downloaded_cover_of_a_manga_collection<'a, H>(
+    pub(self) async fn get_downloaded_cover_of_a_manga_collection<'a, H>(
         &'a self,
         manga_id: String,
         offset: usize,
@@ -122,7 +123,7 @@ impl MangaUtils {
             Box::pin(self.get_downloaded_cover_of_a_manga(manga_id, history)?);
         Collection::from_async_stream(&mut downloaded_covers, limit, offset).await
     }
-    pub fn is_manga_there(&self, manga_id: String) -> ManagerCoreResult<bool> {
+    pub(self) fn is_manga_there(&self, manga_id: String) -> ManagerCoreResult<bool> {
         if !manga_id.is_empty() {
             let path = self
                 .dirs_options
@@ -135,7 +136,7 @@ impl MangaUtils {
             )))
         }
     }
-    pub fn get_manga_data_by_id(
+    pub(self) fn get_manga_data_by_id(
         &self,
         manga_id: String,
     ) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
@@ -153,7 +154,7 @@ impl MangaUtils {
             )))
         }
     }
-    pub fn is_manga_cover_there(&self, manga_id: String) -> Result<bool, std::io::Error> {
+    pub(self) fn is_manga_cover_there(&self, manga_id: String) -> Result<bool, std::io::Error> {
         if !manga_id.is_empty() {
             let path = self
                 .dirs_options
@@ -181,7 +182,7 @@ impl MangaUtils {
                     Some(d) => d.id,
                 };
                 let cover_utils: CoverUtils = From::from(self);
-                cover_utils.is_cover_there(cover_id.to_string())
+                cover_utils.with_id(cover_id.to_string()).is_there()
             }
         } else {
             Err(std::io::Error::new(
@@ -190,14 +191,15 @@ impl MangaUtils {
             ))
         }
     }
-    pub fn is_cover_related_to_manga(
+    pub(self) fn is_cover_related_to_manga(
         &self,
         manga_id: String,
         cover_id: String,
     ) -> ManagerCoreResult<bool> {
         let cover_utils: CoverUtils = From::from(self);
         match cover_utils
-            .get_cover_data(cover_id)?
+            .with_id(cover_id)
+            .get_data()?
             .data
             .relationships
             .iter()
@@ -294,7 +296,7 @@ impl MangaUtils {
             Collection::new(&mut data, limit, offset)
         }
     }
-    pub async fn get_all_downloaded_chapter_data<'a>(
+    pub(self) async fn get_all_downloaded_chapter_data<'a>(
         &'a self,
         manga_id: String,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
@@ -329,7 +331,7 @@ impl MangaUtils {
         })
     }
 
-    pub async fn get_downloaded_chapter_of_a_manga<'a>(
+    pub(self) async fn get_downloaded_chapter_of_a_manga<'a>(
         &'a self,
         manga_id: String,
         offset: usize,
@@ -368,6 +370,26 @@ impl From<CoverUtils> for MangaUtils {
 impl<'a> From<&'a CoverUtils> for MangaUtils {
     fn from(value: &'a CoverUtils) -> Self {
         Self::new(value.dirs_options, value.http_client_ref)
+    }
+}
+
+impl<'a, H, D> From<ChapterDownload<'a, H, D>> for MangaUtils
+where 
+    H : AccessHistory,
+    D : AccessDownloadTasks
+{
+    fn from(value: ChapterDownload<'a, H, D>) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+    }
+}
+
+impl<'a, H, D> From<&'a ChapterDownload<'a, H, D>> for MangaUtils
+where 
+    H : AccessHistory,
+    D : AccessDownloadTasks
+{
+    fn from(value: &'a ChapterDownload<'a, H, D>) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }
 
@@ -447,5 +469,8 @@ impl MangaUtilsWithMangaId {
         limit: usize,
     ) -> ManagerCoreResult<Collection<String>> {
         self.manga_utils.get_downloaded_chapter_of_a_manga(self.manga_id.clone(), offset, limit).await
+    }
+    pub fn is_cover_there(&self) -> Result<bool, std::io::Error> {
+        self.manga_utils.is_manga_cover_there(self.manga_id.clone())
     }
 }
