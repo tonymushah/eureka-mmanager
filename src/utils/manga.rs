@@ -87,7 +87,7 @@ impl MangaUtils {
     pub(self) fn get_downloaded_cover_of_a_manga<'a, H>(
         &'a self,
         manga_id: String,
-        history: &'a H,
+        history: &'a mut H,
     ) -> ManagerCoreResult<impl Stream<Item = String> + 'a>
     where
         H: AccessHistory,
@@ -114,7 +114,7 @@ impl MangaUtils {
         manga_id: String,
         offset: usize,
         limit: usize,
-        history: &'a H,
+        history: &'a mut H,
     ) -> ManagerCoreResult<Collection<String>>
     where
         H: AccessHistory,
@@ -373,22 +373,16 @@ impl<'a> From<&'a CoverUtils> for MangaUtils {
     }
 }
 
-impl<'a, H, D> From<ChapterDownload<'a, H, D>> for MangaUtils
-where 
-    H : AccessHistory,
-    D : AccessDownloadTasks
+impl From<ChapterDownload> for MangaUtils
 {
-    fn from(value: ChapterDownload<'a, H, D>) -> Self {
+    fn from(value: ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }
 
-impl<'a, H, D> From<&'a ChapterDownload<'a, H, D>> for MangaUtils
-where 
-    H : AccessHistory,
-    D : AccessDownloadTasks
+impl<'a> From<&'a ChapterDownload> for MangaUtils
 {
-    fn from(value: &'a ChapterDownload<'a, H, D>) -> Self {
+    fn from(value: &'a ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }
@@ -424,7 +418,7 @@ impl MangaUtilsWithMangaId {
     }
     pub fn get_downloaded_cover<'a, H>(
         &'a self,
-        history: &'a H,
+        history: &'a mut H,
     ) -> ManagerCoreResult<impl Stream<Item = String> + 'a>
     where
         H: AccessHistory,
@@ -436,7 +430,7 @@ impl MangaUtilsWithMangaId {
         &'a self,
         offset: usize,
         limit: usize,
-        history: &'a H,
+        history: &'a mut H,
     ) -> ManagerCoreResult<Collection<String>>
     where
         H: AccessHistory,

@@ -5,7 +5,7 @@ use futures::Stream;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
 
-use crate::{settings::files_dirs::DirsOptions, download::chapter::ChapterDownload, server::traits::{AccessHistory, AccessDownloadTasks}};
+use crate::{settings::files_dirs::DirsOptions, download::chapter::ChapterDownload};
 
 use super::{chapter::ChapterUtils, manga::MangaUtils};
 
@@ -159,22 +159,16 @@ impl<'a> From<&'a MangaUtils> for CoverUtils {
     }
 }
 
-impl<'a, H, D> From<ChapterDownload<'a, H, D>> for CoverUtils
-where 
-    H : AccessHistory,
-    D : AccessDownloadTasks
+impl From<ChapterDownload> for CoverUtils
 {
-    fn from(value: ChapterDownload<'a, H, D>) -> Self {
+    fn from(value: ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }
 
-impl<'a, H, D> From<&'a ChapterDownload<'a, H, D>> for CoverUtils
-where 
-    H : AccessHistory,
-    D : AccessDownloadTasks
+impl<'a> From<&'a ChapterDownload> for CoverUtils
 {
-    fn from(value: &'a ChapterDownload<'a, H, D>) -> Self {
+    fn from(value: &'a ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }

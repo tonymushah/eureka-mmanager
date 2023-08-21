@@ -37,7 +37,7 @@ impl ChapterUtils {
             ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, "the chap_id should'nt be empty")))
         }
     }
-    pub(self) async fn update_chap_by_id<'a, H, D>(&'a self, id: String, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value> 
+    pub(self) async fn update_chap_by_id<'a, H, D>(&'a self, id: String, history : &'a mut H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value> 
         where 
             H : AccessHistory,
             D : AccessDownloadTasks
@@ -74,7 +74,7 @@ impl ChapterUtils {
             
             
     }
-    pub(self) async fn patch_manga_by_chapter<'a, H, D>(&'a self, chap_id: String, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value>
+    pub(self) async fn patch_manga_by_chapter<'a, H, D>(&'a self, chap_id: String, history : &'a mut H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value>
     where
         H : AccessHistory,
         D: AccessDownloadTasks
@@ -171,7 +171,7 @@ impl ChapterUtils {
             )))
         }
     }
-    pub async fn get_all_chapter<'a, H>(&'a self, parameters : Option<GetAllChapter>, history : &'a H)-> ManagerCoreResult<impl Stream<Item = String> + 'a>
+    pub async fn get_all_chapter<'a, H>(&'a self, parameters : Option<GetAllChapter>, history : &'a mut H)-> ManagerCoreResult<impl Stream<Item = String> + 'a>
         where 
             H : AccessHistory
     {
@@ -205,7 +205,7 @@ impl ChapterUtils {
             }
         })
     } 
-    pub async fn get_all_downloaded_chapters<'a, H>(&'a self, parameters : Option<GetChapterQuery>, history : &'a H) -> ManagerCoreResult<Collection<String>> 
+    pub async fn get_all_downloaded_chapters<'a, H>(&'a self, parameters : Option<GetChapterQuery>, history : &'a mut H) -> ManagerCoreResult<Collection<String>> 
         where 
             H : AccessHistory
     {
@@ -227,7 +227,7 @@ impl ChapterUtils {
 #[derive(Clone)]
 pub struct ChapterUtilsWithID {
     pub chapter_utils : ChapterUtils,
-    chapter_id : String
+    pub(crate) chapter_id : String
 }
 
 impl ChapterUtilsWithID {
@@ -237,17 +237,17 @@ impl ChapterUtilsWithID {
     pub fn is_manga_there(&self) -> ManagerCoreResult<bool>{
         self.chapter_utils.is_chapter_manga_there(self.chapter_id.clone())
     }
-    pub async fn update<'a, H, D>(&'a self, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value> 
+    pub async fn update<'a, H, D>(&'a self, history : &'a mut H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value> 
         where 
             H : AccessHistory,
             D : AccessDownloadTasks
     {
         self.chapter_utils.update_chap_by_id(self.chapter_id.clone(), history, task_manager).await
     }
-    pub async fn patch_manga<'a, H, D>(&'a self, chap_id: String, history : &'a H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value>
+    pub async fn patch_manga<'a, H, D>(&'a self, history : &'a mut H, task_manager: &'a mut D) -> ManagerCoreResult<serde_json::Value>
     where
         H : AccessHistory,
-        D: AccessDownloadTasks 
+        D: AccessDownloadTasks
     {
         self.chapter_utils.patch_manga_by_chapter(self.chapter_id.clone(), history, task_manager).await
     }
@@ -280,23 +280,36 @@ impl<'a> From<&'a CoverUtils> for ChapterUtils {
     }
 }
 
-impl<'a, H, D> From<ChapterDownload<'a, H, D>> for ChapterUtils
-where 
-    H : AccessHistory,
-    D : AccessDownloadTasks
+impl From<ChapterDownload> for ChapterUtils
 {
-    fn from(value: ChapterDownload<'a, H, D>) -> Self {
+    fn from(value: ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
     }
 }
 
-impl<'a, H, D> From<&'a ChapterDownload<'a, H, D>> for ChapterUtils
-where 
-    H : AccessHistory,
-    D : AccessDownloadTasks
+impl<'a> From<&'a ChapterDownload> for ChapterUtils
 {
-    fn from(value: &'a ChapterDownload<'a, H, D>) -> Self {
+    fn from(value: &'a ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+    }
+}
+
+impl<'a> From<&'a mut ChapterDownload> for ChapterUtils
+{
+    fn from(value: &'a mut ChapterDownload) -> Self {
+        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+    }
+}
+
+impl From<ChapterDownload> for ChapterUtilsWithID {
+    fn from(value: ChapterDownload) -> Self {
+        Self { chapter_utils: From::from(value), chapter_id: value.chapter_id.to_string() }
+    }
+}
+
+impl From<&ChapterDownload> for ChapterUtilsWithID {
+    fn from(value: &ChapterDownload) -> Self {
+        Self { chapter_utils: From::from(value), chapter_id: value.chapter_id.to_string() }
     }
 }
 
