@@ -2673,9 +2673,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api"
-version = "2.3.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aace1fb8ed6933f73f1bbe18471f2739eef4c2acb16177ac3a4f76271d93bd3b"
+checksum = "b194d20f8177bb8b0cfc3cbb0bcfa448abd292e900b6064d1a93a6ed7579291c"
 dependencies = [
  "anyhow",
  "async-stream",

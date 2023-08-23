@@ -40,58 +40,68 @@ impl CoverDownload {
             .dirs_options
             .covers_add(format!("{}.json", cover_id).as_str());
         let http_client = self.http_client.lock().await.client.clone();
-        task_manager.lock_spawn_with_data(async move {
-            let mut files = File::create(json_cover)?;
-            let resps = http_client
-                .get(format!(
-                    "{}/cover/{}",
-                    mangadex_api::constants::API_URL,
-                    cover_id
-                ))
-                .send()
-                .await?;
-            let bytes = resps.bytes().await?;
-            let bytes_string = String::from_utf8(bytes.to_vec())?;
-            serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str())?;
-            files.write_all(&bytes)?;
-            Ok(())
-        }).await?
+        task_manager
+            .lock_spawn_with_data(async move {
+                let mut files = File::create(json_cover)?;
+                let resps = http_client
+                    .get(format!(
+                        "{}/cover/{}",
+                        mangadex_api::constants::API_URL,
+                        cover_id
+                    ))
+                    .send()
+                    .await?;
+                let bytes = resps.bytes().await?;
+                let bytes_string = String::from_utf8(bytes.to_vec())?;
+                serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str())?;
+                files.write_all(&bytes)?;
+                Ok(())
+            })
+            .await?
     }
-}
+    pub async fn cover_download_by_cover<'a, D>(
+        &self,
+        task_manager: &'a mut D,
+    ) -> ManagerCoreResult<serde_json::Value>
+    where
+        D: AccessDownloadTasks,
+    {
+        let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
+        let cover_id = self.cover_id.clone();
+        let res: ManagerCoreResult<(String, Option<bytes::Bytes>)> = task_manager
+            .lock_spawn_with_data(async move {
+                let resp = client
+                    .download()
+                    .cover()
+                    .build()?
+                    .via_cover_id(cover_id)
+                    .await?;
+                Ok(resp)
+            })
+            .await?;
+        let (filename, bytes_) = res?;
 
-pub async fn cover_download_by_cover(
-    cover_id: &str,
-    client: HttpClientRef,
-) -> ManagerCoreResult<serde_json::Value> {
-    let client = MangaDexClient::new_with_http_client_ref(client);
+        // This is where you would download the file but for this example, we're just printing the raw data.
+        let files_dirs = settings::files_dirs::DirsOptions::new()?;
+        let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
 
-    let (filename, bytes_) = client
-        .download()
-        .cover()
-        .build()?
-        .via_cover_id(Uuid::parse_str(cover_id)?)
-        .await?;
+        if let Some(bytes) = bytes_ {
+            let mut file = File::create(file_path)?;
+            let _ = file.write_all(&bytes);
 
-    // This is where you would download the file but for this example, we're just printing the raw data.
-    let files_dirs = settings::files_dirs::DirsOptions::new()?;
-    let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
+            self.download_cover_data(task_manager).await?;
 
-    if let Some(bytes) = bytes_ {
-        let mut file = File::create(file_path)?;
-        let _ = file.write_all(&bytes);
-
-        download_cover_data(cover_id, client.get_http_client().clone()).await?;
-
-        Ok(serde_json::json!({
-            "result" : "ok",
-            "type": "cover",
-            "downloded" : cover_id
-        }))
-    } else {
-        Err(crate::core::Error::Io(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("Empty byte found for {filename}"),
-        )))
+            Ok(serde_json::json!({
+                "result" : "ok",
+                "type": "cover",
+                "downloded" : cover_id
+            }))
+        } else {
+            Err(crate::core::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Empty byte found for {filename}"),
+            )))
+        }
     }
 }
 
