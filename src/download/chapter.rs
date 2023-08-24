@@ -68,29 +68,23 @@ impl ChapterDownload {
         D: AccessDownloadTasks,
     {
         let chapter_id = self.chapter_id.to_string();
-        let chapter_utils: ChapterUtils = From::from(self);
-        let chapter_utils = chapter_utils.with_id(chapter_id);
+        let chapter_utils = <ChapterUtils as From<&'a Self>>::from(self).with_id(chapter_id);
         self.download_json_data(task_manager).await?;
-        match chapter_utils.is_manga_there() {
-            Ok(data) => {
-                if !data {
-                    chapter_utils.patch_manga(history, task_manager).await?;
-                }
-            }
-            Err(e) => {
+        if let Ok(data) = chapter_utils.is_manga_there() {
+            if !data {
                 chapter_utils.patch_manga(history, task_manager).await?;
             }
+        } else {
+            chapter_utils.patch_manga(history, task_manager).await?;
         }
         Ok(())
     }
-    pub async fn download_chapter<'a, H, D>(
-        &'a self,
+    pub async fn start_transation<'a, H>(
+        &self,
         history: &'a mut H,
-        task_manager: &'a mut D,
-    ) -> ManagerCoreResult<serde_json::Value>
+    ) -> ManagerCoreResult<HistoryEntry>
     where
         H: AccessHistory,
-        D: AccessDownloadTasks,
     {
         let chapter_id = Uuid::parse_str(self.chapter_id.to_string().as_str())?;
         let history_entry = HistoryEntry::new(
@@ -110,15 +104,43 @@ impl ChapterDownload {
             }
         };
         history.commit_rel(history_entry.get_data_type()).await?;
+        Ok(history_entry)
+    }
+    pub async fn end_transation<'a, H>(
+        &self,
+        entry: HistoryEntry,
+        history: &'a mut H,
+    ) -> ManagerCoreResult<()>
+    where
+        H: AccessHistory,
+    {
+        history.remove_in_history(&entry).await?;
+        history.commit_rel(entry.get_data_type()).await?;
+        Ok(())
+    }
+    pub async fn download_chapter<'a, H, D>(
+        &'a self,
+        history: &'a mut H,
+        task_manager: &'a mut D,
+    ) -> ManagerCoreResult<serde_json::Value>
+    where
+        H: AccessHistory,
+        D: AccessDownloadTasks,
+    {
+        let history_entry = self.start_transation(history).await?;
+        let chapter_id = history_entry.get_id();
 
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
+
+        self.verify_chapter_and_manga(history, task_manager).await?;
+
         let files_dirs = settings::files_dirs::DirsOptions::new()?;
         let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
         let chapter_dir = format!("{}/data", chapter_top_dir);
-        std::fs::create_dir_all(&chapter_dir)?;
-        info!("chapter dir created");
 
-        self.verify_chapter_and_manga(history, task_manager).await?;
+        std::fs::create_dir_all(&chapter_dir)?;
+
+        info!("chapter dir created");
 
         let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager
             .lock_spawn_with_data(async move {
@@ -205,8 +227,7 @@ impl ChapterDownload {
         let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
         let _ = file.write_all(jsons.to_string().as_bytes());
         if !has_error {
-            history.remove_in_history(&history_entry).await?;
-            history.commit_rel(history_entry.get_data_type()).await?;
+            self.end_transation(history_entry, history).await?;
         }
 
         Ok(jsons)
@@ -221,28 +242,16 @@ impl ChapterDownload {
         H: AccessHistory,
         D: AccessDownloadTasks,
     {
-        let chapter_id = Uuid::parse_str(self.chapter_id.to_string().as_str())?;
-        let history_entry = HistoryEntry::new(
-            chapter_id,
-            mangadex_api_types_rust::RelationshipType::Chapter,
-        );
-        match history.insert_in_history(&history_entry).await {
-            Ok(_) => (),
-            Err(error_) => {
-                if let Error::Io(error) = error_ {
-                    if error.kind() != std::io::ErrorKind::AlreadyExists {
-                        return Err(crate::core::Error::Io(error));
-                    }
-                } else {
-                    return Err(error_);
-                }
-            }
-        };
-        history.commit_rel(history_entry.get_data_type()).await?;
+        let history_entry = self.start_transation(history).await?;
+        let chapter_id = history_entry.get_id();
 
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
+
+        self.verify_chapter_and_manga(history, task_manager).await?;
+
         let files_dirs = settings::files_dirs::DirsOptions::new()?;
         let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
+
         let chapter_dir = format!("{}/data-saver", chapter_top_dir);
         std::fs::create_dir_all(&chapter_dir)?;
         info!("chapter dir created");
@@ -334,8 +343,7 @@ impl ChapterDownload {
         let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
         let _ = file.write_all(jsons.to_string().as_bytes());
         if !has_error {
-            history.remove_in_history(&history_entry).await?;
-            history.commit_rel(history_entry.get_data_type()).await?;
+            self.end_transation(history_entry, history).await?;
         }
 
         Ok(jsons)
@@ -366,9 +374,33 @@ impl TryFrom<&ChapterUtilsWithID> for ChapterDownload {
     }
 }
 
+#[async_trait::async_trait]
+pub trait AccessChapterDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
+    async fn download_json_data<'a>(
+        &'a mut self,
+        chapter_download: &'a ChapterDownload,
+    ) -> ManagerCoreResult<()> {
+        chapter_download.download_json_data(self).await
+    }
+    async fn download<'a>(
+        &'a mut self,
+        chapter_download: &'a ChapterDownload,
+    ) -> ManagerCoreResult<serde_json::Value> {
+        chapter_download.download_chapter(self, self).await
+    }
+    async fn download_data_saver<'a>(
+        &'a mut self,
+        chapter_download: &'a ChapterDownload,
+    ) -> ManagerCoreResult<serde_json::Value> {
+        chapter_download
+            .download_chapter_data_saver(self, self)
+            .await
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::r#static::history::init_static_history;
+    use crate::server::AppState;
 
     use super::*;
 
@@ -378,11 +410,15 @@ mod tests {
     /// Dev note : Don't go there it's an H...
     #[tokio::test]
     async fn test_download_chapter_normal() {
-        init_static_history().unwrap();
+        let app_state = AppState::init().await.unwrap();
         let chapter_id = "b8e7925e-581a-4c06-a964-0d822053391a";
-        let client = MangaDexClient::default();
-        download_chapter(chapter_id, client.get_http_client())
-            .await
-            .unwrap();
+        ChapterDownload::new(
+            TryFrom::try_from(chapter_id).unwrap(),
+            app_state.dir_options,
+            app_state.http_client,
+        )
+        .download_chapter(&mut app_state, &mut app_state)
+        .await
+        .unwrap();
     }
 }

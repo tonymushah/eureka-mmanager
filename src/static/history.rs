@@ -12,7 +12,7 @@ use crate::{
     settings::{
         file_history::{HistoryEntry, HistoryWFile},
         files_dirs::DirsOptions,
-    }, server::traits::AccessHistory,
+    },
 };
 
 //use self::file_history::History;

@@ -5,7 +5,7 @@ use futures::Stream;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
 
-use crate::{settings::files_dirs::DirsOptions, download::chapter::ChapterDownload};
+use crate::{settings::files_dirs::DirsOptions, download::{chapter::ChapterDownload, cover::CoverDownload}};
 
 use super::{chapter::ChapterUtils, manga::MangaUtils};
 
@@ -117,7 +117,7 @@ impl CoverUtils {
 #[derive(Clone)]
 pub struct CoverUtilsWithId{
     pub cover_utils : CoverUtils,
-    cover_id : String
+    pub(crate) cover_id : String
 }
 
 impl CoverUtilsWithId {
@@ -170,5 +170,17 @@ impl<'a> From<&'a ChapterDownload> for CoverUtils
 {
     fn from(value: &'a ChapterDownload) -> Self {
         Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+    }
+}
+
+impl From<CoverDownload> for CoverUtilsWithId {
+    fn from(value: CoverDownload) -> Self {
+        Self { cover_utils: CoverUtils::new(value.dirs_options, value.http_client), cover_id: value.cover_id.to_string() }
+    }
+}
+
+impl<'a> From<&'a CoverDownload> for CoverUtilsWithId {
+    fn from(value: &'a CoverDownload) -> Self {
+        Self { cover_utils: CoverUtils::new(value.dirs_options, value.http_client), cover_id: value.cover_id.to_string() }
     }
 }

@@ -1,5 +1,5 @@
+use crate::server::AppState;
 use crate::settings::files_dirs::DirsOptions;
-use crate::utils::manga::find_and_delete_all_downloades_by_manga_id;
 use crate::{this_api_option, this_api_result};
 use actix_web::http::header::ContentType;
 use actix_web::{delete, web, HttpResponse, Responder};
@@ -12,9 +12,8 @@ use std::path::Path;
 
 /// delete a chapter from the api
 #[delete("/chapter/{id}")]
-pub async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
-    let chapter_path =
-        this_api_result!(DirsOptions::new()).chapters_add(format!("{}", id).as_str());
+pub async fn delete_chapter_by_id(id: web::Path<String>, app_state: web::Data<AppState>) -> impl Responder {
+    let chapter_path = app_state.dir_options.chapters_add(format!("{}", id).as_str());
     if Path::new(chapter_path.as_str()).exists() {
         this_api_result!(std::fs::remove_dir_all(chapter_path));
         let jsons: serde_json::Value = serde_json::json!({
@@ -36,8 +35,8 @@ pub async fn delete_chapter_by_id(id: web::Path<String>) -> impl Responder {
 
 /// delete a  manga
 #[delete("/manga/{id}")]
-pub async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responder {
-    let file_dirs = this_api_result!(DirsOptions::new());
+pub async fn delete_manga_chapters_by_id(id: web::Path<String>, app_state: web::Data<AppState>) -> impl Responder {
+    let file_dirs = app_state.dir_options.clone();
     let file_dir_clone = file_dirs.clone();
     let path = file_dirs.mangas_add(format!("{}.json", id).as_str());
     let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
@@ -61,7 +60,7 @@ pub async fn delete_manga_chapters_by_id(id: web::Path<String>) -> impl Responde
     let jsons = this_api_result!(std::fs::read_to_string(path2.as_str()));
     let jsons1 = jsons.clone();
 
-    let resp = find_and_delete_all_downloades_by_manga_id(id.to_string()).await;
+    let resp = app_state.manga_utils().with_id(id.to_string()).find_and_delete_all_downloades().await;
     let jsons = this_api_result!(resp);
 
     this_api_result!(std::fs::remove_file(

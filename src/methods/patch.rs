@@ -1,17 +1,11 @@
-use crate::download::cover::{
-    cover_download_by_manga_id,
-};
 use crate::server::AppState;
 use crate::{this_api_result, this_api_option};
-use crate::utils::chapter::{
-    is_chapter_manga_there, patch_manga_by_chapter, update_chap_by_id,
-};
-use actix_web::http::header::{ContentType};
+use actix_web::http::header::ContentType;
 use actix_web::{
     patch, web, HttpResponse,
     Responder,
 };
-use log::{info};
+use log::info;
 use crate::settings::files_dirs::DirsOptions;
 use std::fs::File;
 use std::io::Write;

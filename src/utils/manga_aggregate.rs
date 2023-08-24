@@ -1,10 +1,6 @@
 use std::{io::Result, collections::HashMap, vec, cmp::Ordering};
 
-use mangadex_api_schema_rust::{v5::{ChapterAttributes, MangaAggregate, manga_aggregate::{ChapterAggregate, VolumeAggregate}}, ApiObject};
-use mangadex_api_types_rust::ResultType;
-use tokio_stream::StreamExt;
-
-use crate::core::ManagerCoreResult;
+use mangadex_api_schema_rust::{v5::{ChapterAttributes, manga_aggregate::{ChapterAggregate, VolumeAggregate}}, ApiObject};
 
 type ChapterHashMap = HashMap<String, Vec<ApiObject<ChapterAttributes>>>;
 
@@ -122,15 +118,6 @@ pub fn group_chapter_to_volume_aggregate(input : Vec<ApiObject<ChapterAttributes
     Ok(data)
 }
 
-pub async fn aggregate_manga_chapters(manga_id : String) -> ManagerCoreResult<MangaAggregate>{
-    let data  = Box::pin((crate::utils::manga::get_all_downloaded_chapter_data(manga_id).await)?);
-    let chapters : Vec<ApiObject<ChapterAttributes>> = data.collect().await;
-    let volumes = group_chapter_to_volume_aggregate(chapters)?;
-    Ok(MangaAggregate {
-        result : ResultType::Ok,
-        volumes
-    })
-}
 
 /*pub fn chapter_vec_to_chapter_aggregate_vec(input : Vec<ApiObject<ChapterAttributes>>) -> Result<()> {
     ChapterAggregate{
@@ -141,14 +128,17 @@ pub async fn aggregate_manga_chapters(manga_id : String) -> ManagerCoreResult<Ma
 
 #[cfg(test)]
 mod tests{
-    use crate::utils::manga::get_all_downloaded_chapter_data;
+    use tokio_stream::StreamExt;
+
+    use crate::{utils::manga::MangaUtils, settings::files_dirs::DirsOptions};
 
     use super::*;
 
     #[tokio::test]
     async fn test_to_volume_hash_map(){
         let manga_id = "d58eb211-a1ae-426c-b504-fc88253de600".to_string();
-        let data : Vec<ApiObject<ChapterAttributes>> = (get_all_downloaded_chapter_data(manga_id).await).unwrap().collect().await;
+        let manga_utils = MangaUtils::new(DirsOptions::new().unwrap(), Default::default());
+        let data : Vec<ApiObject<ChapterAttributes>> = (manga_utils.with_id(manga_id).get_all_downloaded_chapter_data().await).unwrap().collect().await;
         for (volume, chapters) in group_chapter_to_volume_hash_map(data).unwrap(){
             println!("\"{}\" : {}", volume, serde_json::to_string(&(group_chapter_to_chapter_aggregate(chapters).unwrap())).unwrap());
         }
@@ -156,6 +146,7 @@ mod tests{
     #[tokio::test]
     async fn test_to_volume_aggregate(){
         let manga_id = "d58eb211-a1ae-426c-b504-fc88253de600".to_string();
-        println!("{}", serde_json::to_string(&(aggregate_manga_chapters(manga_id).await.unwrap())).unwrap());
+        let manga_utils = MangaUtils::new(DirsOptions::new().unwrap(), Default::default()).with_id(manga_id);
+        println!("{}", serde_json::to_string(&(manga_utils.aggregate_manga_chapters().await.unwrap())).unwrap());
     }
 }

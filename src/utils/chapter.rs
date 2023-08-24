@@ -6,7 +6,7 @@ use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{ApiObject, ApiData, v5::ChapterAttributes};
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, download::manga::download_manga, download::{cover::cover_download_by_manga_id, chapter::ChapterDownload}, core::{ManagerCoreResult, Error}, methods::get::GetChapterQuery, server::traits::{AccessHistory, AccessDownloadTasks}};
+use crate::{settings::{files_dirs::DirsOptions, file_history::HistoryEntry}, download::manga::MangaDownload, download::chapter::ChapterDownload, core::{ManagerCoreResult, Error}, methods::get::GetChapterQuery, server::traits::{AccessHistory, AccessDownloadTasks}};
 
 
 use super::{manga::MangaUtils, collection::Collection, cover::CoverUtils};
@@ -80,14 +80,13 @@ impl ChapterUtils {
         D: AccessDownloadTasks
     {
         let manga_utils : MangaUtils = From::from(self);
-        let path = self.dirs_options.chapters_add(format!("{}/data.json", chap_id).as_str());
-        let chapter : ApiObject<ChapterAttributes> = self.get_chapter_by_id(chap_id)?;
+        let chapter : ApiObject<ChapterAttributes> = self.get_chapter_by_id(chap_id.clone())?;
         let manga =  match chapter
             .relationships
             .iter()
             .find(|related| related.type_ == RelationshipType::Manga){
                 None => {
-                    return Err(Error::Io(std::io::Error::new(ErrorKind::Other, format!("can't find manga in the chapter {}", chap_id).as_str())));
+                    return Err(Error::Io(std::io::Error::new(ErrorKind::Other, format!("can't find manga in the chapter {}", chap_id.clone()).as_str())));
                 },
                 Some(data) => data
             };
@@ -96,17 +95,7 @@ impl ChapterUtils {
         let history_entry = HistoryEntry::new(manga_id, type_);
         history.insert_in_history(&history_entry).await?;
         history.commit_rel(history_entry.get_data_type()).await?;
-            download_manga(client.clone(), manga_id).await?;
-            match manga_utils.with_id(manga_id.to_string()).is_cover_there() {
-                core::result::Result::Ok(getted) => {
-                    if !getted{
-                        cover_download_by_manga_id(manga_id.to_string().as_str(), client.clone()).await?;
-                    }
-                }, 
-                Err(_) => {
-                    cover_download_by_manga_id(manga_id.to_string().as_str(), client).await?;
-                }
-            }
+            MangaDownload::new(manga_id, manga_utils.dirs_options, manga_utils.http_client_ref).download_manga(task_manager);
         let jsons = serde_json::json!({
                 "result" : "ok",
                 "type" : "manga",
@@ -333,20 +322,22 @@ impl From<GetChapterQuery> for GetAllChapter{
 
 #[cfg(test)]
 mod tests{
-    use crate::utils::manga::find_all_downloades_by_manga_id;
 
     use super::*;
     #[tokio::test]
     pub async fn test_get_chapter_by_id(){
-        let result = get_chapter_by_id("167fb8f3-1180-4b1c-ac02-a01dc24b8865".to_string());
-        let data = result.unwrap();
+        let data = ChapterUtils::new(DirsOptions::new().unwrap(), HttpClientRef::default()).get_chapter_by_id("167fb8f3-1180-4b1c-ac02-a01dc24b8865".to_string()).unwrap();
         println!("{}", serde_json::to_string(&data).unwrap());
     }
     #[tokio::test]
     pub async fn test_get_chapters_by_vec_ids(){
+        let dir_options = DirsOptions::new().unwrap();
+        let client = HttpClientRef::default();
+        let chapter_utils = ChapterUtils::new(dir_options, client);
+        let manga_utils : MangaUtils = From::from(chapter_utils);
         let manga_id = "17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8".to_string();
-        let manga_downloads = Box::pin(find_all_downloades_by_manga_id(manga_id).await.unwrap());
-        let datas = get_chapters_by_stream_id(manga_downloads).unwrap();
+        let manga_downloads = Box::pin(manga_utils.with_id(manga_id).find_all_downloades().unwrap());
+        let datas = chapter_utils.get_chapters_by_stream_id(manga_downloads).unwrap();
         tokio::pin!(datas);
         while let Some(chap) = datas.next().await{
             println!("{}", serde_json::to_string(&chap).unwrap());

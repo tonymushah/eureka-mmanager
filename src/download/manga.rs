@@ -7,10 +7,12 @@ use mangadex_api_schema_rust::{ApiObject, ApiData};
 use uuid::Uuid;
 
 use crate::core::ManagerCoreResult;
-use crate::download::cover::cover_download_by_manga_id;
-use crate::server::traits::AccessDownloadTasks;
+use crate::server::traits::{AccessDownloadTasks, AccessHistory};
 use crate::settings::files_dirs::DirsOptions;
+use crate::utils::manga::MangaUtilsWithMangaId;
 use crate::utils::send_request;
+
+use super::cover::CoverDownloadWithManga;
 
 #[derive(Clone)]
 pub struct MangaDownload {
@@ -32,6 +34,7 @@ impl MangaDownload {
         where 
             D : AccessDownloadTasks
     {
+        let manga_utils : MangaUtilsWithMangaId = From::from(self);
         let id = format!("{}", self.manga_id);
         let http_client = self.http_client.lock().await.client.clone();
         let task : ManagerCoreResult<String> = task_manager.lock_spawn_with_data(async move {
@@ -46,8 +49,22 @@ impl MangaDownload {
             file.write_all(&bytes)?;
             Ok(id)
         }).await?;
-        let id = task?;
-        cover_download_by_manga_id(id.to_string().as_str(), self.http_client.clone()).await?;
+        task?;
+        let cover_download : CoverDownloadWithManga = From::from(self);
+        if let Ok(is_there) = manga_utils.is_cover_there() {
+            if !is_there {
+                cover_download.download(task_manager).await?;
+            }
+        }else {
+            cover_download.download(task_manager).await?;
+        }
         Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+pub trait AccessMangaDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
+    async fn download<'a>(&'a mut self, manga_download : &'a MangaDownload) -> ManagerCoreResult<()> {
+        manga_download.download_manga(self).await
     }
 }

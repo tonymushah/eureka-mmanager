@@ -1,9 +1,9 @@
 use async_stream::stream;
 use futures::Stream;
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes};
+use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes, MangaAggregate};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
-use mangadex_api_types_rust::RelationshipType;
+use mangadex_api_types_rust::{RelationshipType, ResultType};
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io::ErrorKind;
@@ -12,12 +12,14 @@ use tokio_stream::StreamExt;
 
 use crate::core::ManagerCoreResult;
 use crate::download::chapter::ChapterDownload;
-use crate::server::traits::{AccessHistory, AccessDownloadTasks};
+use crate::download::manga::MangaDownload;
+use crate::server::traits::AccessHistory;
 use crate::settings::files_dirs::DirsOptions;
 
 use super::chapter::ChapterUtils;
 use super::collection::Collection;
 use super::cover::CoverUtils;
+use super::manga_aggregate::group_chapter_to_volume_aggregate;
 
 #[derive(Clone)]
 pub struct MangaUtils {
@@ -87,7 +89,7 @@ impl MangaUtils {
     pub(self) fn get_downloaded_cover_of_a_manga<'a, H>(
         &'a self,
         manga_id: String,
-        history: &'a mut H,
+        _history: &'a mut H,
     ) -> ManagerCoreResult<impl Stream<Item = String> + 'a>
     where
         H: AccessHistory,
@@ -345,7 +347,10 @@ impl MangaUtils {
         Ok(to_use)
     }
     pub fn with_id(&self, manga_id: String) -> MangaUtilsWithMangaId {
-        MangaUtilsWithMangaId { manga_utils: self.clone(), manga_id }
+        MangaUtilsWithMangaId {
+            manga_utils: self.clone(),
+            manga_id,
+        }
     }
 }
 
@@ -373,24 +378,28 @@ impl<'a> From<&'a CoverUtils> for MangaUtils {
     }
 }
 
-impl From<ChapterDownload> for MangaUtils
-{
+impl From<ChapterDownload> for MangaUtils {
     fn from(value: ChapterDownload) -> Self {
-        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+        Self {
+            dirs_options: value.dirs_options,
+            http_client_ref: value.http_client,
+        }
     }
 }
 
-impl<'a> From<&'a ChapterDownload> for MangaUtils
-{
+impl<'a> From<&'a ChapterDownload> for MangaUtils {
     fn from(value: &'a ChapterDownload) -> Self {
-        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+        Self {
+            dirs_options: value.dirs_options,
+            http_client_ref: value.http_client,
+        }
     }
 }
 
 #[derive(Clone)]
 pub struct MangaUtilsWithMangaId {
     pub(crate) manga_utils: MangaUtils,
-    manga_id: String,
+    pub(crate) manga_id: String,
 }
 
 impl MangaUtilsWithMangaId {
@@ -447,24 +456,71 @@ impl MangaUtilsWithMangaId {
     pub fn is_there(&self) -> ManagerCoreResult<bool> {
         self.manga_utils.is_manga_there(self.manga_id.clone())
     }
-    pub fn get_manga_data(
-        &self,
-    ) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
+    pub fn get_manga_data(&self) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
         self.manga_utils.get_manga_data_by_id(self.manga_id.clone())
     }
     pub async fn get_all_downloaded_chapter_data<'a>(
         &'a self,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
-        self.manga_utils.get_all_downloaded_chapter_data(self.manga_id.clone()).await
+        self.manga_utils
+            .get_all_downloaded_chapter_data(self.manga_id.clone())
+            .await
     }
     pub async fn get_downloaded_chapter<'a>(
         &'a self,
         offset: usize,
         limit: usize,
     ) -> ManagerCoreResult<Collection<String>> {
-        self.manga_utils.get_downloaded_chapter_of_a_manga(self.manga_id.clone(), offset, limit).await
+        self.manga_utils
+            .get_downloaded_chapter_of_a_manga(self.manga_id.clone(), offset, limit)
+            .await
     }
     pub fn is_cover_there(&self) -> Result<bool, std::io::Error> {
         self.manga_utils.is_manga_cover_there(self.manga_id.clone())
+    }
+    pub async fn aggregate_manga_chapters(&self) -> ManagerCoreResult<MangaAggregate> {
+        let data = Box::pin(self.get_all_downloaded_chapter_data().await?);
+        let chapters: Vec<ApiObject<ChapterAttributes>> = data.collect().await;
+        let volumes = group_chapter_to_volume_aggregate(chapters)?;
+        Ok(MangaAggregate {
+            result: ResultType::Ok,
+            volumes,
+        })
+    }
+}
+
+impl<'a> From<&'a MangaDownload> for MangaUtils {
+    fn from(value: &'a MangaDownload) -> Self {
+        Self {
+            dirs_options: value.dirs_options,
+            http_client_ref: value.http_client,
+        }
+    }
+}
+
+impl From<MangaDownload> for MangaUtils {
+    fn from(value: MangaDownload) -> Self {
+        Self {
+            dirs_options: value.dirs_options,
+            http_client_ref: value.http_client,
+        }
+    }
+}
+
+impl<'a> From<&'a MangaDownload> for MangaUtilsWithMangaId {
+    fn from(value: &'a MangaDownload) -> Self {
+        Self {
+            manga_utils: From::from(value),
+            manga_id: value.manga_id.to_string(),
+        }
+    }
+}
+
+impl From<MangaDownload> for MangaUtilsWithMangaId {
+    fn from(value: MangaDownload) -> Self {
+        Self {
+            manga_utils: From::from(value),
+            manga_id: value.manga_id.to_string(),
+        }
     }
 }
