@@ -89,7 +89,7 @@ impl CoverUtils {
             Err(error) => Err(error),
         }
     }
-    pub fn get_all_cover<'a>(&'a self) -> Result<impl Stream<Item = String> + 'a, std::io::Error> {
+    pub fn get_all_cover(&self) -> Result<impl Stream<Item = String> + '_, std::io::Error> {
         let file_dirs = self.dirs_options.clone();
         let path = file_dirs.covers_add("");
         if Path::new(path.as_str()).exists() {

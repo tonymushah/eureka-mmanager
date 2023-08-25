@@ -58,8 +58,8 @@ pub async fn delete_manga_chapters_by_id(
         ))?
         .id;
     let filename_path1 =
-        (&file_dirs).covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
-    let path2 = (&file_dirs).covers_add(format!("{}.json", cover_id).as_str());
+        file_dirs.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
+    let path2 = file_dirs.covers_add(format!("{}.json", cover_id).as_str());
     let jsons = std::fs::read_to_string(path2.as_str())?;
     let jsons1 = jsons.clone();
 
@@ -70,12 +70,12 @@ pub async fn delete_manga_chapters_by_id(
         .await;
     let jsons = resp?;
 
-    std::fs::remove_file((&file_dirs).mangas_add(format!("{}.json", id).as_str()))?;
+    std::fs::remove_file(file_dirs.mangas_add(format!("{}.json", id).as_str()))?;
     std::fs::remove_file(filename_path1)?;
     if let Ok(getted) = serde_json::from_str(jsons1.as_str()) {
         let cover_data: ApiData<ApiObject<CoverAttributes>> = getted;
         let filename = cover_data.data.attributes.file_name;
-        let filename_path2 = (&file_dirs).covers_add(format!("images/{}", filename).as_str());
+        let filename_path2 = file_dirs.covers_add(format!("images/{}", filename).as_str());
         std::fs::remove_file(filename_path2)?;
     };
 

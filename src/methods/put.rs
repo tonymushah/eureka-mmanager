@@ -22,7 +22,7 @@ pub async fn download_manga_by_id(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let manga_download = app_state.manga_download(id.clone());
+    let manga_download = app_state.manga_download(*id);
     <AppState as AccessMangaDownload>::download(&mut app_state, &manga_download).await?;
     let jsons = serde_json::json!({
         "result" : "ok",
@@ -63,7 +63,7 @@ pub async fn download_manga_covers(
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
     let manga_cover_download: CoverDownloadWithManga =
-        From::from(app_state.manga_download(id.clone()));
+        From::from(app_state.manga_download(*id));
     let response = <AppState as AccessCoverDownloadWithManga>::all_cover_download(
         &mut app_state,
         &manga_cover_download,
@@ -82,7 +82,7 @@ pub async fn download_manga_cover(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let cover_download: CoverDownloadWithManga = From::from(app_state.manga_download(id.clone()));
+    let cover_download: CoverDownloadWithManga = From::from(app_state.manga_download(*id));
     let response =
         <AppState as AccessCoverDownloadWithManga>::download(&mut app_state, &cover_download)
             .await?;
@@ -123,7 +123,7 @@ pub async fn download_cover(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let cover_download = app_state.cover_download(id.clone());
+    let cover_download = app_state.cover_download(*id);
     let response =
         <AppState as AccessCoverDownload>::download(&mut app_state, &cover_download).await?;
     Ok(HttpResponse::Ok()
@@ -139,7 +139,7 @@ pub async fn download_cover_quality(
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
     let (id, quality) = path.into_inner();
-    let cover_download = app_state.cover_download(id.clone());
+    let cover_download = app_state.cover_download(id);
     let response = <AppState as AccessCoverDownload>::download_with_quality(
         &mut app_state,
         &cover_download,
@@ -162,7 +162,7 @@ pub async fn download_chapter_byid(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let chapter_download = app_state.chapter_download(id.clone());
+    let chapter_download = app_state.chapter_download(*id);
     let response =
         <AppState as AccessChapterDownload>::download(&mut app_state, &chapter_download).await?;
     Ok(HttpResponse::Ok()
@@ -177,7 +177,7 @@ pub async fn download_chapter_data_byid(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let chapter_download = app_state.chapter_download(id.clone());
+    let chapter_download = app_state.chapter_download(*id);
     let response =
         <AppState as AccessChapterDownload>::download(&mut app_state, &chapter_download).await?;
     Ok(HttpResponse::Ok()
@@ -192,7 +192,7 @@ pub async fn download_chapter_data_saver_byid(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let chapter_download = app_state.chapter_download(id.clone());
+    let chapter_download = app_state.chapter_download(*id);
     let response =
         <AppState as AccessChapterDownload>::download_data_saver(&mut app_state, &chapter_download)
             .await?;

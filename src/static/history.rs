@@ -88,7 +88,7 @@ impl HistoryMap {
                 if error.kind() == std::io::ErrorKind::NotFound {
                     history.insert(
                         relationship_type,
-                        HistoryWFile::init(relationship_type, &dir_options)?,
+                        HistoryWFile::init(relationship_type, dir_options)?,
                     );
                     self.get_history_w_file_by_rel(relationship_type).await?
                 } else {

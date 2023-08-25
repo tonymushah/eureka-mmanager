@@ -70,7 +70,7 @@ impl DownloadTaks {
     {
         let (sender, receiver) = channel::<T::Output>();
         self.spawn(async {
-            sender.send(task.await);
+            let _ = sender.send(task.await);
         }).await?;
         Ok(receiver.await?)
     }
@@ -81,7 +81,7 @@ impl DownloadTaks {
     {
         let (sender, receiver) = channel::<T::Output>();
         self.lock_spawn(async {
-            sender.send(task.await);
+            let _ = sender.send(task.await);
         }).await;
         Ok(receiver.await?)
     }

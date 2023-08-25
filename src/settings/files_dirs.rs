@@ -16,7 +16,7 @@ impl DirsOptions{
         Ok(instance)
     }
     pub fn new() -> ManagerCoreResult<DirsOptions>{
-        ManagerCoreResult::Ok(DirsOptions::new_("./settings/files-dirs.json")?)
+        DirsOptions::new_("./settings/files-dirs.json")
     }
     pub fn data_dir_add(&self, path: &str) -> String{
         format!("{}/{}", self.data_dir, path)

@@ -116,7 +116,7 @@ impl CoverDownload {
         D: AccessDownloadTasks,
     {
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
-        let cover_id = self.cover_id.clone();
+        let cover_id = self.cover_id;
         let res: ManagerCoreResult<(String, Option<bytes::Bytes>)> = task_manager
             .lock_spawn_with_data(async move {
                 let resp = client
@@ -228,7 +228,7 @@ impl CoverDownloadWithManga {
             None => {
                 return Err(Error::Io(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("no cover art found for manga {}", self.manga_id.to_string()),
+                    format!("no cover art found for manga {}", self.manga_id),
                 )))
             }
         }
@@ -267,7 +267,7 @@ impl CoverDownloadWithManga {
             None => {
                 return Err(Error::Io(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("no cover art found for manga {}", self.manga_id.to_string()),
+                    format!("no cover art found for manga {}", self.manga_id),
                 )))
             }
         }
@@ -300,13 +300,13 @@ impl CoverDownloadWithManga {
             .await?;
         let mut vecs: Vec<String> = Vec::new();
         for cover_to_use in covers.data {
-            if let Ok(_) = CoverDownload::new(
+            if (CoverDownload::new(
                 cover_to_use.id,
                 self.dirs_options.clone(),
                 client.get_http_client(),
             )
             .download(task_manager)
-            .await
+            .await).is_ok()
             {
                 vecs.push(format!("{}", cover_to_use.id.hyphenated()));
             }

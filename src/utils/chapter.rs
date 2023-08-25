@@ -120,7 +120,7 @@ impl ChapterUtils {
             manga_utils.dirs_options,
             manga_utils.http_client_ref,
         )
-        .download_manga(task_manager);
+        .download_manga(task_manager).await?;
         let jsons = serde_json::json!({
             "result" : "ok",
             "type" : "manga",
@@ -160,10 +160,10 @@ impl ChapterUtils {
             }
         })
     }
-    pub fn get_chapters_by_vec_id<'a>(
-        &'a self,
+    pub fn get_chapters_by_vec_id(
+        &self,
         chap_ids: Vec<String>,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
+    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
         Ok(stream! {
             for id in chap_ids {
                 if let Ok(data_) = self.get_chapter_by_id(id) {
@@ -172,9 +172,9 @@ impl ChapterUtils {
             }
         })
     }
-    pub fn get_all_chapter_without_history<'a>(
-        &'a self,
-    ) -> ManagerCoreResult<impl Stream<Item = String> + 'a> {
+    pub fn get_all_chapter_without_history(
+        &self,
+    ) -> ManagerCoreResult<impl Stream<Item = String> + '_> {
         let file_dirs = self.dirs_options.clone();
         let path = file_dirs.chapters_add("");
         if Path::new(path.as_str()).exists() {

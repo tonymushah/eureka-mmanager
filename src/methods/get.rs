@@ -224,7 +224,7 @@ pub async fn find_chapters_data_by_id(
                 .to_str()
                 .ok_or(std::io::Error::new(
                     std::io::ErrorKind::Other,
-                    format!("can't reconize file").to_string(),
+                    "can't reconize file".to_string().to_string(),
                 ))?
                 .to_string();
             if !filename.ends_with(".json") {
@@ -271,7 +271,7 @@ pub async fn find_chapters_data_saver_by_id(
                 .to_str()
                 .ok_or(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
-                    format!("can't reconize file"),
+                    "can't reconize file".to_string(),
                 ))?
                 .to_string();
             if !filename.ends_with(".json") {

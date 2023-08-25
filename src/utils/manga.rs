@@ -79,8 +79,7 @@ impl<'a> MangaUtils {
         let mut vecs: Vec<String> = Vec::new();
         let mut stream = Box::pin(self.find_all_downloades_by_manga_id(manga_id)?);
         while let Some(chapter_id) = stream.next().await {
-            if let Ok(_) =
-                std::fs::remove_dir_all(self.dirs_options.chapters_add(chapter_id.as_str()))
+            if std::fs::remove_dir_all(self.dirs_options.chapters_add(chapter_id.as_str())).is_ok()
             {
                 vecs.push(chapter_id);
             }
@@ -415,12 +414,12 @@ impl MangaUtilsWithMangaId {
             .is_chap_related_to_manga(chap_id, self.manga_id.clone())
             .await
     }
-    pub fn find_all_downloades<'a>(&'a self) -> ManagerCoreResult<impl Stream<Item = String> + 'a> {
+    pub fn find_all_downloades(&self) -> ManagerCoreResult<impl Stream<Item = String> + '_> {
         self.manga_utils
             .find_all_downloades_by_manga_id(self.manga_id.clone())
     }
-    pub async fn find_and_delete_all_downloades<'a>(
-        &'a self,
+    pub async fn find_and_delete_all_downloades(
+        &self,
     ) -> ManagerCoreResult<serde_json::Value> {
         self.manga_utils
             .find_and_delete_all_downloades_by_manga_id(self.manga_id.clone())
@@ -460,15 +459,15 @@ impl MangaUtilsWithMangaId {
     pub fn get_manga_data(&self) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
         self.manga_utils.get_manga_data_by_id(self.manga_id.clone())
     }
-    pub async fn get_all_downloaded_chapter_data<'a>(
-        &'a self,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
+    pub async fn get_all_downloaded_chapter_data(
+        &self,
+    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
         self.manga_utils
             .get_all_downloaded_chapter_data(self.manga_id.clone())
             .await
     }
-    pub async fn get_downloaded_chapter<'a>(
-        &'a self,
+    pub async fn get_downloaded_chapter(
+        &self,
         offset: usize,
         limit: usize,
     ) -> ManagerCoreResult<Collection<String>> {
