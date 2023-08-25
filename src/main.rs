@@ -22,12 +22,13 @@ async fn main() -> anyhow::Result<()>{
 }
 
 #[cfg(not(feature = "unix-socket-support"))]
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     fern::Dispatch::new()
         .level(log::LevelFilter::Info)
         .chain(std::io::stdout())
         .apply().unwrap();
     verify_all_fs()?;
-    launch_server_default()?;
+    launch_server_default().await?;
     anyhow::Ok(())
 }

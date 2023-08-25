@@ -2,6 +2,7 @@
 // They are not used because we're just printing the raw bytes.
 use std::fs::File;
 use std::io::Write;
+use std::sync::Arc;
 
 use mangadex_api::utils::download::cover::CoverQuality;
 use mangadex_api::{v5::MangaDexClient, HttpClientRef};
@@ -21,13 +22,13 @@ use super::manga::MangaDownload;
 
 #[derive(Clone)]
 pub struct CoverDownload {
-    pub dirs_options: DirsOptions,
+    pub dirs_options: Arc<DirsOptions>,
     pub http_client: HttpClientRef,
     pub cover_id: Uuid,
 }
 
 impl CoverDownload {
-    pub fn new(cover_id: Uuid, dirs_options: DirsOptions, http_client: HttpClientRef) -> Self {
+    pub fn new(cover_id: Uuid, dirs_options: Arc<DirsOptions>, http_client: HttpClientRef) -> Self {
         Self {
             dirs_options,
             http_client,
@@ -70,7 +71,7 @@ impl CoverDownload {
         D: AccessDownloadTasks,
     {
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
-        let cover_id = self.cover_id.clone();
+        let cover_id = self.cover_id;
         let res: ManagerCoreResult<(String, Option<bytes::Bytes>)> = task_manager
             .lock_spawn_with_data(async move {
                 let resp = client
@@ -167,8 +168,8 @@ impl<'a> TryFrom<&'a CoverUtilsWithId> for CoverDownload {
     type Error = uuid::Error;
     fn try_from(value: &'a CoverUtilsWithId) -> Result<Self, Self::Error> {
         Ok(Self {
-            dirs_options: value.cover_utils.dirs_options,
-            http_client: value.cover_utils.http_client_ref,
+            dirs_options: value.cover_utils.dirs_options.clone(),
+            http_client: value.cover_utils.http_client_ref.clone(),
             cover_id: Uuid::try_from(value.cover_id.as_str())?,
         })
     }
@@ -189,13 +190,13 @@ pub trait AccessCoverDownload: AccessDownloadTasks + AccessHistory + Sized + Sen
 
 #[derive(Clone)]
 pub struct CoverDownloadWithManga {
-    pub dirs_options: DirsOptions,
+    pub dirs_options: Arc<DirsOptions>,
     pub http_client: HttpClientRef,
     pub manga_id: Uuid,
 }
 
 impl CoverDownloadWithManga {
-    pub fn new(manga_id: Uuid, dirs_options: DirsOptions, http_client: HttpClientRef) -> Self {
+    pub fn new(manga_id: Uuid, dirs_options: Arc<DirsOptions>, http_client: HttpClientRef) -> Self {
         Self {
             dirs_options,
             http_client,
@@ -279,7 +280,7 @@ impl CoverDownloadWithManga {
         .download_with_quality(quality, task_manager)
         .await
     }
-    pub async fn all_covers_download_quality_by_manga_id<'a, D>(
+    pub async fn all_cover_download<'a, D>(
         &self,
         limit: u32,
         task_manager: &'a mut D,
@@ -338,8 +339,8 @@ impl<'a> TryFrom<&'a MangaUtilsWithMangaId> for CoverDownloadWithManga {
     type Error = uuid::Error;
     fn try_from(value: &'a MangaUtilsWithMangaId) -> Result<Self, Self::Error> {
         Ok(Self {
-            dirs_options: value.manga_utils.dirs_options,
-            http_client: value.manga_utils.http_client_ref,
+            dirs_options: value.manga_utils.dirs_options.clone(),
+            http_client: value.manga_utils.http_client_ref.clone(),
             manga_id: Uuid::try_from(value.manga_id.as_str())?,
         })
     }
@@ -358,9 +359,22 @@ impl From<MangaDownload> for CoverDownloadWithManga {
 impl<'a> From<&'a MangaDownload> for CoverDownloadWithManga {
     fn from(value: &'a MangaDownload) -> Self {
         Self {
-            dirs_options: value.dirs_options,
-            http_client: value.http_client,
+            dirs_options: value.dirs_options.clone(),
+            http_client: value.http_client.clone(),
             manga_id: value.manga_id,
         }
+    }
+}
+
+#[async_trait::async_trait]
+pub trait AccessCoverDownloadWithManga: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
+    async fn download<'a>(&'a mut self, cover_download : &'a CoverDownloadWithManga) -> ManagerCoreResult<serde_json::Value> {
+        cover_download.download(self).await
+    }
+    async fn download_with_quality<'a>(&'a mut self, cover_download : &'a CoverDownloadWithManga, quality : CoverQuality) -> ManagerCoreResult<serde_json::Value> {
+        cover_download.download_with_quality(quality, self).await
+    }
+    async fn all_cover_download<'a>(&'a mut self, cover_download : &'a CoverDownloadWithManga, limit : u32) -> ManagerCoreResult<serde_json::Value> {
+        cover_download.all_cover_download(limit, self).await
     }
 }

@@ -3,9 +3,12 @@ use futures::StreamExt;
 // They are not used because we're just printing the raw bytes.
 use log::info;
 use mangadex_api::{utils::download::chapter::DownloadMode, v5::MangaDexClient, HttpClientRef};
+use mangadex_api_schema_rust::v5::ChapterAttributes;
+use mangadex_api_schema_rust::{ApiData, ApiObject};
 use serde_json::json;
 use std::io::Write;
-use std::{fs::File, io::ErrorKind};
+use std::fs::File;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::core::Error;
@@ -19,13 +22,13 @@ use crate::{
 
 #[derive(Clone)]
 pub struct ChapterDownload {
-    pub dirs_options: DirsOptions,
+    pub dirs_options: Arc<DirsOptions>,
     pub http_client: HttpClientRef,
     pub chapter_id: Uuid,
 }
 
 impl ChapterDownload {
-    pub fn new(chapter_id: Uuid, dirs_options: DirsOptions, http_client: HttpClientRef) -> Self {
+    pub fn new(chapter_id: Uuid, dirs_options: Arc<DirsOptions>, http_client: HttpClientRef) -> Self {
         Self {
             dirs_options,
             http_client,
@@ -35,27 +38,33 @@ impl ChapterDownload {
     pub async fn download_json_data<'a, D>(
         &'a self,
         task_manager: &'a mut D,
-    ) -> ManagerCoreResult<()>
+    ) -> ManagerCoreResult<ApiData<ApiObject<ChapterAttributes>>>
     where
         D: AccessDownloadTasks,
     {
-        let chapter_id = self.chapter_id.clone();
-        let http_client = self.http_client.clone().lock().await.client.clone();
-        let chapter_top_dir = self
-            .dirs_options
-            .chapters_add(self.chapter_id.to_string().as_str());
+        let id = self.chapter_id;
+        let path = self.dirs_options.chapters_add(format!("{}/data.json", id).as_str());
+        let http_client = self.http_client.lock().await.client.clone();
         task_manager.lock_spawn_with_data(async move {
-            let get_chapter = http_client.get(format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", mangadex_api::constants::API_URL, chapter_id.hyphenated())).send().await?;
-            if get_chapter.status().is_client_error() || get_chapter.status().is_server_error() {
-                return Err(crate::core::Error::Io(std::io::Error::new(
-                    ErrorKind::Other,
-                    format!("can't download the chapter {} data", chapter_id),
-                )));
-            }
-            let bytes_ = get_chapter.bytes().await?;
-            let mut chapter_data = File::create(format!("{}/data.json", chapter_top_dir))?;
+            let get_chapter = http_client
+                .get(
+                    format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", 
+                        mangadex_api::constants::API_URL, 
+                        id
+                    )
+                )
+                .send()
+                .await?;
+            
+                let bytes_ = get_chapter.bytes()
+                .await?;
+            
+                let mut chapter_data = File::create((path).as_str())?;
+
             chapter_data.write_all(&bytes_)?;
-            ManagerCoreResult::Ok(())
+            
+            let jsons = std::fs::read_to_string(path.as_str())?;
+            Ok(serde_json::from_str(jsons.as_str())?)
         }).await?
     }
     async fn verify_chapter_and_manga<'a, H, D>(
@@ -367,33 +376,35 @@ impl TryFrom<&ChapterUtilsWithID> for ChapterDownload {
 
     fn try_from(value: &ChapterUtilsWithID) -> Result<Self, Self::Error> {
         Ok(Self {
-            dirs_options: value.chapter_utils.dirs_options,
-            http_client: value.chapter_utils.http_client_ref,
+            dirs_options: value.chapter_utils.dirs_options.clone(),
+            http_client: value.chapter_utils.http_client_ref.clone(),
             chapter_id: Uuid::parse_str(value.chapter_id.as_str())?,
         })
     }
 }
 
 #[async_trait::async_trait]
-pub trait AccessChapterDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
+pub trait AccessChapterDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync + Clone {
     async fn download_json_data<'a>(
         &'a mut self,
         chapter_download: &'a ChapterDownload,
-    ) -> ManagerCoreResult<()> {
+    ) -> ManagerCoreResult<ApiData<ApiObject<ChapterAttributes>>> {
         chapter_download.download_json_data(self).await
     }
     async fn download<'a>(
         &'a mut self,
         chapter_download: &'a ChapterDownload,
     ) -> ManagerCoreResult<serde_json::Value> {
-        chapter_download.download_chapter(self, self).await
+        let mut re_self = self.clone();
+        chapter_download.download_chapter(self, &mut re_self).await
     }
     async fn download_data_saver<'a>(
         &'a mut self,
         chapter_download: &'a ChapterDownload,
     ) -> ManagerCoreResult<serde_json::Value> {
+        let mut re_self = self.clone();
         chapter_download
-            .download_chapter_data_saver(self, self)
+            .download_chapter_data_saver(self, &mut re_self)
             .await
     }
 }
@@ -410,15 +421,9 @@ mod tests {
     /// Dev note : Don't go there it's an H...
     #[tokio::test]
     async fn test_download_chapter_normal() {
-        let app_state = AppState::init().await.unwrap();
+        let mut app_state = AppState::init().await.unwrap();
         let chapter_id = "b8e7925e-581a-4c06-a964-0d822053391a";
-        ChapterDownload::new(
-            TryFrom::try_from(chapter_id).unwrap(),
-            app_state.dir_options,
-            app_state.http_client,
-        )
-        .download_chapter(&mut app_state, &mut app_state)
-        .await
-        .unwrap();
+        let chapter_download = app_state.chapter_download(Uuid::parse_str(chapter_id).unwrap());
+        <AppState as AccessChapterDownload>::download(&mut app_state, &chapter_download).await.unwrap();
     }
 }

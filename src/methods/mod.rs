@@ -8,41 +8,6 @@ pub mod get;
 pub mod patch;
 pub mod delete;
 pub mod put;
-#[macro_export]
-macro_rules! this_api_result {
-    ($to_use:expr) => {
-        match $to_use {
-            Err(e) => {
-                let jsons = serde_json::json!({
-                    "result" : "error",
-                    "message" : format!("{}", e.to_string())
-                });
-                return HttpResponse::InternalServerError()
-                    .content_type(ContentType::json())
-                    .body(jsons.to_string());
-            }
-            Ok(f) => f,
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! this_api_option {
-    ($to_use:expr, $message:expr) => {
-        match $to_use {
-            Some(d) => d,
-            None => {
-                let jsons = serde_json::json!({
-                    "result" : "error",
-                    "message" : $message
-                });
-                return HttpResponse::InternalServerError()
-                    .content_type(ContentType::json())
-                    .body(jsons.to_string());
-            }
-        }
-    };
-}
 
 pub fn get_params(request: HttpRequest) -> HashMap<String, String> {
     return match query_string_to_hash_map(request.query_string()) {
@@ -51,4 +16,11 @@ pub fn get_params(request: HttpRequest) -> HashMap<String, String> {
             HashMap::new()
         }
     };
+}
+
+pub trait DefaultOffsetLimit<'a>: serde::Deserialize<'a> {
+    type OffsetOutput;
+    type LimitOutput;
+    fn default_offset() -> Self::OffsetOutput;
+    fn default_limit() -> Self::LimitOutput;
 }

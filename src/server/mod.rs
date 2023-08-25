@@ -63,7 +63,7 @@ fn not_found_message<B>(
 }
 
 pub fn get_actix_app(
-    app_state: AppState,
+    app_state: web::Data<AppState>,
 ) -> App<
     impl ServiceFactory<
             ServiceRequest,
@@ -74,7 +74,7 @@ pub fn get_actix_app(
         > + 'static,
 > {
     App::new()
-        .app_data(web::Data::new(app_state))
+        .app_data(app_state)
         .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
         /*
             get Methods
@@ -124,7 +124,8 @@ pub fn get_actix_app(
 
 /// Get the server handle
 pub fn launch_async_server(app_state: AppState, (address, port) : (String, u16)) -> std::io::Result<Server> {
-    Ok(HttpServer::new(move || get_actix_app(app_state.clone()))
+    let app_state_ref = web::Data::new(app_state);
+    Ok(HttpServer::new(move || get_actix_app(app_state_ref.clone()))
         .bind((address, port))?
         .run())
 }

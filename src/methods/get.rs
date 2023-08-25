@@ -1,12 +1,9 @@
+use super::DefaultOffsetLimit;
 use crate::core::{Error, ManagerCoreResult};
-use crate::methods::get_params;
-use crate::server::traits::AccessDownloadTasks;
+use crate::server::traits::AccessHistory;
 use crate::server::AppState;
-use crate::settings::files_dirs::DirsOptions;
-use crate::utils::query::get_query_hash_value_or_else;
-use crate::{this_api_option, this_api_result};
 use actix_web::http::header::ContentType;
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, web, HttpResponse, Responder};
 use itertools::Itertools;
 use log::info;
 use mangadex_api_schema_rust::v5::{CoverAttributes, MangaAttributes};
@@ -14,16 +11,8 @@ use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery;
-use std::num::ParseIntError;
 use std::path::Path;
-use std::str::{FromStr, Utf8Error};
-
-pub trait DefaultOffsetLimit<'a>: Deserialize<'a> {
-    type OffsetOutput;
-    type LimitOutput;
-    fn default_offset() -> Self::OffsetOutput;
-    fn default_limit() -> Self::LimitOutput;
-}
+use std::str::FromStr;
 
 /// try if the app is ok
 /// # How to use
@@ -231,31 +220,36 @@ pub async fn find_chapters_data_by_id(
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
             let filename_os = files?.file_name().clone();
-            let filename : &str =
-                filename_os.to_str().ok_or() ; format!("can't reconize file").to_string();
+            let filename = filename_os
+                .to_str()
+                .ok_or(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("can't reconize file").to_string(),
+                ))?
+                .to_string();
             if !filename.ends_with(".json") {
                 vecs.push(filename);
             }
         }
         vecs = vecs.into_iter().unique().collect();
-        HttpResponse::Ok().content_type(ContentType::json()).body(
+        Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
             serde_json::json!({
                 "result" : "ok",
                 "type" : "collection",
                 "data" : vecs
             })
             .to_string(),
-        )
+        ))
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
             "type" : "manga",
-            "id" : id.as_str(),
+            "id" : id.to_string(),
             "message" : format!("Cannot find the chapter {} data in the api", id)
         });
-        HttpResponse::NotFound()
+        Ok(HttpResponse::NotFound()
             .content_type(ContentType::json())
-            .body(jsons.to_string())
+            .body(jsons.to_string()))
     }
 }
 
@@ -264,30 +258,35 @@ pub async fn find_chapters_data_by_id(
 pub async fn find_chapters_data_saver_by_id(
     id: web::Path<String>,
     app_state: web::Data<AppState>,
-) -> impl Responder {
+) -> ManagerCoreResult<impl Responder> {
     let file_dirs = &app_state.dir_options;
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data-saver", id).as_str());
     if Path::new(path.as_str()).exists() {
-        let list_dir = this_api_result!(std::fs::read_dir(path.as_str()));
+        let list_dir = std::fs::read_dir(path.as_str())?;
         let mut vecs: Vec<String> = Vec::new();
         for files in list_dir {
-            let filename_os = this_api_result!(files).file_name().clone();
-            let filename =
-                this_api_option!(filename_os.to_str(), format!("can't reconize file")).to_string();
+            let filename_os = files?.file_name().clone();
+            let filename = filename_os
+                .to_str()
+                .ok_or(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("can't reconize file"),
+                ))?
+                .to_string();
             if !filename.ends_with(".json") {
                 vecs.push(filename);
             }
         }
         vecs = vecs.into_iter().unique().collect();
-        HttpResponse::Ok().content_type(ContentType::json()).body(
+        Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
             serde_json::json!({
                 "result" : "ok",
                 "type" : "collection",
                 "data" : vecs
             })
             .to_string(),
-        )
+        ))
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
@@ -295,9 +294,9 @@ pub async fn find_chapters_data_saver_by_id(
             "id" : id.as_str(),
             "message" : format!("Cannot find the chapter {} data-saver in the api", id)
         });
-        HttpResponse::NotFound()
+        Ok(HttpResponse::NotFound()
             .content_type(ContentType::json())
-            .body(jsons.to_string())
+            .body(jsons.to_string()))
     }
 }
 /// find a chapters data image by his id
@@ -305,14 +304,14 @@ pub async fn find_chapters_data_saver_by_id(
 pub async fn find_chapters_data_img_by_id(
     data: web::Path<(uuid::Uuid, String)>,
     app_state: web::Data<AppState>,
-) -> impl Responder {
+) -> ManagerCoreResult<impl Responder> {
     let (id, filename) = data.into_inner();
     let file_dirs = &app_state.dir_options;
     let path = file_dirs.chapters_add(format!("{}/data/{}", id, filename).as_str());
     if Path::new(path.as_str()).exists() {
-        HttpResponse::Ok()
+        Ok(HttpResponse::Ok()
             .content_type(ContentType::jpeg())
-            .body(this_api_result!(std::fs::read(path)))
+            .body(std::fs::read(path)?))
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
@@ -320,9 +319,9 @@ pub async fn find_chapters_data_img_by_id(
             "id" : id.to_string(),
             "message" : format!("Cannot find the chapter {} data-saver in the api", id)
         });
-        HttpResponse::NotFound()
+        Ok(HttpResponse::NotFound()
             .content_type(ContentType::json())
-            .body(jsons.to_string())
+            .body(jsons.to_string()))
     }
 }
 
@@ -330,14 +329,15 @@ pub async fn find_chapters_data_img_by_id(
 #[get("/chapter/{id}/data-saver/{filename}")]
 pub async fn find_chapters_data_saver_img_by_id(
     data: web::Path<(String, String)>,
-) -> impl Responder {
+    app_state: web::Data<AppState>,
+) -> ManagerCoreResult<impl Responder> {
     let (id, filename) = data.into_inner();
-    let file_dirs = this_api_result!(DirsOptions::new());
+    let file_dirs = &app_state.dir_options;
     let path = file_dirs.chapters_add(format!("{}/data-saver/{}", id, filename).as_str());
     if Path::new(path.as_str()).exists() {
-        HttpResponse::Ok()
+        Ok(HttpResponse::Ok()
             .content_type(ContentType::jpeg())
-            .body(this_api_result!(std::fs::read(path)))
+            .body(std::fs::read(path)?))
     } else {
         let jsons = serde_json::json!({
             "result" : "error",
@@ -345,47 +345,50 @@ pub async fn find_chapters_data_saver_img_by_id(
             "id" : id.as_str(),
             "message" : format!("Cannot find the chapter {} data-saver in the api", id)
         });
-        HttpResponse::NotFound()
+        Ok(HttpResponse::NotFound()
             .content_type(ContentType::json())
-            .body(jsons.to_string())
+            .body(jsons.to_string()))
     }
 }
 
 /// find a chapter (json data) by his id
 #[get("/chapter/{id}")]
-pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
+pub async fn find_chapter_by_id(
+    id: web::Path<String>,
+    app_state: web::Data<AppState>,
+) -> ManagerCoreResult<impl Responder> {
     //let path = format!("chapters/{}/data.json", id);
-    let file_dirs = this_api_result!(DirsOptions::new());
+    let file_dirs = &app_state.dir_options;
     //let file_dir_clone = file_dirs.clone();
     let path = file_dirs.chapters_add(format!("{}/data.json", id).as_str());
     if Path::new(path.as_str()).exists() {
-        let jsons = this_api_result!(std::fs::read_to_string(path.as_str()));
-        let history_ = this_api_result!(get_history_w_file_by_rel_or_init(
-            mangadex_api_types_rust::RelationshipType::Chapter
-        ));
+        let jsons = std::fs::read_to_string(path.as_str())?;
+        let mut history_ = app_state
+            .get_history_w_file_by_rel_or_init(mangadex_api_types_rust::RelationshipType::Chapter)
+            .await?;
 
         let uuid_str = format!("urn:uuid:{}", id);
         match uuid::Uuid::from_str(uuid_str.as_str()) {
             Ok(uuid_data) => {
                 if history_.get_history().is_in(uuid_data) {
-                    HttpResponse::Ok()
+                    Ok(HttpResponse::Ok()
                         .insert_header(("X-DOWNLOAD-FAILED", "true"))
                         .content_type(ContentType::json())
-                        .body(jsons)
+                        .body(jsons))
                 } else {
-                    HttpResponse::Ok()
+                    Ok(HttpResponse::Ok()
                         .insert_header(("X-DOWNLOAD-FAILED", "false"))
                         .content_type(ContentType::json())
-                        .body(jsons)
+                        .body(jsons))
                 }
             }
             Err(error) => {
                 info!("{}", error.to_string());
-                HttpResponse::Ok()
+                Ok(HttpResponse::Ok()
                     .insert_header(("X-DOWNLOAD-FAILED", "false"))
                     .insert_header(("EUREKA-UUID-PARSING-ERROR", "true"))
                     .content_type(ContentType::json())
-                    .body(jsons)
+                    .body(jsons))
             }
         }
     } else {
@@ -394,9 +397,9 @@ pub async fn find_chapter_by_id(id: web::Path<String>) -> impl Responder {
             "id" : id.as_str(),
             "message" : "Cannot find the chapter in the api"
         });
-        HttpResponse::NotFound()
+        Ok(HttpResponse::NotFound()
             .content_type(ContentType::json())
-            .body(jsons.to_string())
+            .body(jsons.to_string()))
     }
 }
 
@@ -423,9 +426,13 @@ impl Default for GetChapterQuery {
 #[get("/chapter")]
 pub async fn find_all_downloaded_chapter(
     query: QsQuery<GetChapterQuery>,
+    app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
-    //let include_failed : Result<boolean, ParseBoolError> =
-    let getted = get_all_downloaded_chapters(Some(query.into_inner())).await?;
+    let mut app_state: AppState = From::from(app_state);
+    let getted = app_state
+        .chapter_utils()
+        .get_all_downloaded_chapters(Some(query.into_inner()), &mut app_state)
+        .await?;
     Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
@@ -436,73 +443,110 @@ pub async fn find_all_downloaded_chapter(
     ))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FindAllDownloadedMangaParams {
+    #[serde(default = "<FindAllDownloadedMangaParams as DefaultOffsetLimit>::default_offset")]
+    pub offset: usize,
+    #[serde(default = "<FindAllDownloadedMangaParams as DefaultOffsetLimit>::default_limit")]
+    pub limit: usize,
+    #[serde(default)]
+    pub title: Option<String>,
+}
+
+impl DefaultOffsetLimit<'_> for FindAllDownloadedMangaParams {
+    type OffsetOutput = usize;
+
+    type LimitOutput = usize;
+
+    fn default_offset() -> Self::OffsetOutput {
+        0
+    }
+
+    fn default_limit() -> Self::LimitOutput {
+        10
+    }
+}
+
 /// find all downloaded manga
 #[get("/manga")]
-pub async fn find_all_downloaded_manga(request: HttpRequest) -> impl Responder {
-    let query = get_params(request);
-    let offset: Result<usize, ParseIntError> =
-        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
-            .as_str()
-            .parse();
-    let offset = this_api_result!(offset);
-    let limit: Result<usize, ParseIntError> =
-        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
-            .as_str()
-            .parse();
-    let limit = this_api_result!(limit);
-    let title = get_query_hash_value_or_else(&query, "title".to_string(), "".to_string());
-    let title = if title.is_empty() { None } else { Some(title) };
-    let getted = this_api_result!(get_downloaded_manga(offset, limit, title).await);
+pub async fn find_all_downloaded_manga(
+    params: QsQuery<FindAllDownloadedMangaParams>,
+    app_state: web::Data<AppState>,
+) -> ManagerCoreResult<impl Responder> {
+    let getted = app_state
+        .manga_utils()
+        .get_downloaded_manga(params.offset, params.limit, params.title.clone())
+        .await?;
 
-    HttpResponse::Ok().content_type(ContentType::json()).body(
+    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
             "type" : "collection",
             "data" : getted
         })
         .to_string(),
-    )
+    ))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FindMangaChaptersByIdParams {
+    #[serde(default = "<FindMangaChaptersByIdParams as DefaultOffsetLimit>::default_offset")]
+    pub offset: usize,
+    #[serde(default = "<FindMangaChaptersByIdParams as DefaultOffsetLimit>::default_limit")]
+    pub limit: usize,
+}
+
+impl DefaultOffsetLimit<'_> for FindMangaChaptersByIdParams {
+    type OffsetOutput = usize;
+
+    type LimitOutput = usize;
+
+    fn default_offset() -> Self::OffsetOutput {
+        0
+    }
+
+    fn default_limit() -> Self::LimitOutput {
+        10
+    }
 }
 
 /// find all downloaded chapter manga
 #[get("/manga/{id}/chapters")]
 pub async fn find_manga_chapters_by_id(
-    id: web::Path<String>,
-    request: HttpRequest,
-) -> impl Responder {
-    let query = get_params(request);
-    let offset: Result<usize, ParseIntError> =
-        get_query_hash_value_or_else(&query, "offset".to_string(), "0".to_string())
-            .as_str()
-            .parse();
-    let offset = this_api_result!(offset);
-    let limit: Result<usize, ParseIntError> =
-        get_query_hash_value_or_else(&query, "limit".to_string(), "10".to_string())
-            .as_str()
-            .parse();
-    let limit = this_api_result!(limit);
-    let to_use =
-        this_api_result!(get_downloaded_chapter_of_a_manga(id.to_string(), offset, limit).await);
-    HttpResponse::Ok().content_type(ContentType::json()).body(
+    id: web::Path<uuid::Uuid>,
+    params: QsQuery<FindMangaChaptersByIdParams>,
+    app_state: web::Data<AppState>,
+) -> ManagerCoreResult<impl Responder> {
+    let to_use = app_state
+        .manga_utils()
+        .with_id(id.to_string())
+        .get_downloaded_chapter(params.offset, params.limit)
+        .await?;
+    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
             "type" : "collection",
             "data" : to_use
         })
         .to_string(),
-    )
+    ))
 }
 
 #[get("/manga/{id}/aggregate")]
-pub async fn aggregate_manga(id: web::Path<String>) -> impl Responder {
-    let aggregate = this_api_result!(
-        crate::utils::manga_aggregate::aggregate_manga_chapters(id.to_string()).await
-    );
-    HttpResponse::Ok().content_type(ContentType::json()).body(
+pub async fn aggregate_manga(
+    id: web::Path<uuid::Uuid>,
+    app_state: web::Data<AppState>,
+) -> ManagerCoreResult<impl Responder> {
+    let aggregate = app_state
+        .manga_utils()
+        .with_id(id.to_string())
+        .aggregate_manga_chapters()
+        .await?;
+    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({
             "result" : "ok",
             "volumes" : aggregate.volumes
         })
         .to_string(),
-    )
+    ))
 }

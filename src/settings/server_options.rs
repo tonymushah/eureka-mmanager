@@ -12,6 +12,6 @@ impl ServerOptions{
         Ok(instance)
     }
     pub fn get_hostname_port(&self) -> (String, u16) {
-        (self.hostname, self.port)
+        (self.hostname.clone(), self.port)
     }
 }

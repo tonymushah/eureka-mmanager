@@ -40,7 +40,7 @@ impl HistoryMap {
         self.0.as_ref()
     }
     pub fn into_inner(&self) -> Arc<Mutex<InnerHistoryMap>> {
-        self.0
+        self.0.clone()
     }
     pub async fn get_history(&self) -> MutexGuard<'_, InnerHistoryMap> {
         self.lock().await

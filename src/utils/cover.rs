@@ -1,22 +1,25 @@
-use std::{fs::File, path::Path};
+use std::{fs::File, path::Path, sync::Arc};
 
 use async_stream::stream;
 use futures::Stream;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
 
-use crate::{settings::files_dirs::DirsOptions, download::{chapter::ChapterDownload, cover::CoverDownload}};
+use crate::{
+    download::{chapter::ChapterDownload, cover::CoverDownload},
+    settings::files_dirs::DirsOptions,
+};
 
 use super::{chapter::ChapterUtils, manga::MangaUtils};
 
 #[derive(Clone)]
 pub struct CoverUtils {
-    pub(crate) dirs_options: DirsOptions,
+    pub(crate) dirs_options: Arc<DirsOptions>,
     pub(crate) http_client_ref: HttpClientRef,
 }
 
 impl CoverUtils {
-    pub fn new(dirs_options: DirsOptions, http_client_ref: HttpClientRef) -> Self {
+    pub fn new(dirs_options: Arc<DirsOptions>, http_client_ref: HttpClientRef) -> Self {
         Self {
             dirs_options,
             http_client_ref,
@@ -67,7 +70,7 @@ impl CoverUtils {
         cover_id: String,
     ) -> Result<ApiData<ApiObject<CoverAttributes>>, std::io::Error> {
         let cover_id_clone = cover_id.clone();
-        match self.is_cover_there(cover_id) {
+        match self.is_cover_there(cover_id.clone()) {
             core::result::Result::Ok(is_there) => {
                 if is_there {
                     let path = self
@@ -110,19 +113,25 @@ impl CoverUtils {
         }
     }
     pub fn with_id(&self, cover_id: String) -> CoverUtilsWithId {
-        CoverUtilsWithId { cover_utils: self.clone(), cover_id }
+        CoverUtilsWithId {
+            cover_utils: self.clone(),
+            cover_id,
+        }
     }
 }
 
 #[derive(Clone)]
-pub struct CoverUtilsWithId{
-    pub cover_utils : CoverUtils,
-    pub(crate) cover_id : String
+pub struct CoverUtilsWithId {
+    pub cover_utils: CoverUtils,
+    pub(crate) cover_id: String,
 }
 
 impl CoverUtilsWithId {
-    pub fn new(cover_id : String, cover_utils : CoverUtils) -> Self{
-        Self { cover_utils, cover_id }
+    pub fn new(cover_id: String, cover_utils: CoverUtils) -> Self {
+        Self {
+            cover_utils,
+            cover_id,
+        }
     }
     pub fn is_there(&self) -> Result<bool, std::io::Error> {
         self.cover_utils.is_cover_there(self.cover_id.clone())
@@ -143,7 +152,7 @@ impl From<ChapterUtils> for CoverUtils {
 
 impl<'a> From<&'a ChapterUtils> for CoverUtils {
     fn from(value: &'a ChapterUtils) -> Self {
-        Self::new(value.dirs_options, value.http_client_ref)
+        Self::new(value.dirs_options.clone(), value.http_client_ref.clone())
     }
 }
 
@@ -155,32 +164,42 @@ impl From<MangaUtils> for CoverUtils {
 
 impl<'a> From<&'a MangaUtils> for CoverUtils {
     fn from(value: &'a MangaUtils) -> Self {
-        Self::new(value.dirs_options, value.http_client_ref)
+        Self::new(value.dirs_options.clone(), value.http_client_ref.clone())
     }
 }
 
-impl From<ChapterDownload> for CoverUtils
-{
+impl From<ChapterDownload> for CoverUtils {
     fn from(value: ChapterDownload) -> Self {
-        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+        Self {
+            dirs_options: value.dirs_options,
+            http_client_ref: value.http_client,
+        }
     }
 }
 
-impl<'a> From<&'a ChapterDownload> for CoverUtils
-{
+impl<'a> From<&'a ChapterDownload> for CoverUtils {
     fn from(value: &'a ChapterDownload) -> Self {
-        Self { dirs_options: value.dirs_options, http_client_ref: value.http_client }
+        Self {
+            dirs_options: value.dirs_options.clone(),
+            http_client_ref: value.http_client.clone(),
+        }
     }
 }
 
 impl From<CoverDownload> for CoverUtilsWithId {
     fn from(value: CoverDownload) -> Self {
-        Self { cover_utils: CoverUtils::new(value.dirs_options, value.http_client), cover_id: value.cover_id.to_string() }
+        Self {
+            cover_utils: CoverUtils::new(value.dirs_options, value.http_client),
+            cover_id: value.cover_id.to_string(),
+        }
     }
 }
 
 impl<'a> From<&'a CoverDownload> for CoverUtilsWithId {
     fn from(value: &'a CoverDownload) -> Self {
-        Self { cover_utils: CoverUtils::new(value.dirs_options, value.http_client), cover_id: value.cover_id.to_string() }
+        Self {
+            cover_utils: CoverUtils::new(value.dirs_options.clone(), value.http_client.clone()),
+            cover_id: value.cover_id.to_string(),
+        }
     }
 }

@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::Path;
+use std::sync::Arc;
 use tokio_stream::StreamExt;
 
 use crate::core::ManagerCoreResult;
@@ -23,12 +24,12 @@ use super::manga_aggregate::group_chapter_to_volume_aggregate;
 
 #[derive(Clone)]
 pub struct MangaUtils {
-    pub(crate) dirs_options: DirsOptions,
+    pub(crate) dirs_options: Arc<DirsOptions>,
     pub(crate) http_client_ref: HttpClientRef,
 }
 
 impl MangaUtils {
-    pub fn new(dirs_options: DirsOptions, http_client_ref: HttpClientRef) -> Self {
+    pub fn new(dirs_options: Arc<DirsOptions>, http_client_ref: HttpClientRef) -> Self {
         Self {
             dirs_options,
             http_client_ref,
@@ -362,7 +363,7 @@ impl From<ChapterUtils> for MangaUtils {
 
 impl<'a> From<&'a ChapterUtils> for MangaUtils {
     fn from(value: &'a ChapterUtils) -> Self {
-        Self::new(value.dirs_options, value.http_client_ref)
+        Self::new(value.dirs_options.clone(), value.http_client_ref.clone())
     }
 }
 
@@ -374,7 +375,7 @@ impl From<CoverUtils> for MangaUtils {
 
 impl<'a> From<&'a CoverUtils> for MangaUtils {
     fn from(value: &'a CoverUtils) -> Self {
-        Self::new(value.dirs_options, value.http_client_ref)
+        Self::new(value.dirs_options.clone(), value.http_client_ref.clone())
     }
 }
 
@@ -390,8 +391,8 @@ impl From<ChapterDownload> for MangaUtils {
 impl<'a> From<&'a ChapterDownload> for MangaUtils {
     fn from(value: &'a ChapterDownload) -> Self {
         Self {
-            dirs_options: value.dirs_options,
-            http_client_ref: value.http_client,
+            dirs_options: value.dirs_options.clone(),
+            http_client_ref: value.http_client.clone(),
         }
     }
 }
@@ -492,8 +493,8 @@ impl MangaUtilsWithMangaId {
 impl<'a> From<&'a MangaDownload> for MangaUtils {
     fn from(value: &'a MangaDownload) -> Self {
         Self {
-            dirs_options: value.dirs_options,
-            http_client_ref: value.http_client,
+            dirs_options: value.dirs_options.clone(),
+            http_client_ref: value.http_client.clone(),
         }
     }
 }
@@ -518,9 +519,10 @@ impl<'a> From<&'a MangaDownload> for MangaUtilsWithMangaId {
 
 impl From<MangaDownload> for MangaUtilsWithMangaId {
     fn from(value: MangaDownload) -> Self {
+        let manga_id = value.manga_id.to_string();
         Self {
             manga_utils: From::from(value),
-            manga_id: value.manga_id.to_string(),
+            manga_id,
         }
     }
 }

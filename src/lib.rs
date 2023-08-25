@@ -39,8 +39,8 @@ pub use crate::server::launch_async_server;
 /// }
 /// ```
 pub async fn launch_server(app_state : AppState, (address, port) : (String, u16)) -> std::io::Result<()> {
-    info!("launching mangadex-desktop-api on {}:{}", address, port);
-    let habdle = launch_async_server(app_state, (address, port))?.await;
+    info!("launching mangadex-desktop-api on {}:{}", address.clone(), port);
+    let habdle = launch_async_server(app_state, (address.clone(), port))?.await;
     info!("closing mangadex-desktop-api on {}:{}", address, port);
     habdle
 }

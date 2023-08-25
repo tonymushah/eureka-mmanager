@@ -128,6 +128,8 @@ pub fn group_chapter_to_volume_aggregate(input : Vec<ApiObject<ChapterAttributes
 
 #[cfg(test)]
 mod tests{
+    use std::sync::Arc;
+
     use tokio_stream::StreamExt;
 
     use crate::{utils::manga::MangaUtils, settings::files_dirs::DirsOptions};
@@ -137,7 +139,7 @@ mod tests{
     #[tokio::test]
     async fn test_to_volume_hash_map(){
         let manga_id = "d58eb211-a1ae-426c-b504-fc88253de600".to_string();
-        let manga_utils = MangaUtils::new(DirsOptions::new().unwrap(), Default::default());
+        let manga_utils = MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default());
         let data : Vec<ApiObject<ChapterAttributes>> = (manga_utils.with_id(manga_id).get_all_downloaded_chapter_data().await).unwrap().collect().await;
         for (volume, chapters) in group_chapter_to_volume_hash_map(data).unwrap(){
             println!("\"{}\" : {}", volume, serde_json::to_string(&(group_chapter_to_chapter_aggregate(chapters).unwrap())).unwrap());
@@ -146,7 +148,7 @@ mod tests{
     #[tokio::test]
     async fn test_to_volume_aggregate(){
         let manga_id = "d58eb211-a1ae-426c-b504-fc88253de600".to_string();
-        let manga_utils = MangaUtils::new(DirsOptions::new().unwrap(), Default::default()).with_id(manga_id);
+        let manga_utils = MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default()).with_id(manga_id);
         println!("{}", serde_json::to_string(&(manga_utils.aggregate_manga_chapters().await.unwrap())).unwrap());
     }
 }

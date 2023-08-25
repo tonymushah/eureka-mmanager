@@ -1,13 +1,15 @@
+use std::sync::Arc;
+
 use crate::core::ManagerCoreResult;
 use crate::download::chapter::{AccessChapterDownload, ChapterDownload};
-use crate::download::cover::{AccessCoverDownload, CoverDownload};
+use crate::download::cover::{AccessCoverDownload, CoverDownload, AccessCoverDownloadWithManga};
 use crate::download::manga::{AccessMangaDownload, MangaDownload};
 use crate::download::DownloadTaks;
 use crate::r#static::history::HistoryMap;
 use crate::settings::file_history::{HistoryEntry, HistoryWFile};
 use crate::settings::files_dirs::DirsOptions;
 use crate::settings::server_options::ServerOptions;
-use crate::utils::chapter::ChapterUtils;
+use crate::utils::chapter::{ChapterUtils, AccessChapterUtisWithID};
 use crate::utils::cover::CoverUtils;
 use crate::utils::manga::MangaUtils;
 use crate::verify_all_fs;
@@ -25,8 +27,8 @@ use super::traits::{AccessDownloadTasks, AccessHistory};
 #[derive(Clone)]
 pub struct AppState {
     pub http_client: HttpClientRef,
-    pub dir_options: DirsOptions,
-    pub server_options: ServerOptions,
+    pub dir_options: Arc<DirsOptions>,
+    pub server_options: Arc<ServerOptions>,
     pub download_tasks: DownloadTaks,
     pub history: HistoryMap,
 }
@@ -47,8 +49,8 @@ impl AppState {
     ) -> Self {
         Self {
             http_client: http_client_ref,
-            dir_options,
-            server_options,
+            dir_options: Arc::new(dir_options),
+            server_options: Arc::new(server_options),
             download_tasks,
             history,
         }
@@ -74,51 +76,52 @@ impl AppState {
         let server_options = ServerOptions::new()?;
         Ok(Self {
             http_client,
-            dir_options,
-            server_options,
+            dir_options: Arc::new(dir_options),
+            server_options: Arc::new(server_options),
             download_tasks: Default::default(),
             history,
         })
     }
     pub fn chapter_utils(&self) -> ChapterUtils {
         ChapterUtils {
-            dirs_options: self.dir_options,
-            http_client_ref: self.http_client,
+            dirs_options: self.dir_options.clone(),
+            http_client_ref: self.http_client.clone(),
         }
     }
     pub fn manga_utils(&self) -> MangaUtils {
         MangaUtils {
-            dirs_options: self.dir_options,
-            http_client_ref: self.http_client,
+            dirs_options: self.dir_options.clone(),
+            http_client_ref: self.http_client.clone(),
         }
     }
     pub fn cover_utils(&self) -> CoverUtils {
         CoverUtils {
-            dirs_options: self.dir_options,
-            http_client_ref: self.http_client,
+            dirs_options: self.dir_options.clone(),
+            http_client_ref: self.http_client.clone(),
         }
     }
     pub fn manga_download(&self, id: uuid::Uuid) -> MangaDownload {
         MangaDownload {
-            dirs_options: self.dir_options,
-            http_client: self.http_client,
+            dirs_options: self.dir_options.clone(),
+            http_client: self.http_client.clone(),
             manga_id: id,
         }
     }
     pub fn chapter_download(&self, id: uuid::Uuid) -> ChapterDownload {
         ChapterDownload {
-            dirs_options: self.dir_options,
-            http_client: self.http_client,
+            dirs_options: self.dir_options.clone(),
+            http_client: self.http_client.clone(),
             chapter_id: id,
         }
     }
     pub fn cover_download(&self, id: uuid::Uuid) -> CoverDownload {
         CoverDownload {
-            dirs_options: self.dir_options,
-            http_client: self.http_client,
+            dirs_options: self.dir_options.clone(),
+            http_client: self.http_client.clone(),
             cover_id: id,
         }
     }
+
 }
 
 #[async_trait::async_trait]
@@ -204,8 +207,15 @@ impl AccessCoverDownload for AppState {}
 #[async_trait::async_trait]
 impl AccessMangaDownload for AppState {}
 
+#[async_trait::async_trait]
+impl AccessCoverDownloadWithManga for AppState{}
+
+#[async_trait::async_trait]
+impl AccessChapterUtisWithID for AppState{}
+
 impl From<Data<AppState>> for AppState {
     fn from(value: Data<AppState>) -> Self {
+        let value = value.as_ref().clone();
         Self {
             http_client: value.http_client,
             dir_options: value.dir_options,
@@ -215,3 +225,4 @@ impl From<Data<AppState>> for AppState {
         }
     }
 }
+
