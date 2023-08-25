@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 
-use mangadex_api_schema_rust::{ApiObject, v5::ChapterAttributes};
-use serde::{Serialize, Deserialize};
+use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiObject};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct ChapterFeed(ApiObject<ChapterAttributes>);
 
 impl ChapterFeed {
-    pub fn new(value : ApiObject<ChapterAttributes>) -> ChapterFeed {
+    pub fn new(value: ApiObject<ChapterAttributes>) -> ChapterFeed {
         ChapterFeed(value)
     }
 }

@@ -1,28 +1,27 @@
 use crate::r#core::ManagerCoreResult;
 
 use crate::settings::verifications::{
-        data::{initialise_data_dir, verify_data_dir}, 
-        settings::{initialise_settings_dir, verify_settings_dir}
-    };
+    data::{initialise_data_dir, verify_data_dir},
+    settings::{initialise_settings_dir, verify_settings_dir},
+};
 use actix_web::dev::Server;
 use log::{info, warn};
 use server::AppState;
 mod r#core;
 
-mod methods;
 pub mod download;
-pub mod settings;
-pub mod utils;
-pub mod server;
-pub mod r#static;
 #[cfg(feature = "feeds")]
 pub mod feeds;
+mod methods;
+pub mod server;
+pub mod settings;
+pub mod r#static;
 #[cfg(feature = "tauri")]
 pub mod tauri;
+pub mod utils;
 /// url not found handler
 ///
 ///
-
 pub use crate::server::launch_async_server;
 
 #[actix_web::main]
@@ -38,16 +37,23 @@ pub use crate::server::launch_async_server;
 ///     // it launch the server at 127.0.0.1:8090
 /// }
 /// ```
-pub async fn launch_server(app_state : AppState, (address, port) : (String, u16)) -> std::io::Result<()> {
-    info!("launching mangadex-desktop-api on {}:{}", address.clone(), port);
+pub async fn launch_server(
+    app_state: AppState,
+    (address, port): (String, u16),
+) -> std::io::Result<()> {
+    info!(
+        "launching mangadex-desktop-api on {}:{}",
+        address.clone(),
+        port
+    );
     let habdle = launch_async_server(app_state, (address.clone(), port))?.await;
     info!("closing mangadex-desktop-api on {}:{}", address, port);
     habdle
 }
 
-pub async fn launch_server_w_app_state(app_state : AppState) -> ManagerCoreResult<Server> {
+pub async fn launch_server_w_app_state(app_state: AppState) -> ManagerCoreResult<Server> {
     let hostname_port = app_state.get_hostname_port();
-    Ok(launch_async_server(app_state, hostname_port)?) 
+    Ok(launch_async_server(app_state, hostname_port)?)
 }
 
 pub async fn launch_async_server_default() -> ManagerCoreResult<Server> {

@@ -3,19 +3,26 @@
 
 use std::io::Write;
 
-use tauri::http::{Response, status::StatusCode, header};
+use tauri::http::{header, status::StatusCode, Response};
 
 fn main() {
-  tauri::Builder::default()
-    .register_uri_scheme_protocol("mangadex", |_app, _req| {
-      let mut res = Response::default();
-      res.headers_mut().insert("Access-Control-Allow-Origin", header::HeaderValue::from_static("*"));
-      res.body_mut().write_all(serde_json::json!({
-        "result" : "ok"
-      }).to_string().as_bytes())?;
-      res.set_status(StatusCode::ACCEPTED);
-      Ok(res)
-    })
-    .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    tauri::Builder::default()
+        .register_uri_scheme_protocol("mangadex", |_app, _req| {
+            let mut res = Response::default();
+            res.headers_mut().insert(
+                "Access-Control-Allow-Origin",
+                header::HeaderValue::from_static("*"),
+            );
+            res.body_mut().write_all(
+                serde_json::json!({
+                  "result" : "ok"
+                })
+                .to_string()
+                .as_bytes(),
+            )?;
+            res.set_status(StatusCode::ACCEPTED);
+            Ok(res)
+        })
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

@@ -1,6 +1,6 @@
 use actix::Message;
 
-use crate::{utils::feed::ChapterFeed, feeds::MangaDownloadFeedError};
+use crate::{feeds::MangaDownloadFeedError, utils::feed::ChapterFeed};
 pub type FeedRtResult = Result<ChapterFeed, MangaDownloadFeedError>;
 
 #[derive(Message)]

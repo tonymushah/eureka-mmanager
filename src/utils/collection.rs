@@ -4,9 +4,9 @@ use crate::core::ManagerCoreResult;
 
 #[derive(Clone, serde::Serialize)]
 pub struct Collection<T>
-    where 
-        T : serde::Serialize,
-        T: Clone
+where
+    T: serde::Serialize,
+    T: Clone,
 {
     data: Vec<T>,
     limit: usize,
@@ -14,10 +14,10 @@ pub struct Collection<T>
     total: usize,
 }
 
-impl<T> Collection<T> 
-    where 
-        T : serde::Serialize,
-        T: Clone
+impl<T> Collection<T>
+where
+    T: serde::Serialize,
+    T: Clone,
 {
     pub fn new(
         to_use: &mut Vec<T>,
@@ -67,8 +67,8 @@ impl<T> Collection<T>
     pub fn convert_to<S, F>(&mut self, f: F) -> ManagerCoreResult<Collection<S>>
     where
         F: Fn(T) -> S,
-        S : Clone,
-        S : serde::Serialize
+        S: Clone,
+        S: serde::Serialize,
     {
         let mut new_data: Vec<S> = Vec::new();
         let old_data = self.data.clone();
@@ -82,12 +82,17 @@ impl<T> Collection<T>
             total: self.total,
         })
     }
-    pub async fn from_async_stream<S>(stream : S, limit: usize, offset: usize) -> ManagerCoreResult<Collection<T>>
-        where S : Stream<Item = T>
+    pub async fn from_async_stream<S>(
+        stream: S,
+        limit: usize,
+        offset: usize,
+    ) -> ManagerCoreResult<Collection<T>>
+    where
+        S: Stream<Item = T>,
     {
         let stream = stream;
         tokio::pin!(stream);
-        let mut to_use : Vec<T> = stream.collect().await;
+        let mut to_use: Vec<T> = stream.collect().await;
         Self::new(&mut to_use, limit, offset)
     }
 }

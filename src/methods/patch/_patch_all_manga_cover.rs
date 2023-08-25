@@ -17,9 +17,23 @@ pub async fn patch_all_manga_cover(
         let list_dir = std::fs::read_dir(path.as_str())?;
         let mut vecs: Vec<serde_json::Value> = Vec::new();
         for files in list_dir.flatten() {
-            let manga_id = files.file_name().to_str().ok_or(std::io::Error::new(std::io::ErrorKind::InvalidData, "can't reconize file".to_string()))?.to_string().replace(".json", "");
-            let manga_cover_download : CoverDownloadWithManga = TryFrom::try_from(app_state.manga_utils().with_id(manga_id))?;
-            if let Ok(result) = <AppState as AccessCoverDownloadWithManga>::download(&mut app_state, &manga_cover_download).await {
+            let manga_id = files
+                .file_name()
+                .to_str()
+                .ok_or(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "can't reconize file".to_string(),
+                ))?
+                .to_string()
+                .replace(".json", "");
+            let manga_cover_download: CoverDownloadWithManga =
+                TryFrom::try_from(app_state.manga_utils().with_id(manga_id))?;
+            if let Ok(result) = <AppState as AccessCoverDownloadWithManga>::download(
+                &mut app_state,
+                &manga_cover_download,
+            )
+            .await
+            {
                 vecs.push(result);
             }
         }

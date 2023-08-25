@@ -3,9 +3,9 @@ use std::num::TryFromIntError;
 use actix_web::ResponseError;
 
 #[derive(serde::Serialize)]
-pub struct WhenError{
-    message : String,
-    result : String
+pub struct WhenError {
+    message: String,
+    result: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -31,95 +31,126 @@ pub enum Error {
     #[error(transparent)]
     Other(#[from] anyhow::Error),
     #[error("An error occured when building mangadex_api::utils::download::chapter::ChapterDownload \n Details : {0}")]
-    ChapterDownloadBuilderError(#[from] mangadex_api::utils::download::chapter::ChapterDownloadBuilderError),
+    ChapterDownloadBuilderError(
+        #[from] mangadex_api::utils::download::chapter::ChapterDownloadBuilderError,
+    ),
     #[error("An error occured when building mangadex_api::utils::download::cover::CoverDownload \n Details : {0}")]
-    CoverDownloadBuilderError(#[from] mangadex_api::utils::download::cover::CoverDownloadBuilderError),
-    #[error("An error occured when building mangadex_api::v5::manga::get::GetManga \n Details : {0}")]
+    CoverDownloadBuilderError(
+        #[from] mangadex_api::utils::download::cover::CoverDownloadBuilderError,
+    ),
+    #[error(
+        "An error occured when building mangadex_api::v5::manga::get::GetManga \n Details : {0}"
+    )]
     GetMangaBuilderError(#[from] mangadex_api::v5::manga::get::GetMangaBuilderError),
-    #[error("An error occured when building mangadex_api::v5::cover::list::ListCover \n Details : {0}")]
+    #[error(
+        "An error occured when building mangadex_api::v5::cover::list::ListCover \n Details : {0}"
+    )]
     ListCoverBuilderError(#[from] mangadex_api::v5::cover::list::ListCoverBuilderError),
     #[error("An Download Tasks limit Exceded {current}/{limit}")]
-    DownloadTaskLimitExceded{
-        current : u16,
-        limit: u16
-    },
+    DownloadTaskLimitExceded { current: u16, limit: u16 },
     #[error("An error occured when converting into a int")]
     TryIntError(#[from] TryFromIntError),
     #[error("An error occured when sending data between an oneshot channel \n Details: {0}")]
-    OneshotRecvError(#[from] tokio::sync::oneshot::error::RecvError)
+    OneshotRecvError(#[from] tokio::sync::oneshot::error::RecvError),
 }
 
 impl ResponseError for Error {
     fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
         match self {
-            Error::Io(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
+            Error::Io(e) => actix_web::HttpResponse::InternalServerError().json(WhenError {
+                message: e.to_string(),
+                result: "error".to_string(),
             }),
-            Error::ReqwestError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
+            Error::ReqwestError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::MangadexAPIError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::TokioJoinError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::SerdeJsonError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::UuidError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError {
+                message: e.to_string(),
+                result: "error".to_string(),
             }),
-            Error::MangadexAPIError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
+            Error::StringUtf8Error(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::StringUTF16Error(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::StringParseError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::Other(e) => actix_web::HttpResponse::InternalServerError().json(WhenError {
+                message: e.to_string(),
+                result: "error".to_string(),
             }),
-            Error::TokioJoinError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::SerdeJsonError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::UuidError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::StringUtf8Error(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::StringUTF16Error(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::StringParseError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::Other(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::ChapterDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::CoverDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::GetMangaBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::ListCoverBuilderError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::DownloadTaskLimitExceded { current, limit } => actix_web::HttpResponse::TooManyRequests().json(WhenError{
-                message : format!("Download task limit exceded {current}/{limit}"),
-                result : "error".to_string()
-            }),
-            Error::TryIntError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
-            Error::OneshotRecvError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError{
-                message : e.to_string(),
-                result : "error".to_string()
-            }),
+            Error::ChapterDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError()
+                .json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                }),
+            Error::CoverDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError()
+                .json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                }),
+            Error::GetMangaBuilderError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::ListCoverBuilderError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::DownloadTaskLimitExceded { current, limit } => {
+                actix_web::HttpResponse::TooManyRequests().json(WhenError {
+                    message: format!("Download task limit exceded {current}/{limit}"),
+                    result: "error".to_string(),
+                })
+            }
+            Error::TryIntError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::OneshotRecvError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
         }
     }
 }

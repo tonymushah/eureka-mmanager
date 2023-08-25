@@ -27,17 +27,17 @@ pub trait AccessHistory {
 #[async_trait::async_trait]
 pub trait AccessDownloadTasks {
     async fn verify_limit(&self) -> bool;
-    async fn spawn<F>(&mut self, task : F) -> ManagerCoreResult<AbortHandle> 
-    where 
-        F : Future<Output = ()> + Send + 'static;
-    async fn lock_spawn<F>(&mut self, task : F) -> AbortHandle
-    where 
-        F : Future<Output = ()> + Send + 'static;
-    async fn spawn_with_data<T>(&mut self, task : T) -> ManagerCoreResult<T::Output> 
+    async fn spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
+    where
+        F: Future<Output = ()> + Send + 'static;
+    async fn lock_spawn<F>(&mut self, task: F) -> AbortHandle
+    where
+        F: Future<Output = ()> + Send + 'static;
+    async fn spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
     where
         T: Future + Send + 'static,
         T::Output: Send + 'static;
-    async fn lock_spawn_with_data<T>(&mut self, task : T) -> ManagerCoreResult<T::Output> 
+    async fn lock_spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
     where
         T: Future + Send + 'static,
         T::Output: Send + 'static;

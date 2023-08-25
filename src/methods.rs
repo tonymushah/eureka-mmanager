@@ -1,6 +1,6 @@
+pub mod delete;
 pub mod get;
 pub mod patch;
-pub mod delete;
 pub mod put;
 
 pub trait DefaultOffsetLimit<'a>: serde::Deserialize<'a> {

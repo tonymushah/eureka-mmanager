@@ -8,11 +8,12 @@ use std::os::unix::net::UnixListener;
 
 #[cfg(feature = "unix-socket-support")]
 #[actix_web::main]
-async fn main() -> anyhow::Result<()>{
+async fn main() -> anyhow::Result<()> {
     fern::Dispatch::new()
         .level(log::LevelFilter::Info)
         .chain(std::io::stdout())
-        .apply().unwrap();
+        .apply()
+        .unwrap();
     verify_all_fs()?;
     if cfg!(feature = "unix-socket-support") {
         let unix_listener = UnixListener::bind("./socket/mangadex")?;
@@ -27,7 +28,8 @@ async fn main() -> anyhow::Result<()> {
     fern::Dispatch::new()
         .level(log::LevelFilter::Info)
         .chain(std::io::stdout())
-        .apply().unwrap();
+        .apply()
+        .unwrap();
     verify_all_fs()?;
     launch_server_default().await?;
     anyhow::Ok(())

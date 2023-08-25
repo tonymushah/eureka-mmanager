@@ -1,7 +1,5 @@
 use crate::core::ManagerCoreResult;
-use crate::download::cover::{
-    AccessCoverDownloadWithManga, CoverDownloadWithManga,
-};
+use crate::download::cover::{AccessCoverDownloadWithManga, CoverDownloadWithManga};
 use crate::server::AppState;
 use actix_web::http::header::ContentType;
 use actix_web::{put, web, HttpResponse, Responder};

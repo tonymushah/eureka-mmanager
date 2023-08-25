@@ -26,8 +26,7 @@ pub async fn delete_manga_chapters_by_id(
             format!("can't find the cover art in manga {}", id),
         ))?
         .id;
-    let filename_path1 =
-        file_dirs.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
+    let filename_path1 = file_dirs.covers_add(format!("{}.json", cover_id.hyphenated()).as_str());
     let path2 = file_dirs.covers_add(format!("{}.json", cover_id).as_str());
     let jsons = std::fs::read_to_string(path2.as_str())?;
     let jsons1 = jsons.clone();

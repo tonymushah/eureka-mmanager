@@ -120,7 +120,8 @@ impl ChapterUtils {
             manga_utils.dirs_options,
             manga_utils.http_client_ref,
         )
-        .download_manga(task_manager).await?;
+        .download_manga(task_manager)
+        .await?;
         let jsons = serde_json::json!({
             "result" : "ok",
             "type" : "manga",
@@ -454,8 +455,7 @@ mod tests {
         let manga_utils: MangaUtils = From::from(chapter_utils.clone());
         let manga_id = "17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8".to_string();
         let this_manga_utils = manga_utils.with_id(manga_id);
-        let manga_downloads =
-            Box::pin(this_manga_utils.find_all_downloades().unwrap());
+        let manga_downloads = Box::pin(this_manga_utils.find_all_downloades().unwrap());
         let datas = chapter_utils
             .get_chapters_by_stream_id(manga_downloads)
             .unwrap();

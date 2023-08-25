@@ -1,5 +1,5 @@
-pub mod traits;
 mod app_state;
+pub mod traits;
 use crate::methods::delete::{delete_chapter_by_id, delete_manga_chapters_by_id};
 use crate::methods::get::{
     aggregate_manga, find_all_downloaded_chapter, find_all_downloaded_manga, find_chapter_by_id,
@@ -26,8 +26,8 @@ use actix_web::{
     HttpServer,
     //web
 };
-pub use app_state::AppState;
 use actix_web::{web, Error};
+pub use app_state::AppState;
 #[cfg(feature = "unix-socket-support")]
 mod unix;
 #[cfg(feature = "unix-socket-support")]
@@ -123,9 +123,14 @@ pub fn get_actix_app(
 }
 
 /// Get the server handle
-pub fn launch_async_server(app_state: AppState, (address, port) : (String, u16)) -> std::io::Result<Server> {
+pub fn launch_async_server(
+    app_state: AppState,
+    (address, port): (String, u16),
+) -> std::io::Result<Server> {
     let app_state_ref = web::Data::new(app_state);
-    Ok(HttpServer::new(move || get_actix_app(app_state_ref.clone()))
-        .bind((address, port))?
-        .run())
+    Ok(
+        HttpServer::new(move || get_actix_app(app_state_ref.clone()))
+            .bind((address, port))?
+            .run(),
+    )
 }

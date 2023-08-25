@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    ops::Deref,
-    sync::Arc,
-};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use mangadex_api_types_rust::RelationshipType;
 use tokio::sync::{Mutex, MutexGuard};
@@ -137,7 +133,10 @@ impl HistoryMap {
         std::fs::create_dir_all(path)?;
         Ok(())
     }
-    pub async fn init(dir_option: &DirsOptions, to_init : Option<Vec<RelationshipType>>) -> ManagerCoreResult<Self>{
+    pub async fn init(
+        dir_option: &DirsOptions,
+        to_init: Option<Vec<RelationshipType>>,
+    ) -> ManagerCoreResult<Self> {
         let instance = Self::default();
         if let Some(rels) = to_init {
             for rel in rels {
@@ -146,7 +145,10 @@ impl HistoryMap {
         }
         Ok(instance)
     }
-    pub async fn load_history(dir_options: &DirsOptions, to_init : Option<Vec<RelationshipType>>) -> ManagerCoreResult<Self> {
+    pub async fn load_history(
+        dir_options: &DirsOptions,
+        to_init: Option<Vec<RelationshipType>>,
+    ) -> ManagerCoreResult<Self> {
         Self::init_history_dir(dir_options)?;
         Self::init(dir_options, to_init).await
     }

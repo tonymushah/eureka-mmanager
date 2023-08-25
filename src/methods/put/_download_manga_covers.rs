@@ -1,7 +1,5 @@
 use crate::core::ManagerCoreResult;
-use crate::download::cover::{
-    AccessCoverDownloadWithManga, CoverDownloadWithManga,
-};
+use crate::download::cover::{AccessCoverDownloadWithManga, CoverDownloadWithManga};
 use crate::server::AppState;
 use actix_web::http::header::ContentType;
 use actix_web::{put, web, HttpResponse, Responder};
@@ -38,8 +36,7 @@ pub async fn download_manga_covers(
     params: QsQuery<DownloadMangaCoversParams>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state);
-    let manga_cover_download: CoverDownloadWithManga =
-        From::from(app_state.manga_download(*id));
+    let manga_cover_download: CoverDownloadWithManga = From::from(app_state.manga_download(*id));
     let response = <AppState as AccessCoverDownloadWithManga>::all_cover_download(
         &mut app_state,
         &manga_cover_download,

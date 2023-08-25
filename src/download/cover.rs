@@ -177,13 +177,23 @@ impl<'a> TryFrom<&'a CoverUtilsWithId> for CoverDownload {
 
 #[async_trait::async_trait]
 pub trait AccessCoverDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
-    async fn download_json_data<'a>(&'a mut self, cover_download : &'a CoverDownload) -> ManagerCoreResult<()> {
+    async fn download_json_data<'a>(
+        &'a mut self,
+        cover_download: &'a CoverDownload,
+    ) -> ManagerCoreResult<()> {
         cover_download.download_cover_data(self).await
     }
-    async fn download<'a>(&'a mut self, cover_download : &'a CoverDownload) -> ManagerCoreResult<serde_json::Value> {
+    async fn download<'a>(
+        &'a mut self,
+        cover_download: &'a CoverDownload,
+    ) -> ManagerCoreResult<serde_json::Value> {
         cover_download.download(self).await
     }
-    async fn download_with_quality<'a>(&'a mut self, cover_download : &'a CoverDownload, quality : CoverQuality) -> ManagerCoreResult<serde_json::Value> {
+    async fn download_with_quality<'a>(
+        &'a mut self,
+        cover_download: &'a CoverDownload,
+        quality: CoverQuality,
+    ) -> ManagerCoreResult<serde_json::Value> {
         cover_download.download_with_quality(quality, self).await
     }
 }
@@ -306,7 +316,8 @@ impl CoverDownloadWithManga {
                 client.get_http_client(),
             )
             .download(task_manager)
-            .await).is_ok()
+            .await)
+                .is_ok()
             {
                 vecs.push(format!("{}", cover_to_use.id.hyphenated()));
             }
@@ -367,14 +378,27 @@ impl<'a> From<&'a MangaDownload> for CoverDownloadWithManga {
 }
 
 #[async_trait::async_trait]
-pub trait AccessCoverDownloadWithManga: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
-    async fn download<'a>(&'a mut self, cover_download : &'a CoverDownloadWithManga) -> ManagerCoreResult<serde_json::Value> {
+pub trait AccessCoverDownloadWithManga:
+    AccessDownloadTasks + AccessHistory + Sized + Send + Sync
+{
+    async fn download<'a>(
+        &'a mut self,
+        cover_download: &'a CoverDownloadWithManga,
+    ) -> ManagerCoreResult<serde_json::Value> {
         cover_download.download(self).await
     }
-    async fn download_with_quality<'a>(&'a mut self, cover_download : &'a CoverDownloadWithManga, quality : CoverQuality) -> ManagerCoreResult<serde_json::Value> {
+    async fn download_with_quality<'a>(
+        &'a mut self,
+        cover_download: &'a CoverDownloadWithManga,
+        quality: CoverQuality,
+    ) -> ManagerCoreResult<serde_json::Value> {
         cover_download.download_with_quality(quality, self).await
     }
-    async fn all_cover_download<'a>(&'a mut self, cover_download : &'a CoverDownloadWithManga, limit : u32) -> ManagerCoreResult<serde_json::Value> {
+    async fn all_cover_download<'a>(
+        &'a mut self,
+        cover_download: &'a CoverDownloadWithManga,
+        limit: u32,
+    ) -> ManagerCoreResult<serde_json::Value> {
         cover_download.all_cover_download(limit, self).await
     }
 }

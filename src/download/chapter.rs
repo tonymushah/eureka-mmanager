@@ -6,8 +6,8 @@ use mangadex_api::{utils::download::chapter::DownloadMode, v5::MangaDexClient, H
 use mangadex_api_schema_rust::v5::ChapterAttributes;
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use serde_json::json;
-use std::io::Write;
 use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -28,7 +28,11 @@ pub struct ChapterDownload {
 }
 
 impl ChapterDownload {
-    pub fn new(chapter_id: Uuid, dirs_options: Arc<DirsOptions>, http_client: HttpClientRef) -> Self {
+    pub fn new(
+        chapter_id: Uuid,
+        dirs_options: Arc<DirsOptions>,
+        http_client: HttpClientRef,
+    ) -> Self {
         Self {
             dirs_options,
             http_client,
@@ -43,26 +47,28 @@ impl ChapterDownload {
         D: AccessDownloadTasks,
     {
         let id = self.chapter_id;
-        let path = self.dirs_options.chapters_add(format!("{}/data.json", id).as_str());
+        let path = self
+            .dirs_options
+            .chapters_add(format!("{}/data.json", id).as_str());
         let http_client = self.http_client.lock().await.client.clone();
         task_manager.lock_spawn_with_data(async move {
             let get_chapter = http_client
                 .get(
                     format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", 
-                        mangadex_api::constants::API_URL, 
+                        mangadex_api::constants::API_URL,
                         id
                     )
                 )
                 .send()
                 .await?;
-            
+
                 let bytes_ = get_chapter.bytes()
                 .await?;
-            
+
                 let mut chapter_data = File::create((path).as_str())?;
 
             chapter_data.write_all(&bytes_)?;
-            
+
             let jsons = std::fs::read_to_string(path.as_str())?;
             Ok(serde_json::from_str(jsons.as_str())?)
         }).await?
@@ -384,7 +390,9 @@ impl TryFrom<&ChapterUtilsWithID> for ChapterDownload {
 }
 
 #[async_trait::async_trait]
-pub trait AccessChapterDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync + Clone {
+pub trait AccessChapterDownload:
+    AccessDownloadTasks + AccessHistory + Sized + Send + Sync + Clone
+{
     async fn download_json_data<'a>(
         &'a mut self,
         chapter_download: &'a ChapterDownload,
@@ -424,6 +432,8 @@ mod tests {
         let mut app_state = AppState::init().await.unwrap();
         let chapter_id = "b8e7925e-581a-4c06-a964-0d822053391a";
         let chapter_download = app_state.chapter_download(Uuid::parse_str(chapter_id).unwrap());
-        <AppState as AccessChapterDownload>::download(&mut app_state, &chapter_download).await.unwrap();
+        <AppState as AccessChapterDownload>::download(&mut app_state, &chapter_download)
+            .await
+            .unwrap();
     }
 }

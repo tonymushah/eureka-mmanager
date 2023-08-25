@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use crate::core::ManagerCoreResult;
 use crate::download::chapter::{AccessChapterDownload, ChapterDownload};
-use crate::download::cover::{AccessCoverDownload, CoverDownload, AccessCoverDownloadWithManga};
+use crate::download::cover::{AccessCoverDownload, AccessCoverDownloadWithManga, CoverDownload};
 use crate::download::manga::{AccessMangaDownload, MangaDownload};
 use crate::download::DownloadTaks;
 use crate::r#static::history::HistoryMap;
 use crate::settings::file_history::{HistoryEntry, HistoryWFile};
 use crate::settings::files_dirs::DirsOptions;
 use crate::settings::server_options::ServerOptions;
-use crate::utils::chapter::{ChapterUtils, AccessChapterUtisWithID};
+use crate::utils::chapter::{AccessChapterUtisWithID, ChapterUtils};
 use crate::utils::cover::CoverUtils;
 use crate::utils::manga::MangaUtils;
 use crate::verify_all_fs;
@@ -121,7 +121,6 @@ impl AppState {
             cover_id: id,
         }
     }
-
 }
 
 #[async_trait::async_trait]
@@ -208,10 +207,10 @@ impl AccessCoverDownload for AppState {}
 impl AccessMangaDownload for AppState {}
 
 #[async_trait::async_trait]
-impl AccessCoverDownloadWithManga for AppState{}
+impl AccessCoverDownloadWithManga for AppState {}
 
 #[async_trait::async_trait]
-impl AccessChapterUtisWithID for AppState{}
+impl AccessChapterUtisWithID for AppState {}
 
 impl From<Data<AppState>> for AppState {
     fn from(value: Data<AppState>) -> Self {
@@ -225,4 +224,3 @@ impl From<Data<AppState>> for AppState {
         }
     }
 }
-

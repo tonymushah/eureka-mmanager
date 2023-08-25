@@ -1,7 +1,7 @@
 use async_stream::stream;
 use futures::Stream;
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes, MangaAggregate};
+use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAggregate, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::{RelationshipType, ResultType};
 use std::cmp::Ordering;
@@ -418,9 +418,7 @@ impl MangaUtilsWithMangaId {
         self.manga_utils
             .find_all_downloades_by_manga_id(self.manga_id.clone())
     }
-    pub async fn find_and_delete_all_downloades(
-        &self,
-    ) -> ManagerCoreResult<serde_json::Value> {
+    pub async fn find_and_delete_all_downloades(&self) -> ManagerCoreResult<serde_json::Value> {
         self.manga_utils
             .find_and_delete_all_downloades_by_manga_id(self.manga_id.clone())
             .await
