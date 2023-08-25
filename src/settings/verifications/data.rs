@@ -1,6 +1,5 @@
 use crate::settings::files_dirs;
 
-
 pub fn initialise_data_dir() -> anyhow::Result<()> {
     let dirs_options: files_dirs::DirsOptions = match files_dirs::DirsOptions::new() {
         Ok(data) => data,
@@ -38,4 +37,3 @@ pub fn verify_data_dir() -> anyhow::Result<String, String> {
     }
     Ok("the data dir is operational".to_string())
 }
-

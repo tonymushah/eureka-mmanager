@@ -46,13 +46,16 @@ where
 // remember to call `.manage(MyState::default())`
 #[tauri::command]
 #[allow(dead_code)]
-async fn command_name<T, I>(_request : HttpRequestBuilder ,_state: tauri::State<'_, ActixTauriState<T, I>>) -> Result<(), String>
+async fn command_name<T, I>(
+    _request: HttpRequestBuilder,
+    _state: tauri::State<'_, ActixTauriState<T, I>>,
+) -> Result<(), String>
 where
     T: actix_service::Service<
-        actix_http::Request,
-        Response = actix_web::dev::ServiceResponse<I>,
-        Error = actix_web::Error,
-    > + Send,
+            actix_http::Request,
+            Response = actix_web::dev::ServiceResponse<I>,
+            Error = actix_web::Error,
+        > + Send,
     I: actix_web::body::MessageBody,
 {
     // let service : T = get_app_service().await.unwrap();

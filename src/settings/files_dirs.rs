@@ -3,23 +3,22 @@ use serde::{Deserialize, Serialize};
 use crate::core::ManagerCoreResult;
 
 #[derive(Deserialize, Serialize, Clone)]
-pub struct DirsOptions{
-    data_dir : String,
-    chapters : String,
-    mangas : String,
-    covers : String
+pub struct DirsOptions {
+    data_dir: String,
+    chapters: String,
+    mangas: String,
+    covers: String,
 }
 
-impl DirsOptions{
-    pub fn new_() -> ManagerCoreResult<DirsOptions>{
-        let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string("./settings/files-dirs.json")?.as_str())?;
+impl DirsOptions {
+    pub fn new_(path: &str) -> ManagerCoreResult<DirsOptions> {
+        let instance: DirsOptions = serde_json::from_str(std::fs::read_to_string(path)?.as_str())?;
         Ok(instance)
     }
-    pub fn new() -> ManagerCoreResult<DirsOptions>{
-        let instance : DirsOptions = serde_json::from_str(std::fs::read_to_string("./settings/files-dirs.json")?.as_str())?;
-        ManagerCoreResult::Ok(instance)
+    pub fn new() -> ManagerCoreResult<DirsOptions> {
+        DirsOptions::new_("./settings/files-dirs.json")
     }
-    pub fn data_dir_add(&self, path: &str) -> String{
+    pub fn data_dir_add(&self, path: &str) -> String {
         format!("{}/{}", self.data_dir, path)
     }
     pub fn chapters_add(&self, path: &str) -> String {
