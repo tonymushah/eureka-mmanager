@@ -28,7 +28,7 @@ pub struct MangaUtils {
     pub(crate) http_client_ref: HttpClientRef,
 }
 
-impl MangaUtils {
+impl<'a> MangaUtils {
     pub fn new(dirs_options: Arc<DirsOptions>, http_client_ref: HttpClientRef) -> Self {
         Self {
             dirs_options,
@@ -52,7 +52,7 @@ impl MangaUtils {
         }
         Ok(is)
     }
-    pub(self) fn find_all_downloades_by_manga_id<'a>(
+    pub(self) fn find_all_downloades_by_manga_id(
         &'a self,
         manga_id: String,
     ) -> ManagerCoreResult<impl Stream<Item = String> + 'a> {
@@ -72,7 +72,7 @@ impl MangaUtils {
         })
     }
 
-    pub(self) async fn find_and_delete_all_downloades_by_manga_id<'a>(
+    pub(self) async fn find_and_delete_all_downloades_by_manga_id(
         &'a self,
         manga_id: String,
     ) -> ManagerCoreResult<serde_json::Value> {
@@ -87,7 +87,7 @@ impl MangaUtils {
         }
         Ok(serde_json::json!(vecs))
     }
-    pub(self) fn get_downloaded_cover_of_a_manga<'a, H>(
+    pub(self) fn get_downloaded_cover_of_a_manga<H>(
         &'a self,
         manga_id: String,
         _history: &'a mut H,
@@ -112,7 +112,7 @@ impl MangaUtils {
             };
         })
     }
-    pub(self) async fn get_downloaded_cover_of_a_manga_collection<'a, H>(
+    pub(self) async fn get_downloaded_cover_of_a_manga_collection<H>(
         &'a self,
         manga_id: String,
         offset: usize,
@@ -212,7 +212,7 @@ impl MangaUtils {
             Some(_) => self.is_manga_there(manga_id),
         }
     }
-    pub fn get_manga_data_by_ids<'a, T>(
+    pub fn get_manga_data_by_ids<T>(
         &'a self,
         mut manga_ids: T,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<MangaAttributes>> + 'a>
@@ -227,7 +227,7 @@ impl MangaUtils {
             }
         })
     }
-    pub fn get_manga_data_by_ids_old<'a>(
+    pub fn get_manga_data_by_ids_old(
         &'a self,
         manga_ids: Vec<String>,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<MangaAttributes>> + 'a> {
@@ -239,7 +239,7 @@ impl MangaUtils {
             }
         })
     }
-    pub fn get_all_downloaded_manga<'a>(
+    pub fn get_all_downloaded_manga(
         &'a self,
     ) -> ManagerCoreResult<impl Stream<Item = String> + 'a> {
         let path = self.dirs_options.mangas_add("");
@@ -259,7 +259,7 @@ impl MangaUtils {
             )))
         }
     }
-    pub async fn get_downloaded_manga<'a>(
+    pub async fn get_downloaded_manga(
         &'a self,
         offset: usize,
         limit: usize,
@@ -299,7 +299,7 @@ impl MangaUtils {
             Collection::new(&mut data, limit, offset)
         }
     }
-    pub(self) async fn get_all_downloaded_chapter_data<'a>(
+    pub(self) async fn get_all_downloaded_chapter_data(
         &'a self,
         manga_id: String,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
@@ -334,7 +334,7 @@ impl MangaUtils {
         })
     }
 
-    pub(self) async fn get_downloaded_chapter_of_a_manga<'a>(
+    pub(self) async fn get_downloaded_chapter_of_a_manga(
         &'a self,
         manga_id: String,
         offset: usize,
