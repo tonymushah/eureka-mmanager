@@ -2,6 +2,12 @@ use std::num::TryFromIntError;
 
 use actix_web::ResponseError;
 
+#[derive(serde::Serialize)]
+pub struct WhenError{
+    message : String,
+    result : String
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("An std::io::Error captured! \n Details : {0}")]
@@ -117,11 +123,3 @@ impl ResponseError for Error {
         }
     }
 }
-
-#[derive(serde::Serialize)]
-pub struct WhenError{
-    message : String,
-    result : String
-}
-
-pub type ManagerCoreResult<T> = Result<T, Error>; 

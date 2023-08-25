@@ -10,7 +10,7 @@ use crate::{
     core::{Error, ManagerCoreResult},
     download::chapter::ChapterDownload,
     download::manga::MangaDownload,
-    methods::get::GetChapterQuery,
+    methods::get::_find_all_downloaded_chapter::GetChapterQuery,
     server::traits::{AccessDownloadTasks, AccessHistory},
     settings::{file_history::HistoryEntry, files_dirs::DirsOptions},
 };
