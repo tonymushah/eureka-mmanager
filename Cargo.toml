@@ -27,7 +27,7 @@ url = { version = "2.2.2", features = ["serde"] }
 uuid = { version = "1.0.0", features = ["serde", "v4"] }
 mangadex-api = { version = "2.3.1", default-features = false, features = ["multi-thread", "utils", "deserializable-endpoint"] }
 anyhow = "1.0.75"
-serde_json = "1.0.79"
+serde_json = "1.0.105"
 tokio = { version = "1.32.0", features = ["full"] }
 actix-web = { version = "4" }
 mangadex-api-schema-rust = { version = "0.4.1", default-features = false, features = ["serialize"] }
