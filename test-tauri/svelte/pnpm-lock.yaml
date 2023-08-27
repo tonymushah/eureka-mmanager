@@ -14,8 +14,8 @@ devDependencies:
     specifier: ^2.0.4
     version: 2.0.4(svelte@3.58.0)(vite@4.3.9)
   '@tsconfig/svelte':
-    specifier: ^4.0.1
-    version: 4.0.1
+    specifier: ^5.0.0
+    version: 5.0.2
   svelte:
     specifier: ^3.58.0
     version: 3.58.0
@@ -297,8 +297,8 @@ packages:
     engines: {node: '>= 14.6.0', npm: '>= 6.6.0', yarn: '>= 1.19.1'}
     dev: false
 
-  /@tsconfig/svelte@4.0.1:
-    resolution: {integrity: sha512-B+XlGpmuAQzJqDoBATNCvEPqQg0HkO7S8pM14QDI5NsmtymzRexQ1N+nX2H6RTtFbuFgaZD4I8AAi8voGg0GLg==}
+  /@tsconfig/svelte@5.0.2:
+    resolution: {integrity: sha512-BRbo1fOtyVbhfLyuCWw6wAWp+U8UQle+ZXu84MYYWzYSEB28dyfnRBIE99eoG+qdAC0po6L2ScIEivcT07UaMA==}
     dev: true
 
   /@types/pug@2.0.6:
