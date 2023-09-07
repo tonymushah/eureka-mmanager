@@ -42,7 +42,7 @@ impl DownloadTaks {
         }
     }
     pub async fn verify_limit(&self) -> bool {
-        self.lock().await.len() >= self.limit.into()
+        self.lock().await.len() >= <u16 as Into<usize>>::into(self.limit)
     }
     pub async fn spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
