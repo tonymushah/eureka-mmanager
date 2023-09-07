@@ -9,6 +9,8 @@ use log::{info, warn};
 use server::AppState;
 mod r#core;
 
+pub use r#core::Error;
+
 pub mod download;
 #[cfg(feature = "feeds")]
 pub mod feeds;
