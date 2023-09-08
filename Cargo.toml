@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"

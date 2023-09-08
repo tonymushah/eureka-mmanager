@@ -93,4 +93,7 @@ impl DownloadTaks {
         .await;
         Ok(receiver.await?)
     }
+    pub fn get_limit(&self) -> u16{
+        self.limit
+    }
 }
