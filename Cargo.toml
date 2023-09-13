@@ -41,7 +41,7 @@ actix-rt = { version = "2.9", optional = true}
 linfa-linear = { version = "0.6.1", optional = true }
 binary_search_tree = { version = "0.2.2", optional = true }
 actix-web-actors = { version = "4", optional = true }
-surrealdb = { version = "1.0.0-beta.11", features = ["kv-rocksdb"], optional = true }
+surrealdb = { version = "1.0.0", features = ["kv-rocksdb"], optional = true }
 derive_builder = { version = "0.12.0", optional = true }
 tauri = { version = "1.4", optional = true, features = ["reqwest-client", "http-api"] }
 actix-service = { version = "2", optional = true }
