@@ -93,9 +93,9 @@ impl CoverUtils {
         let file_dirs = self.dirs_options.clone();
         let path = file_dirs.covers_add("");
         if Path::new(path.as_str()).exists() {
-            let list_dir = (std::fs::read_dir(path.as_str()))?;
+            let list_dir = (std::fs::read_dir(path.as_str()))?.flatten();
             Ok(stream! {
-                for file_ in list_dir.flatten() {
+                for file_ in list_dir {
                     if let core::result::Result::Ok(metadata) = file_.metadata() {
                         if metadata.is_file() {
                             if let Some(data) = file_.file_name().to_str() {

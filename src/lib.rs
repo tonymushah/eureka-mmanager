@@ -26,7 +26,6 @@ pub mod utils;
 ///
 pub use crate::server::launch_async_server;
 
-#[actix_web::main]
 /// it's launch the server in the given adrress and the given port
 /// a call like this
 ///

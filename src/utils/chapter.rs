@@ -149,17 +149,17 @@ impl ChapterUtils {
     pub fn get_chapters_by_stream_id<'a, T>(
         &'a self,
         mut chap_ids: T,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a>
+    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + 'a
     where
         T: Stream<Item = String> + std::marker::Unpin + 'a,
     {
-        Ok(stream! {
+        stream! {
             while let Some(id) = chap_ids.next().await {
                 if let Ok(data_) = self.get_chapter_by_id(id) {
                     yield data_;
                 }
             }
-        })
+        }
     }
     pub fn get_chapters_by_vec_id(
         &self,
@@ -179,9 +179,9 @@ impl ChapterUtils {
         let file_dirs = self.dirs_options.clone();
         let path = file_dirs.chapters_add("");
         if Path::new(path.as_str()).exists() {
-            let list_dir = std::fs::read_dir(path.as_str())?;
+            let list_dir = std::fs::read_dir(path.as_str())?.flatten();
             Ok(stream! {
-                for files in list_dir.flatten() {
+                for files in list_dir {
                     if let Some(data) = files.file_name().to_str() {
                         if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str()).exists() {
                             yield data.to_string()
@@ -455,10 +455,8 @@ mod tests {
         let manga_utils: MangaUtils = From::from(chapter_utils.clone());
         let manga_id = "17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8".to_string();
         let this_manga_utils = manga_utils.with_id(manga_id);
-        let manga_downloads = Box::pin(this_manga_utils.find_all_downloades().unwrap());
-        let datas = chapter_utils
-            .get_chapters_by_stream_id(manga_downloads)
-            .unwrap();
+        let manga_downloads = Box::pin(this_manga_utils.find_all_downloades());
+        let datas = chapter_utils.get_chapters_by_stream_id(manga_downloads);
         tokio::pin!(datas);
         while let Some(chap) = datas.next().await {
             println!("{}", serde_json::to_string(&chap).unwrap());
