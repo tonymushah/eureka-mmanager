@@ -4,7 +4,6 @@ use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAggregate, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::{RelationshipType, ResultType};
-use std::cmp::Ordering;
 use std::fs::File;
 use std::io::ErrorKind;
 use std::path::Path;
