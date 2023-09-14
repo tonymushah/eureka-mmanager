@@ -17,7 +17,7 @@ use crate::settings::files_dirs::DirsOptions;
 use crate::utils::chapter::{ChapterUtils, ChapterUtilsWithID};
 use crate::{
     core::ManagerCoreResult,
-    settings::{self, file_history::HistoryEntry},
+    settings::file_history::HistoryEntry,
 };
 
 #[derive(Clone)]
@@ -129,8 +129,19 @@ impl ChapterDownload {
     where
         H: AccessHistory,
     {
-        history.remove_in_history(&entry).await?;
-        history.commit_rel(entry.get_data_type()).await?;
+        if let Err(error) = history.remove_in_history(&entry).await {
+            if let Error::Io(io) = error{
+                if io.kind() == std::io::ErrorKind::NotFound {
+                    history.commit_rel(entry.get_data_type()).await?;
+                }else{
+                    return Err(Error::Io(io))
+                }
+            }else {
+                return Err(error);
+            }
+        }else{
+            history.commit_rel(entry.get_data_type()).await?;
+        }
         Ok(())
     }
     pub async fn download_chapter<'a, H, D>(
@@ -146,16 +157,15 @@ impl ChapterDownload {
         let chapter_id = history_entry.get_id();
 
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
-
-        self.verify_chapter_and_manga(history, task_manager).await?;
-
-        let files_dirs = settings::files_dirs::DirsOptions::new()?;
+        let files_dirs = self.dirs_options.clone();
         let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
         let chapter_dir = format!("{}/data", chapter_top_dir);
-
+        
         std::fs::create_dir_all(&chapter_dir)?;
 
         info!("chapter dir created");
+        
+        self.verify_chapter_and_manga(history, task_manager).await?;
 
         let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager
             .lock_spawn_with_data(async move {
@@ -232,13 +242,16 @@ impl ChapterDownload {
                 Ok((files_, errors, has_error, chapter_dir.clone()))
             })
             .await?;
+        
         let (files_, errors, has_error, chapter_dir) = task?;
+        
         let jsons = json!({
             "result" : "ok",
             "dir" : chapter_dir,
             "downloaded" : files_,
             "errors" : errors
         });
+
         let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
         let _ = file.write_all(jsons.to_string().as_bytes());
         if !has_error {
@@ -261,16 +274,14 @@ impl ChapterDownload {
         let chapter_id = history_entry.get_id();
 
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
-
-        self.verify_chapter_and_manga(history, task_manager).await?;
-
-        let files_dirs = settings::files_dirs::DirsOptions::new()?;
+        let files_dirs = self.dirs_options.clone();
         let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
-
         let chapter_dir = format!("{}/data-saver", chapter_top_dir);
+        
         std::fs::create_dir_all(&chapter_dir)?;
-        info!("chapter dir created");
 
+        info!("chapter dir created");
+        
         self.verify_chapter_and_manga(history, task_manager).await?;
 
         let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager

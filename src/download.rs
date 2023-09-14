@@ -1,4 +1,5 @@
 use futures::Future;
+use std::fmt::Debug;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::oneshot::channel;
 use tokio::{
@@ -61,22 +62,27 @@ impl DownloadTaks {
     where
         F: Future<Output = ()> + Send + 'static,
     {
-        let mut tasks = self.tasks.lock().await;
         if self.verify_limit().await {
+            let mut tasks = self.tasks.lock().await;
+            println!("Lock spawing");
             tasks.join_next().await;
             tasks.spawn(task)
         } else {
+            let mut tasks = self.tasks.lock().await;
             tasks.spawn(task)
         }
     }
     pub async fn spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
     where
         T: Future + Send + 'static,
-        T::Output: Send + 'static,
+        T::Output: Send + Debug + 'static,
     {
         let (sender, receiver) = channel::<T::Output>();
         self.spawn(async {
-            let _ = sender.send(task.await);
+            match sender.send(task.await) {
+                Ok(_) => {},
+                Err(er) => println!("{:?}", er)
+            };
         })
         .await?;
         Ok(receiver.await?)

@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use crate::core::ManagerCoreResult;
@@ -24,13 +25,24 @@ use tokio::task::AbortHandle;
 
 use super::traits::{AccessDownloadTasks, AccessHistory};
 
-#[derive(Clone)]
 pub struct AppState {
     pub http_client: HttpClientRef,
     pub dir_options: Arc<DirsOptions>,
     pub server_options: Arc<ServerOptions>,
     pub download_tasks: DownloadTaks,
     pub history: HistoryMap,
+}
+
+impl Clone for AppState {
+    fn clone(&self) -> Self {
+        Self {
+            http_client: self.http_client.clone(),
+            dir_options: self.dir_options.clone(),
+            server_options: self.server_options.clone(),
+            download_tasks: self.download_tasks.clone(),
+            history: self.history.clone(),
+        }
+    }
 }
 
 impl AppState {
@@ -184,7 +196,7 @@ impl AccessDownloadTasks for AppState {
     async fn spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
     where
         T: Future + Send + 'static,
-        T::Output: Send + 'static,
+        T::Output: Send + Debug + 'static,
     {
         self.download_tasks.spawn_with_data(task).await
     }

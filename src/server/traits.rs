@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use futures::Future;
 use mangadex_api_types_rust::RelationshipType;
 use tokio::task::AbortHandle;
@@ -36,7 +38,7 @@ pub trait AccessDownloadTasks {
     async fn spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
     where
         T: Future + Send + 'static,
-        T::Output: Send + 'static;
+        T::Output: Send + Debug + 'static;
     async fn lock_spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
     where
         T: Future + Send + 'static,

@@ -1,4 +1,4 @@
-use mangadex_desktop_api2::{launch_server_default, verify_all_fs};
+use mangadex_desktop_api2::launch_server_default;
 //use mangadex_api::MangaDexClient;
 #[cfg(feature = "unix-socket-support")]
 use mangadex_desktop_api2::server::launch_async_server_with_unix_socket;
@@ -30,7 +30,6 @@ async fn main() -> anyhow::Result<()> {
         .chain(std::io::stdout())
         .apply()
         .unwrap();
-    verify_all_fs()?;
     launch_server_default().await?;
     anyhow::Ok(())
 }
