@@ -1,4 +1,5 @@
 use futures::Future;
+use tokio::sync::Semaphore;
 use std::fmt::Debug;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::oneshot::channel;
@@ -17,13 +18,16 @@ pub mod manga;
 pub struct DownloadTaks {
     tasks: Arc<Mutex<JoinSet<()>>>,
     limit: u16,
+    sephamore : Arc<Semaphore>
 }
 
 impl Default for DownloadTaks {
     fn default() -> Self {
+        let limit = 20;
         Self {
             tasks: Arc::new(Mutex::new(JoinSet::default())),
-            limit: 20,
+            limit,
+            sephamore : Arc::new(Semaphore::new(limit.into()))
         }
     }
 }
@@ -40,10 +44,11 @@ impl DownloadTaks {
         Self {
             tasks: Arc::new(Mutex::new(JoinSet::default())),
             limit,
+            sephamore : Arc::new(Semaphore::new(limit.into()))
         }
     }
     pub async fn verify_limit(&self) -> bool {
-        self.lock().await.len() >= <u16 as Into<usize>>::into(self.limit)
+        self.sephamore.available_permits() == 0
     }
     pub async fn spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
@@ -55,10 +60,14 @@ impl DownloadTaks {
                 limit: self.limit,
             })
         } else {
-            Ok(self.tasks.lock().await.spawn(task))
+            let permit = self.sephamore.clone().acquire_owned().await?;
+            Ok(self.tasks.lock().await.spawn(async move {
+                task.await;
+                drop(permit)
+            }))
         }
     }
-    pub async fn lock_spawn<F>(&mut self, task: F) -> AbortHandle
+    pub async fn lock_spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
         F: Future<Output = ()> + Send + 'static,
     {
@@ -66,10 +75,18 @@ impl DownloadTaks {
             let mut tasks = self.tasks.lock().await;
             println!("Lock spawing");
             tasks.join_next().await;
-            tasks.spawn(task)
+            let permit = self.sephamore.clone().acquire_owned().await?;
+            Ok(tasks.spawn(async move {
+                task.await;
+                drop(permit)
+            }))
         } else {
             let mut tasks = self.tasks.lock().await;
-            tasks.spawn(task)
+            let permit = self.sephamore.clone().acquire_owned().await?;
+            Ok(tasks.spawn(async move {
+                task.await;
+                drop(permit)
+            }))
         }
     }
     pub async fn spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>
@@ -96,10 +113,13 @@ impl DownloadTaks {
         self.lock_spawn(async {
             let _ = sender.send(task.await);
         })
-        .await;
+        .await?;
         Ok(receiver.await?)
     }
     pub fn get_limit(&self) -> u16 {
         self.limit
+    }
+    pub fn get_running_tasks(&self) -> usize {
+        <u16 as Into<usize>>::into(self.limit) - self.sephamore.available_permits()
     }
 }

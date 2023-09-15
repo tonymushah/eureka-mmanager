@@ -32,7 +32,7 @@ pub trait AccessDownloadTasks {
     async fn spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
         F: Future<Output = ()> + Send + 'static;
-    async fn lock_spawn<F>(&mut self, task: F) -> AbortHandle
+    async fn lock_spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
         F: Future<Output = ()> + Send + 'static;
     async fn spawn_with_data<T>(&mut self, task: T) -> ManagerCoreResult<T::Output>

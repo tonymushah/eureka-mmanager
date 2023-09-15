@@ -53,6 +53,8 @@ pub enum Error {
     TryIntError(#[from] TryFromIntError),
     #[error("An error occured when sending data between an oneshot channel \n Details: {0}")]
     OneshotRecvError(#[from] tokio::sync::oneshot::error::RecvError),
+    #[error("An error occured when acquiring a semaphore \n Details : {0}")]
+    AcquireError(#[from] tokio::sync::AcquireError)
 }
 
 impl ResponseError for Error {
@@ -147,6 +149,12 @@ impl ResponseError for Error {
                 })
             }
             Error::OneshotRecvError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::AcquireError(e) => {
                 actix_web::HttpResponse::InternalServerError().json(WhenError {
                     message: e.to_string(),
                     result: "error".to_string(),

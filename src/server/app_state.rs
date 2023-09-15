@@ -187,7 +187,7 @@ impl AccessDownloadTasks for AppState {
     {
         self.download_tasks.spawn(task).await
     }
-    async fn lock_spawn<F>(&mut self, task: F) -> AbortHandle
+    async fn lock_spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
         F: Future<Output = ()> + Send + 'static,
     {
