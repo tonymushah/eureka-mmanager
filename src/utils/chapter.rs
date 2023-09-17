@@ -12,7 +12,15 @@ use crate::{
     download::manga::MangaDownload,
     methods::get::_find_all_downloaded_chapter::GetChapterQuery,
     server::traits::{AccessDownloadTasks, AccessHistory},
-    settings::{file_history::HistoryEntry, files_dirs::DirsOptions},
+    settings::{
+        file_history::{
+            history_w_file::traits::{
+                NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
+            },
+            HistoryEntry, HistoryWFile, IsIn, History,
+        },
+        files_dirs::DirsOptions,
+    },
 };
 
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
@@ -71,9 +79,11 @@ impl ChapterUtils {
         D: AccessDownloadTasks,
     {
         let chap_id = uuid::Uuid::parse_str(id.as_str())?;
-        let mut hwf = history
-            .get_history_w_file_by_rel_or_init(RelationshipType::Chapter)
-            .await?;
+        let entry = HistoryEntry::new(chap_id, RelationshipType::Chapter);
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
+            history, entry,
+        )
+        .await?;
         let data = ChapterDownload::new(
             chap_id,
             self.dirs_options.clone(),
@@ -81,8 +91,10 @@ impl ChapterUtils {
         )
         .download_json_data(task_manager)
         .await?;
-        hwf.get_history().remove_uuid(chap_id)?;
-        hwf.commit()?;
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
+            history, entry,
+        )
+        .await?;
         Ok(data)
     }
     pub(self) async fn patch_manga_by_chapter<'a, H, D>(
@@ -113,8 +125,11 @@ impl ChapterUtils {
         let manga_id = manga.id;
         let type_ = manga.type_;
         let history_entry = HistoryEntry::new(manga_id, type_);
-        history.insert_in_history(&history_entry).await?;
-        history.commit_rel(history_entry.get_data_type()).await?;
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
+            history,
+            history_entry,
+        )
+        .await?;
         MangaDownload::new(
             manga_id,
             manga_utils.dirs_options,
@@ -128,8 +143,11 @@ impl ChapterUtils {
             "id" : manga_id.hyphenated()
         });
         info!("downloaded {}.json", manga_id.hyphenated());
-        history.remove_in_history(&history_entry).await?;
-        history.commit_rel(history_entry.get_data_type()).await?;
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
+            history,
+            history_entry,
+        )
+        .await?;
         Ok(jsons)
     }
     pub(self) fn get_chapter_by_id<T>(
@@ -207,7 +225,7 @@ impl ChapterUtils {
         let file_dirs = self.dirs_options.clone();
         let mut all_chapters = Box::pin(self.get_all_chapter_without_history()?);
         let parameters = parameters.unwrap_or_default();
-        let mut hist = history
+        let mut hist: HistoryWFile = history
             .get_history_w_file_by_rel_or_init(RelationshipType::Chapter)
             .await?;
         Ok(async_stream::stream! {
@@ -215,7 +233,7 @@ impl ChapterUtils {
             if !parameters.only_fails {
                 while let Some(data) = all_chapters.next().await {
                     if !parameters.include_fails{
-                        if !chapter_history.is_in(
+                        if !<History as IsIn<uuid::Uuid>>::is_in(chapter_history,
                                 match uuid::Uuid::parse_str(data.as_str()){
                                     Ok(o) => o,
                                     Err(_) => uuid::Uuid::NAMESPACE_DNS

@@ -6,7 +6,7 @@ use crate::{core::ManagerCoreResult, settings::files_dirs::DirsOptions, Error};
 
 use self::traits::{AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable};
 
-use super::{History, HistoryEntry, Insert, Remove};
+use super::{History, HistoryEntry, Insert, Remove, IsIn};
 
 pub mod traits;
 
@@ -152,5 +152,69 @@ impl AutoCommitRollbackRemove<uuid::Uuid> for HistoryWFile {
         } else {
             Ok(())
         }
+    }
+}
+
+impl AutoCommitRollbackInsert<HistoryEntry> for HistoryWFile {
+    type Output = ManagerCoreResult<()>;
+
+    fn insert(&mut self, input : HistoryEntry) -> <Self as crate::settings::file_history::history_w_file::traits::AutoCommitRollbackInsert<HistoryEntry>>::Output {
+        if let Err(error) = <Self as Insert<HistoryEntry>>::insert(self, input) {
+            if error.kind() == ErrorKind::AlreadyExists {
+                if let Err(error) = self.commit() {
+                    self.rollback()?;
+                    Err(Error::RollBacked(error.to_string()))
+                } else {
+                    Ok(())
+                }
+            } else {
+                Err(Error::Io(error))
+            }
+        } else if let Err(error) = self.commit() {
+            self.rollback()?;
+            Err(Error::RollBacked(error.to_string()))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl AutoCommitRollbackRemove<HistoryEntry> for HistoryWFile {
+    type Output = ManagerCoreResult<()>;
+
+    fn remove(&mut self, input : HistoryEntry) -> <Self as crate::settings::file_history::history_w_file::traits::AutoCommitRollbackRemove<uuid::Uuid>>::Output{
+        if let Err(error) = <Self as Remove<HistoryEntry>>::remove(self, input) {
+            if error.kind() == ErrorKind::NotFound {
+                if let Err(error) = self.commit() {
+                    self.rollback()?;
+                    Err(Error::RollBacked(error.to_string()))
+                } else {
+                    Ok(())
+                }
+            } else {
+                Err(Error::Io(error))
+            }
+        } else if let Err(error) = self.commit() {
+            self.rollback()?;
+            Err(Error::RollBacked(error.to_string()))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl IsIn<uuid::Uuid> for HistoryWFile{
+    type Output = bool;
+    
+    fn is_in(&self, to_use : uuid::Uuid) -> Self::Output {
+        <History as IsIn<uuid::Uuid>>::is_in(&self.history, to_use)
+    }
+}
+
+impl IsIn<HistoryEntry> for HistoryWFile{
+    type Output = <History as IsIn<HistoryEntry>>::Output;
+
+    fn is_in(&self, to_use : HistoryEntry) -> Self::Output {
+        <History as IsIn<HistoryEntry>>::is_in(&self.history, to_use)
     }
 }
