@@ -216,7 +216,6 @@ pub(crate) trait HistoryMapWithMutexGuardOnly {
             dir_options,
         )
         .await?;
-        log::info!("{:?}", history_w_file);
         history_w_file
             .get_history()
             .remove_uuid(to_remove.get_id())?;
