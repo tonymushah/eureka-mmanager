@@ -7,11 +7,6 @@ description = "A Actix server for downloading manga, chapters, covers from Manga
 edition = "2021"
 resolver = "2"
 
-[workspace]
-members = [
-    "test-tauri"
-]
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
