@@ -30,8 +30,8 @@ impl HistoryWFile {
         self.file
     }
     pub fn from_file(file: String) -> Result<Self, std::io::Error> {
-        let file_data: String = std::fs::read_to_string(&file)?;
-        let history: History = serde_json::from_str(&file_data)?;
+        let file_data: String = std::fs::read_to_string(file.clone())?;
+        let history: History = serde_json::from_str(file_data.as_str())?;
         Ok(Self { history, file })
     }
     pub fn init(
@@ -46,10 +46,9 @@ impl HistoryWFile {
             .replace('\"', "")
             .as_str(),
         );
-        let path_clone = path.clone();
-        let history = match Self::from_file(path) {
+        let history = match Self::from_file(path.clone()) {
             Ok(data) => data,
-            Err(_) => HistoryWFile::new(relationship_type, path_clone),
+            Err(_) => HistoryWFile::new(relationship_type, path.clone()),
         };
         Ok(history)
     }

@@ -1,5 +1,5 @@
 use futures::Future;
-use tokio::sync::Semaphore;
+use tokio::sync::{Semaphore, RwLock};
 use std::fmt::Debug;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::oneshot::channel;
@@ -18,7 +18,8 @@ pub mod manga;
 pub struct DownloadTaks {
     tasks: Arc<Mutex<JoinSet<()>>>,
     limit: u16,
-    sephamore : Arc<Semaphore>
+    sephamore : Arc<Semaphore>,
+    on_lock : Arc<RwLock<usize>>
 }
 
 impl Default for DownloadTaks {
@@ -27,7 +28,8 @@ impl Default for DownloadTaks {
         Self {
             tasks: Arc::new(Mutex::new(JoinSet::default())),
             limit,
-            sephamore : Arc::new(Semaphore::new(limit.into()))
+            sephamore : Arc::new(Semaphore::new(limit.into())),
+            on_lock : Arc::new(RwLock::new(0))
         }
     }
 }
@@ -44,7 +46,8 @@ impl DownloadTaks {
         Self {
             tasks: Arc::new(Mutex::new(JoinSet::default())),
             limit,
-            sephamore : Arc::new(Semaphore::new(limit.into()))
+            sephamore : Arc::new(Semaphore::new(limit.into())),
+            on_lock : Arc::new(RwLock::new(0))
         }
     }
     pub async fn verify_limit(&self) -> bool {
@@ -67,14 +70,25 @@ impl DownloadTaks {
             }))
         }
     }
+    async fn add_something_to_lock_list(&self) -> ManagerCoreResult<()> {
+        let mut data = self.on_lock.write().await;
+        *data += 1;
+        Ok(())
+    }
+    async fn remove_something_to_lock_list(&self) -> ManagerCoreResult<()> {
+        let mut data = self.on_lock.write().await;
+        *data -= 1;
+        Ok(())
+    }
     pub async fn lock_spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
         F: Future<Output = ()> + Send + 'static,
     {
         if self.verify_limit().await {
             let mut tasks = self.tasks.lock().await;
-            println!("Lock spawing");
+            self.add_something_to_lock_list().await?;
             tasks.join_next().await;
+            self.remove_something_to_lock_list().await?;
             let permit = self.sephamore.clone().acquire_owned().await?;
             Ok(tasks.spawn(async move {
                 task.await;

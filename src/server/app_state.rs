@@ -79,7 +79,7 @@ impl AppState {
     }
     pub async fn load_dir_options_history() -> ManagerCoreResult<(DirsOptions, HistoryMap)> {
         let dir_options = DirsOptions::new()?;
-        let history = HistoryMap::init(&dir_options, None).await?;
+        let history = HistoryMap::init(&dir_options, Some(vec![RelationshipType::Chapter, RelationshipType::Manga, RelationshipType::CoverArt])).await?;
         Ok((dir_options, history))
     }
     pub async fn init() -> ManagerCoreResult<Self> {
