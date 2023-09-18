@@ -136,4 +136,7 @@ impl DownloadTaks {
     pub fn get_running_tasks(&self) -> usize {
         <u16 as Into<usize>>::into(self.limit) - self.sephamore.available_permits()
     }
+    pub async fn get_locked_tasks(&self) -> usize {
+        *self.on_lock.read().await
+    }
 }
