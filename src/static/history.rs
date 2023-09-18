@@ -145,10 +145,7 @@ pub trait HistoryMapWithMutexGuardOnly {
             Ok(data) => data,
             Err(error) => {
                 if error.kind() == std::io::ErrorKind::NotFound {
-                    history.insert(
-                        relationship_type,
-                        HistoryWFile::init(relationship_type, dir_options)?,
-                    );
+                    Self::init_history(history, dir_options, relationship_type).await?;
                     Self::get_history_w_file_by_rel(history, relationship_type).await?
                 } else {
                     return Err(Error::Io(error));
