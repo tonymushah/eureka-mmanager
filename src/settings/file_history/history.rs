@@ -1,12 +1,22 @@
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
 use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-use super::{HistoryEntry, IsIn, Insert, Remove};
+use super::{HistoryEntry, Insert, IsIn, Remove};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct History {
     history_list: Vec<uuid::Uuid>,
     data_type: RelationshipType,
+}
+
+impl From<History> for Arc<RwLock<History>>{
+    fn from(val: History) -> Self {
+        Arc::new(RwLock::new(val))
+    }
 }
 
 impl History {
@@ -19,7 +29,7 @@ impl History {
     pub fn get_history_list_mut(&mut self) -> &mut Vec<uuid::Uuid> {
         &mut (self.history_list)
     }
-    pub fn get_history_list(&mut self) -> &Vec<uuid::Uuid> {
+    pub fn get_history_list(&self) -> &Vec<uuid::Uuid> {
         &(self.history_list)
     }
     pub fn get_data_type_mut(&mut self) -> &mut RelationshipType {
@@ -34,24 +44,21 @@ impl History {
 }
 
 impl IsIn<uuid::Uuid> for History {
-    type Output = bool;
+    type Output = Option<usize>;
 
-    fn is_in(&self, to_use : uuid::Uuid) -> Self::Output {
-        self.history_list
+    fn is_in(&self, to_use: uuid::Uuid) -> Self::Output {
+        self.get_history_list()
             .iter()
-            .any(|id| id.cmp(&to_use).is_eq())
+            .position(|id| id.cmp(&to_use).is_eq())
     }
 }
 
 impl IsIn<HistoryEntry> for History {
     type Output = Result<bool, std::io::Error>;
-    fn is_in(&self, to_use : HistoryEntry) -> Self::Output {
-        if to_use.data_type == self.data_type {
-            if self.is_in(to_use.id) {
-                Ok(true)
-            } else {
-                Ok(false)
-            }
+
+    fn is_in(&self, to_use: HistoryEntry) -> Self::Output {
+        if self.is_this_type(to_use.data_type) {
+            Ok(self.is_in(to_use.id).is_some())
         } else {
             Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
@@ -61,12 +68,12 @@ impl IsIn<HistoryEntry> for History {
     }
 }
 
-impl Insert<uuid::Uuid> for History{
+impl Insert<uuid::Uuid> for History {
     type Output = Result<(), std::io::Error>;
-    fn insert(&mut self, input : uuid::Uuid) -> Self::Output {
+    fn insert(&mut self, input: uuid::Uuid) -> Self::Output {
         let result = <Self as IsIn<uuid::Uuid>>::is_in(self, input);
-        if !result {
-            self.history_list.push(input);
+        if result.is_none() {
+            self.get_history_list_mut().push(input);
             Ok(())
         } else {
             Err(std::io::Error::new(
@@ -77,13 +84,13 @@ impl Insert<uuid::Uuid> for History{
     }
 }
 
-impl Insert<HistoryEntry> for History{
+impl Insert<HistoryEntry> for History {
     type Output = Result<(), std::io::Error>;
 
-    fn insert(&mut self, input : HistoryEntry) -> Self::Output {
+    fn insert(&mut self, input: HistoryEntry) -> Self::Output {
         let result = <Self as IsIn<HistoryEntry>>::is_in(self, input)?;
         if !result {
-            self.history_list.push(input.id);
+            self.get_history_list_mut().push(input.id);
         } else {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::AlreadyExists,
@@ -94,47 +101,30 @@ impl Insert<HistoryEntry> for History{
     }
 }
 
-impl Remove<uuid::Uuid> for History{
+impl Remove<uuid::Uuid> for History {
     type Output = Result<(), std::io::Error>;
 
-    fn remove(&mut self, input : uuid::Uuid) -> Self::Output {
-        let result = <Self as IsIn<uuid::Uuid>>::is_in(self, input);
-        if result {
-            self.history_list.remove(
-                match self
-                    .history_list
-                    .iter()
-                    .position(|data| data.cmp(&input).is_eq())
-                {
-                    Some(data) => data,
-                    None => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::NotFound,
-                            format!("the uuid {} is not found", input),
-                        ))
-                    }
-                },
-            );
-        } else {
-            return Err(std::io::Error::new(
+    fn remove(&mut self, input: uuid::Uuid) -> Self::Output {
+        let position =
+            <Self as IsIn<uuid::Uuid>>::is_in(self, input).ok_or(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!("the uuid {} is not found", input),
-            ));
-        }
+            ))?;
+        self.get_history_list_mut().remove(position);
         Ok(())
     }
 }
 
-impl Remove<HistoryEntry> for History{
+impl Remove<HistoryEntry> for History {
     type Output = Result<(), std::io::Error>;
-    fn remove(&mut self, input : HistoryEntry) -> Self::Output {
-        let result = <Self as IsIn<HistoryEntry>>::is_in(self, input)?;
+    fn remove(&mut self, input: HistoryEntry) -> Self::Output {
+        let result = self.is_this_type(input.data_type);
         if result {
             <Self as Remove<uuid::Uuid>>::remove(self, input.id)
-        }else{
+        } else {
             Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("the uuid {} is not found", input.id),
+                std::io::ErrorKind::InvalidInput,
+                "the relationship doesn't match",
             ))
         }
     }

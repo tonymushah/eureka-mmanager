@@ -59,6 +59,8 @@ pub enum Error {
     AcquireError(#[from] tokio::sync::AcquireError),
     #[error("The file transaction was been roolback due to an error. Details : {0}")]
     RollBacked(String),
+    #[error("An RwLock occured \n Details : {0}")]
+    RwLockError(#[from] std::sync::PoisonError<String>),
 }
 
 #[derive(serde::Serialize, Debug, serde::Deserialize)]
@@ -82,6 +84,7 @@ pub enum ErrorType {
     OneshotRecvError,
     AcquireError,
     RollBacked,
+    RwLockError,
 }
 
 impl ResponseError for Error {
@@ -208,6 +211,13 @@ impl ResponseError for Error {
             Error::RollBacked(e) => {
                 actix_web::HttpResponse::InternalServerError().json(WhenError {
                     type_: ErrorType::RollBacked,
+                    message: e.to_string(),
+                    result: "error".to_string(),
+                })
+            }
+            Error::RwLockError(e) => {
+                actix_web::HttpResponse::InternalServerError().json(WhenError {
+                    type_: ErrorType::RwLockError,
                     message: e.to_string(),
                     result: "error".to_string(),
                 })

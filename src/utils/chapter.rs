@@ -17,13 +17,17 @@ use crate::{
             history_w_file::traits::{
                 NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
             },
-            HistoryEntry, HistoryWFile, IsIn, History,
+            HistoryEntry, HistoryWFile,
         },
         files_dirs::DirsOptions,
     },
 };
 
+use self::get_all_chapter::AsyncGetAllChapter;
+
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
+
+mod get_all_chapter;
 
 #[derive(Clone)]
 pub struct ChapterUtils {
@@ -223,36 +227,34 @@ impl ChapterUtils {
         H: AccessHistory,
     {
         let file_dirs = self.dirs_options.clone();
-        let mut all_chapters = Box::pin(self.get_all_chapter_without_history()?);
+        let all_chapters = Box::pin(self.get_all_chapter_without_history()?);
         let parameters = parameters.unwrap_or_default();
-        let mut hist: HistoryWFile = history
+        let hist: HistoryWFile = history
             .get_history_w_file_by_rel_or_init(RelationshipType::Chapter)
             .await?;
-        Ok(async_stream::stream! {
-            let chapter_history = hist.get_history();
-            if !parameters.only_fails {
-                while let Some(data) = all_chapters.next().await {
-                    if !parameters.include_fails{
-                        if !<History as IsIn<uuid::Uuid>>::is_in(chapter_history,
-                                match uuid::Uuid::parse_str(data.as_str()){
-                                    Ok(o) => o,
-                                    Err(_) => uuid::Uuid::NAMESPACE_DNS
-                            })
-                        {
-                            yield data.to_string()
-                        }
-                    }else {
-                        yield data.to_string()
-                    }
-                }
-            }else{
-                for entry in chapter_history.clone().into_iter(){
-                    if Path::new(format!("{}/data.json", file_dirs.chapters_add(entry.to_string().as_str())).as_str()).exists() {
-                        yield entry.to_string()
-                    }
+        let h = hist.owned_read_history()?;
+        let re_h = h.clone();
+        Ok(AsyncGetAllChapter::new(
+            parameters,
+            h,
+            all_chapters,
+            Box::pin(async_stream::stream! {
+                let h = re_h;
+                for entry in h.into_iter() {
+                    if Path::new(
+                    format!(
+                        "{}/data.json",
+                        file_dirs.chapters_add(entry.to_string().as_str())
+                    )
+                    .as_str(),
+                )
+                .exists()
+                {
+                    yield entry;
                 }
             }
-        })
+            })
+        ))
     }
     pub async fn get_all_downloaded_chapters<'a, H>(
         &'a self,

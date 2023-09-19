@@ -1,6 +1,9 @@
-use std::io::{ErrorKind, Write};
+use std::{io::ErrorKind, sync::Arc};
+
+use tokio::sync::{RwLockReadGuard, RwLockWriteGuard, RwLock, OwnedRwLockWriteGuard, OwnedRwLockReadGuard};
 
 use mangadex_api_types_rust::RelationshipType;
+use serde::Serialize;
 
 use crate::{core::ManagerCoreResult, settings::files_dirs::DirsOptions, Error};
 
@@ -12,19 +15,28 @@ pub mod traits;
 
 #[derive(Clone, Debug)]
 pub struct HistoryWFile {
-    history: History,
+    history: Arc<RwLock<History>>,
     file: String,
 }
 
 impl HistoryWFile {
     pub fn new(data_type: RelationshipType, file: String) -> HistoryWFile {
         HistoryWFile {
-            history: History::new(data_type),
+            history: Arc::new(RwLock::new(History::new(data_type))),
             file,
         }
     }
-    pub fn get_history(&mut self) -> &mut History {
-        &mut (self.history)
+    pub fn read_history(& self) -> Result<RwLockReadGuard<'_, History>, std::io::Error> {
+        self.history.try_read().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+    }
+    pub fn write_history(&mut self) -> Result<RwLockWriteGuard<'_, History>, std::io::Error> {
+        self.history.try_write().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+    }
+    pub fn owned_read_history(&self) -> Result<OwnedRwLockReadGuard<History>, std::io::Error> {
+        self.history.clone().try_read_owned().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+    }
+    pub fn owned_write_history(&mut self) -> Result<OwnedRwLockWriteGuard<History>, std::io::Error> {
+        self.history.clone().try_write_owned().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
     }
     pub fn get_file(self) -> String {
         self.file
@@ -32,7 +44,7 @@ impl HistoryWFile {
     pub fn from_file(file: String) -> Result<Self, std::io::Error> {
         let file_data: String = std::fs::read_to_string(file.clone())?;
         let history: History = serde_json::from_str(file_data.as_str())?;
-        Ok(Self { history, file })
+        Ok(Self { history : history.into(), file })
     }
     pub fn init(
         relationship_type: RelationshipType,
@@ -57,28 +69,28 @@ impl HistoryWFile {
 impl Insert<uuid::Uuid> for HistoryWFile {
     type Output = Result<(), std::io::Error>;
     fn insert(&mut self, input: uuid::Uuid) -> Self::Output {
-        <History as Insert<uuid::Uuid>>::insert(self.get_history(), input)
+        self.write_history()?.insert(input)
     }
 }
 
 impl Insert<HistoryEntry> for HistoryWFile {
     type Output = Result<(), std::io::Error>;
     fn insert(&mut self, input: HistoryEntry) -> Self::Output {
-        <History as Insert<HistoryEntry>>::insert(self.get_history(), input)
+        self.write_history()?.insert(input)
     }
 }
 
 impl Remove<uuid::Uuid> for HistoryWFile {
     type Output = Result<(), std::io::Error>;
     fn remove(&mut self, input: uuid::Uuid) -> Self::Output {
-        <History as Remove<uuid::Uuid>>::remove(self.get_history(), input)
+        self.write_history()?.remove(input)
     }
 }
 
 impl Remove<HistoryEntry> for HistoryWFile {
     type Output = Result<(), std::io::Error>;
     fn remove(&mut self, input: HistoryEntry) -> Self::Output {
-        <History as Remove<HistoryEntry>>::remove(self.get_history(), input)
+        self.write_history()?.remove(input)
     }
 }
 
@@ -86,13 +98,14 @@ impl Commitable for HistoryWFile {
     type Output = Result<(), std::io::Error>;
 
     fn commit(&mut self) -> Self::Output {
-        let history_string_value = serde_json::to_string(&(self.history))?;
-        let mut to_use_file = std::fs::File::options()
+        let to_use_file = std::fs::File::options()
             .create(true)
             .truncate(true)
             .write(true)
             .open(&(self.file))?;
-        to_use_file.write_all(history_string_value.as_bytes())?;
+        let history = self.write_history()?;
+        let mut serializer = serde_json::Serializer::new(to_use_file);
+        history.serialize(&mut serializer)?;
         Ok(())
     }
 }
@@ -101,7 +114,8 @@ impl RollBackable for HistoryWFile {
     type Output = Result<(), std::io::Error>;
     fn rollback(&mut self) -> Self::Output {
         let history_string_value = std::fs::read_to_string(&(self.file))?;
-        self.history = serde_json::from_str::<History>(&history_string_value)?;
+        let mut history = self.write_history()?;
+        *history = serde_json::from_str::<History>(&history_string_value)?;
         Ok(())
     }
 }
@@ -203,10 +217,10 @@ impl AutoCommitRollbackRemove<HistoryEntry> for HistoryWFile {
 }
 
 impl IsIn<uuid::Uuid> for HistoryWFile{
-    type Output = bool;
+    type Output = ManagerCoreResult<bool>;
     
     fn is_in(&self, to_use : uuid::Uuid) -> Self::Output {
-        <History as IsIn<uuid::Uuid>>::is_in(&self.history, to_use)
+        Ok(self.read_history()?.is_in(to_use).is_some())
     }
 }
 
@@ -214,6 +228,6 @@ impl IsIn<HistoryEntry> for HistoryWFile{
     type Output = <History as IsIn<HistoryEntry>>::Output;
 
     fn is_in(&self, to_use : HistoryEntry) -> Self::Output {
-        <History as IsIn<HistoryEntry>>::is_in(&self.history, to_use)
+        self.read_history()?.is_in(to_use)
     }
 }
