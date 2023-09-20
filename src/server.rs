@@ -53,7 +53,27 @@ fn not_found_message<B>(
     let (req, res) = res.into_parts();
     let json = serde_json::json!({
         "result" : "error",
-        "message" : format!("Ressource {} not found", req.path())
+        "message" : format!("Ressource {} {} not found", req.method(), req.path())
+    });
+    let res = res.set_body(json.to_string());
+    let res = ServiceResponse::new(req, res)
+        .map_into_boxed_body()
+        .map_into_right_body();
+    Ok(ErrorHandlerResponse::Response(res))
+}
+
+fn not_allowed_message<B>(
+    mut res: dev::ServiceResponse<B>,
+) -> Result<ErrorHandlerResponse<B>, actix_web::Error> {
+    res.response_mut().headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json"),
+    );
+    let (req, res) = res.into_parts();
+    let json = serde_json::json!({
+        "result" : "error",
+        "type" : "Not Allowed",
+        "message" : format!("Ressource {} {} is still busy! Please call it later", req.method(), req.path())
     });
     let res = res.set_body(json.to_string());
     let res = ServiceResponse::new(req, res)
@@ -76,6 +96,7 @@ pub fn get_actix_app(
     App::new()
         .app_data(app_state)
         .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
+        .wrap(ErrorHandlers::new().handler(StatusCode::METHOD_NOT_ALLOWED, not_allowed_message))
         /*
             get Methods
         */

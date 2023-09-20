@@ -4,8 +4,6 @@ use std::io::ErrorKind;
 pub mod chapter;
 pub mod collection;
 pub mod cover;
-#[cfg(feature = "feeds")]
-pub mod feed;
 pub mod manga;
 pub mod manga_aggregate;
 pub mod query;

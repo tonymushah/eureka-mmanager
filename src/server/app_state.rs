@@ -7,7 +7,8 @@ use crate::download::cover::{AccessCoverDownload, AccessCoverDownloadWithManga, 
 use crate::download::manga::{AccessMangaDownload, MangaDownload};
 use crate::download::DownloadTaks;
 use crate::r#static::history::HistoryMap;
-use crate::settings::file_history::{HistoryEntry, HistoryWFile};
+use crate::settings::file_history::history_w_file::traits::{AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove, AsyncRollBackableWInput, AsyncCommitableWInput, NoLFAsyncAutoCommitRollbackRemove, NoLFAsyncAutoCommitRollbackInsert};
+use crate::settings::file_history::{AsyncInsert, HistoryEntry, HistoryWFile, AsyncRemove, AsyncIsIn, NoLFAsyncIsIn, NoLFAsyncRemove, NoLFAsyncInsert};
 use crate::settings::files_dirs::DirsOptions;
 use crate::settings::server_options::ServerOptions;
 use crate::utils::chapter::{AccessChapterUtisWithID, ChapterUtils};
@@ -78,7 +79,7 @@ impl AppState {
     }
     pub async fn load_dir_options_history() -> ManagerCoreResult<(DirsOptions, HistoryMap)> {
         let dir_options = DirsOptions::new()?;
-        let history = HistoryMap::init(&dir_options, None).await?;
+        let history = HistoryMap::init(&dir_options, Some(vec![RelationshipType::Chapter, RelationshipType::Manga, RelationshipType::CoverArt])).await?;
         Ok((dir_options, history))
     }
     pub async fn init() -> ManagerCoreResult<Self> {
@@ -136,6 +137,65 @@ impl AppState {
 }
 
 #[async_trait::async_trait]
+impl NoLFAsyncInsert<HistoryEntry> for AppState {
+    type Output = <HistoryMap as NoLFAsyncInsert<(HistoryEntry, DirsOptions)>>::Output;
+    async fn insert<'a>(&'a mut self, input: HistoryEntry) -> Self::Output {
+        <HistoryMap as AsyncInsert<'a, (HistoryEntry, &'a DirsOptions)>>::insert(
+            &mut self.history,
+            (input, self.dir_options.as_ref()),
+        )
+        .await
+    }
+}
+
+#[async_trait::async_trait]
+impl NoLFAsyncRemove<HistoryEntry> for AppState {
+    type Output = <HistoryMap as NoLFAsyncRemove<(HistoryEntry, DirsOptions)>>::Output;
+    async fn remove<'a>(&'a mut self, input: HistoryEntry) -> Self::Output {
+        <HistoryMap as AsyncRemove<'a, (HistoryEntry, &'a DirsOptions)>>::remove(
+            &mut self.history,
+            (input, self.dir_options.as_ref()),
+        )
+        .await
+    }
+}
+
+#[async_trait::async_trait]
+impl NoLFAsyncAutoCommitRollbackInsert<HistoryEntry> for AppState {
+    type Output = <HistoryMap as NoLFAsyncAutoCommitRollbackInsert<(HistoryEntry, DirsOptions)>>::Output;
+    async fn insert<'a>(&'a mut self, input: HistoryEntry) -> Self::Output {
+        <HistoryMap as AsyncAutoCommitRollbackInsert<'a, (HistoryEntry, &'a DirsOptions)>>::insert(
+            &mut self.history,
+            (input, self.dir_options.as_ref()),
+        )
+        .await
+    }
+}
+
+#[async_trait::async_trait]
+impl NoLFAsyncAutoCommitRollbackRemove<HistoryEntry> for AppState {
+    type Output = <HistoryMap as NoLFAsyncAutoCommitRollbackRemove<(HistoryEntry, DirsOptions)>>::Output;
+    async fn remove<'a>(&'a mut self, input: HistoryEntry) -> Self::Output {
+        <HistoryMap as AsyncAutoCommitRollbackRemove<'a, (HistoryEntry, &'a DirsOptions)>>::remove(
+            &mut self.history,
+            (input, self.dir_options.as_ref()),
+        )
+        .await
+    }
+}
+#[async_trait::async_trait]
+impl NoLFAsyncIsIn<HistoryEntry> for AppState{
+    type Output = <HistoryMap as NoLFAsyncIsIn<(HistoryEntry, DirsOptions)>>::Output;
+    async fn is_in<'a>(&'a self, to_use : HistoryEntry) -> Self::Output{
+        <HistoryMap as AsyncIsIn<'a, (HistoryEntry, &'a DirsOptions)>>::is_in(
+            &self.history,
+            (to_use, self.dir_options.as_ref()),
+        )
+        .await
+    }
+}
+
+#[async_trait::async_trait]
 impl AccessHistory for AppState {
     async fn init_history(&self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
         self.history
@@ -158,21 +218,11 @@ impl AccessHistory for AppState {
             .get_history_w_file_by_rel_or_init(relationship_type, &self.dir_options)
             .await
     }
-    async fn insert_in_history(&self, to_insert: &HistoryEntry) -> ManagerCoreResult<()> {
-        self.history
-            .insert_in_history(to_insert, &self.dir_options)
-            .await
+    async fn commit_rel(&mut self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
+        <HistoryMap as AsyncCommitableWInput<'life0, RelationshipType>>::commit(&mut self.history, relationship_type).await
     }
-    async fn remove_in_history(&self, to_remove: &HistoryEntry) -> ManagerCoreResult<()> {
-        self.history
-            .remove_in_history(to_remove, &self.dir_options)
-            .await
-    }
-    async fn commit_rel(&self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
-        self.history.commit_rel(relationship_type).await
-    }
-    async fn rollback_rel(&self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
-        self.history.rollback_rel(relationship_type).await
+    async fn rollback_rel(&mut self, relationship_type: RelationshipType) -> ManagerCoreResult<()> {
+        <HistoryMap as AsyncRollBackableWInput<'life0, RelationshipType>>::rollback(&mut self.history, relationship_type).await
     }
 }
 
@@ -187,7 +237,7 @@ impl AccessDownloadTasks for AppState {
     {
         self.download_tasks.spawn(task).await
     }
-    async fn lock_spawn<F>(&mut self, task: F) -> AbortHandle
+    async fn lock_spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where
         F: Future<Output = ()> + Send + 'static,
     {

@@ -1,16 +1,11 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.5.5"
+version = "0.5.6-alpha.4"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
 edition = "2021"
 resolver = "2"
-
-[workspace]
-members = [
-    "test-tauri"
-]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

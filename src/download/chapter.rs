@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use crate::core::Error;
 use crate::server::traits::{AccessDownloadTasks, AccessHistory};
+use crate::settings::file_history::history_w_file::traits::{NoLFAsyncAutoCommitRollbackRemove, NoLFAsyncAutoCommitRollbackInsert};
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::chapter::{ChapterUtils, ChapterUtilsWithID};
 use crate::{
@@ -87,10 +88,10 @@ impl ChapterDownload {
         self.download_json_data(task_manager).await?;
         if let Ok(data) = chapter_utils.is_manga_there() {
             if !data {
-                chapter_utils.patch_manga(history, task_manager).await?;
+                (chapter_utils).patch_manga(history, task_manager).await?;
             }
         } else {
-            chapter_utils.patch_manga(history, task_manager).await?;
+            (chapter_utils).patch_manga(history, task_manager).await?;
         }
         Ok(())
     }
@@ -106,42 +107,18 @@ impl ChapterDownload {
             chapter_id,
             mangadex_api_types_rust::RelationshipType::Chapter,
         );
-        match history.insert_in_history(&history_entry).await {
-            Ok(_) => (),
-            Err(error_) => {
-                if let Error::Io(error) = error_ {
-                    if error.kind() != std::io::ErrorKind::AlreadyExists {
-                        return Err(crate::core::Error::Io(error));
-                    }
-                } else {
-                    return Err(error_);
-                }
-            }
-        };
-        history.commit_rel(history_entry.get_data_type()).await?;
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(history, history_entry).await?;
         Ok(history_entry)
     }
     pub async fn end_transation<'a, H>(
-        &self,
+        &'a self,
         entry: HistoryEntry,
         history: &'a mut H,
     ) -> ManagerCoreResult<()>
     where
         H: AccessHistory,
     {
-        if let Err(error) = history.remove_in_history(&entry).await {
-            if let Error::Io(io) = error{
-                if io.kind() == std::io::ErrorKind::NotFound {
-                    history.commit_rel(entry.get_data_type()).await?;
-                }else{
-                    return Err(Error::Io(io))
-                }
-            }else {
-                return Err(error);
-            }
-        }else{
-            history.commit_rel(entry.get_data_type()).await?;
-        }
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(history, entry).await?;
         Ok(())
     }
     pub async fn download_chapter<'a, H, D>(
