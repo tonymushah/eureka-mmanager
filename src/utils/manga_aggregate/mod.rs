@@ -162,7 +162,7 @@ mod tests {
         let data: Vec<ApiObject<ChapterAttributes>> = (manga_utils
             .with_id(manga_id)
             .get_all_downloaded_chapter_data()
-            .await)
+            )
             .unwrap()
             .collect()
             .await;

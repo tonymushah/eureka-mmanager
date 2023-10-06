@@ -160,7 +160,7 @@ mod tests {
         let manga_utils =
             MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default());
         let utils = manga_utils.with_id(manga_id);
-        let mut data = Box::pin(utils.get_all_downloaded_chapter_data().await.unwrap());
+        let mut data = Box::pin(utils.get_all_downloaded_chapter_data().unwrap());
 
         for (volume, chapters) in group_chapter_to_volume_hash_map(&mut data).await.unwrap() {
             println!(

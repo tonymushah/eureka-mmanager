@@ -94,7 +94,7 @@ pub fn get_actix_app(
             InitError = (),
         > + 'static,
 > {
-    let cors = Cors::default().allow_any_origin();
+    let cors = Cors::default().allow_any_origin().send_wildcard();
     App::new()
         .app_data(app_state)
         .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
