@@ -52,3 +52,7 @@ required-features = ["use_fern"]
 [[bench]]
 name = "aggregate"
 harness = false
+
+[[bench]]
+name = "chapter_listing"
+harness = false

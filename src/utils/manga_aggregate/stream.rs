@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap, io::Result, vec};
+use std::cmp::Ordering;
 
 use futures::Stream;
 use mangadex_api_schema_rust::{
@@ -10,121 +10,124 @@ use mangadex_api_schema_rust::{
 };
 use tokio_stream::StreamExt;
 
-pub type ChapterHashMap = HashMap<String, Vec<ApiObject<ChapterAttributes>>>;
+use crate::settings::file_history::IsIn;
 
-fn group_chapter_to_chapter_hash_map(input: Vec<ApiObject<ChapterAttributes>>) -> ChapterHashMap {
-    let mut data: ChapterHashMap = ChapterHashMap::new();
-    for chap in input {
-        let chap_ = chap.clone();
-        let volume = match chap.attributes.chapter {
-            None => "none".to_string(),
-            Some(d) => d,
-        };
-        match data.get_mut(&volume) {
-            None => {
-                data.insert(volume, vec![chap_]);
+use super::{IsHere, ShouldBe};
+
+impl IsIn<&ApiObject<ChapterAttributes>> for Vec<uuid::Uuid> {
+    type Output = bool;
+
+    fn is_in(&self, to_use: &ApiObject<ChapterAttributes>) -> Self::Output {
+        self.iter().any(|d| *d == to_use.id)
+    }
+}
+
+impl<'a> ShouldBe<'a, &'a ApiObject<ChapterAttributes>> for Vec<ChapterAggregate> {
+    type Output = IsHere;
+
+    fn should_be(
+        self: &'a mut std::vec::Vec<mangadex_api_schema_rust::v5::manga_aggregate::ChapterAggregate>,
+        to_use: &'a ApiObject<ChapterAttributes>,
+    ) -> Self::Output {
+        let attributes = &to_use.attributes;
+        if let Some(should_be) = self
+            .iter_mut()
+            .find(|d| d.chapter == attributes.chapter.clone().unwrap_or(String::from("none")))
+        {
+            if should_be.id == to_use.id || should_be.others.is_in(to_use) {
+                IsHere::AlreadyHere
+            } else {
+                should_be.others.push(to_use.id);
+                should_be.count +=
+                    <usize as TryInto<u32>>::try_into(should_be.others.len()).unwrap_or(0);
+                IsHere::Inserted
             }
-            Some(arr) => {
-                arr.push(chap_);
-            }
+        } else {
+            let new = ChapterAggregate {
+                chapter: to_use
+                    .attributes
+                    .chapter
+                    .clone()
+                    .unwrap_or("none".to_string()),
+                id: to_use.id,
+                others: Vec::new(),
+                count: 1,
+            };
+            self.push(new);
+            IsHere::Inserted
         }
     }
-    data
 }
 
-fn chap_hashmapentry_to_chapter_aggregate(
-    input: (String, Vec<ApiObject<ChapterAttributes>>),
-) -> Result<ChapterAggregate> {
-    let id = match input.1.get(0) {
-        None => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                "The input vector is empty",
-            ));
-        }
-        Some(d) => d.clone(),
-    };
-    let others: Vec<uuid::Uuid> = match input.1.get(1..(input.1.len())) {
-        None => Vec::new(),
-        Some(d) => d.iter().map(|d_| d_.id).collect(),
-    };
-    let chapter: ChapterAggregate = ChapterAggregate {
-        chapter: input.0,
-        id: id.id,
-        others,
-        count: input.1.len() as u32,
-    };
-    Ok(chapter)
-}
+impl<'a> ShouldBe<'a, &'a ApiObject<ChapterAttributes>> for VolumeAggregate {
+    type Output = IsHere;
 
-fn group_chapter_to_chapter_aggregate(
-    input: Vec<ApiObject<ChapterAttributes>>,
-) -> Result<Vec<ChapterAggregate>> {
-    let data = group_chapter_to_chapter_hash_map(input);
-    let mut returns: Vec<ChapterAggregate> = Vec::new();
-    for chunk in data {
-        returns.push(chap_hashmapentry_to_chapter_aggregate(chunk)?);
-    }
-    returns.sort_by(|a, b| {
-        let a_chp = match a.chapter.parse::<f32>() {
-            Ok(d) => d,
-            Err(_) => return Ordering::Equal,
-        };
-        let b_chp = match b.chapter.parse::<f32>() {
-            Ok(d) => d,
-            Err(_) => return Ordering::Equal,
-        };
-        a_chp.total_cmp(&b_chp)
-    });
-    Ok(returns)
-}
-
-fn chapter_volume_hashmap_entry_to_volume_aggregate(
-    (volume, chapters): (String, Vec<ApiObject<ChapterAttributes>>),
-) -> Result<VolumeAggregate> {
-    let chapters = group_chapter_to_chapter_aggregate(chapters)?;
-    Ok(VolumeAggregate {
-        volume,
-        count: chapters.len() as u32,
-        chapters,
-    })
-}
-
-pub type ChapterVolumeHashMap = HashMap<String, Vec<ApiObject<ChapterAttributes>>>;
-/// Convert an array of chapter to an HashMap with
-/// - Key : volume number
-/// - Value : The chapter Attributes
-async fn group_chapter_to_volume_hash_map<I>(mut input: I) -> Result<ChapterVolumeHashMap>
-where
-    I: Stream<Item = ApiObject<ChapterAttributes>> + Unpin,
-{
-    let mut data: ChapterVolumeHashMap = ChapterVolumeHashMap::new();
-    while let Some(chap) = input.next().await {
-        let chap_ = chap.clone();
-        let volume = match chap.attributes.volume {
-            None => "none".to_string(),
-            Some(d) => d,
-        };
-        match data.get_mut(&volume) {
-            None => {
-                data.insert(volume, vec![chap_]);
-            }
-            Some(arr) => {
-                arr.push(chap_);
-            }
+    fn should_be(
+        self: &'a mut mangadex_api_schema_rust::v5::manga_aggregate::VolumeAggregate,
+        to_use: &'a ApiObject<ChapterAttributes>,
+    ) -> Self::Output {
+        if let IsHere::Inserted = self.chapters.should_be(to_use) {
+            let mut count = 0;
+            self.chapters.iter().for_each(|data| {
+                count += data.count;
+            });
+            self.count = count;
+            IsHere::Inserted
+        } else {
+            IsHere::AlreadyHere
         }
     }
-    Ok(data)
 }
 
-pub async fn group_chapter_to_volume_aggregate<I>(input: I) -> Result<Vec<VolumeAggregate>>
+impl<'a> ShouldBe<'a, &'a ApiObject<ChapterAttributes>> for Vec<VolumeAggregate> {
+    type Output = IsHere;
+
+    fn should_be(&'a mut self, to_use: &'a ApiObject<ChapterAttributes>) -> Self::Output {
+        let attributes = &to_use.attributes;
+        if let Some(here) = self.iter_mut().find(|d| {
+            d.volume
+                .cmp(&attributes.volume.clone().unwrap_or("none".to_string()))
+                == Ordering::Equal
+        }) {
+            here.should_be(to_use)
+        } else {
+            let data = VolumeAggregate {
+                volume: attributes.volume.clone().unwrap_or("none".to_string()),
+                count: 1,
+                chapters: vec![ChapterAggregate {
+                    chapter: attributes.chapter.clone().unwrap_or("none".to_string()),
+                    id: to_use.id,
+                    count: 1,
+                    others: Default::default(),
+                }],
+            };
+            self.push(data);
+            IsHere::Inserted
+        }
+    }
+}
+
+pub async fn group_chapter_to_volume_aggregate<I>(mut input: I) -> Vec<VolumeAggregate>
 where
     I: Stream<Item = ApiObject<ChapterAttributes>> + Unpin,
 {
     let mut data: Vec<VolumeAggregate> = Vec::new();
-    for in_ in group_chapter_to_volume_hash_map(input).await? {
-        data.push(chapter_volume_hashmap_entry_to_volume_aggregate(in_)?);
+    while let Some(chapter) = input.next().await {
+        data.should_be(&chapter);
     }
+    data.iter_mut().for_each(|data| {
+        data.chapters.sort_by(|a, b| {
+            let a = match a.chapter.parse::<f32>() {
+                Ok(d) => d,
+                Err(_) => return Ordering::Equal,
+            };
+            let b = match b.chapter.parse::<f32>() {
+                Ok(d) => d,
+                Err(_) => return Ordering::Equal,
+            };
+            a.total_cmp(&b)
+        });
+    });
     data.sort_by(|a, b| {
         let a = match a.volume.parse::<f32>() {
             Ok(d) => d,
@@ -136,7 +139,7 @@ where
         };
         a.total_cmp(&b)
     });
-    Ok(data)
+    data
 }
 
 /*pub fn chapter_vec_to_chapter_aggregate_vec(input : Vec<ApiObject<ChapterAttributes>>) -> Result<()> {
@@ -152,25 +155,6 @@ mod tests {
 
     use crate::{settings::files_dirs::DirsOptions, utils::manga::MangaUtils};
 
-    use super::*;
-
-    #[tokio::test]
-    async fn test_to_volume_hash_map() {
-        let manga_id = "d58eb211-a1ae-426c-b504-fc88253de600".to_string();
-        let manga_utils =
-            MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default());
-        let utils = manga_utils.with_id(manga_id);
-        let mut data = Box::pin(utils.get_all_downloaded_chapter_data().unwrap());
-
-        for (volume, chapters) in group_chapter_to_volume_hash_map(&mut data).await.unwrap() {
-            println!(
-                "\"{}\" : {}",
-                volume,
-                serde_json::to_string(&(group_chapter_to_chapter_aggregate(chapters).unwrap()))
-                    .unwrap()
-            );
-        }
-    }
     #[tokio::test]
     async fn test_to_volume_aggregate() {
         let manga_id = "1c8f0358-d663-4d60-8590-b5e82890a1e3".to_string();

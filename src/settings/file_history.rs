@@ -22,6 +22,11 @@ pub trait IsIn<T> {
     fn is_in(&self, to_use: T) -> Self::Output;
 }
 
+pub trait IsInMut<'a, T> {
+    type Output;
+    fn is_in(&'a mut self, to_use: T) -> Self::Output;
+}
+
 #[async_trait::async_trait]
 pub trait AsyncInsert<'a, T> {
     type Output;

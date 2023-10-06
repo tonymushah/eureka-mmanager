@@ -45,7 +45,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     );
 }
 
-fn main(){
+fn main() {
     let mut c = Criterion::default().with_plots().configure_from_args();
     criterion_benchmark(&mut c);
 }

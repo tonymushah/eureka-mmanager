@@ -1,7 +1,6 @@
 use std::{fs::File, path::Path, sync::Arc};
 
-use async_stream::stream;
-use futures::Stream;
+use tokio_stream::{Stream, StreamExt};
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
 
@@ -94,17 +93,17 @@ impl CoverUtils {
         let path = file_dirs.covers_add("");
         if Path::new(path.as_str()).exists() {
             let list_dir = (std::fs::read_dir(path.as_str()))?.flatten();
-            Ok(stream! {
-                for file_ in list_dir {
-                    if let core::result::Result::Ok(metadata) = file_.metadata() {
-                        if metadata.is_file() {
-                            if let Some(data) = file_.file_name().to_str() {
-                                yield data.to_string().replace(".json", "");
-                            }
-                        }
+            Ok(tokio_stream::iter(list_dir).filter_map(move |file_| {
+                if let core::result::Result::Ok(metadata) = file_.metadata() {
+                    if metadata.is_file() {
+                        file_.file_name().to_str().map(|data| data.to_string().replace(".json", ""))
+                    } else {
+                        None
                     }
+                } else {
+                    None
                 }
-            })
+            }))
         } else {
             Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
