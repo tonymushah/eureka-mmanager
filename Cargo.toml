@@ -38,6 +38,9 @@ serde_qs = { version = "0", features = ["actix4"]}
 async-trait = "0.1"
 actix-cors = "0.6.4"
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["async_tokio"]}
+
 [features]
 default = []
 use_fern = ["dep:fern"]
@@ -45,3 +48,7 @@ use_fern = ["dep:fern"]
 [[bin]]
 name = "special-eureka-downloader"
 required-features = ["use_fern"]
+
+[[bench]]
+name = "aggregate"
+harness = false
