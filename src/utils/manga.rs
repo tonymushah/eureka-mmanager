@@ -41,15 +41,10 @@ impl<'a> MangaUtils {
     ) -> ManagerCoreResult<bool> {
         let chapter_utils: ChapterUtils = From::from(self);
         let chapter: ApiObject<ChapterAttributes> = chapter_utils.with_id(chap_id).get_chapter()?;
-        let mut is = false;
-        for relas in chapter.relationships {
-            if relas.type_ == RelationshipType::Manga
-                && relas.id.hyphenated().to_string() == manga_id
-            {
-                is = true;
-            }
-        }
-        Ok(is)
+
+        Ok(chapter.relationships.iter().any(|relas| {
+            relas.type_ == RelationshipType::Manga && relas.id.hyphenated().to_string() == manga_id
+        }))
     }
     pub(self) fn find_all_downloades_by_manga_id(
         &'a self,
@@ -484,6 +479,14 @@ impl MangaUtilsWithMangaId {
         let data = Box::pin(self.get_all_downloaded_chapter_data().await?);
         let chapters: Vec<ApiObject<ChapterAttributes>> = data.collect().await;
         let volumes = group_chapter_to_volume_aggregate(chapters)?;
+        Ok(MangaAggregate {
+            result: ResultType::Ok,
+            volumes,
+        })
+    }
+    pub async fn aggregate_manga_chapters_async_friendly(&self) -> ManagerCoreResult<MangaAggregate>{
+        let data = Box::pin(self.get_all_downloaded_chapter_data().await?);
+        let volumes = super::manga_aggregate::stream::group_chapter_to_volume_aggregate(data).await?;
         Ok(MangaAggregate {
             result: ResultType::Ok,
             volumes,

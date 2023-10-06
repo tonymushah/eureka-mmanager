@@ -9,7 +9,7 @@ use log::{info, warn};
 use server::AppState;
 mod r#core;
 
-pub use r#core::{Error, ErrorType};
+pub use crate::r#core::{Error, ErrorType};
 
 pub mod download;
 #[cfg(feature = "feeds")]
