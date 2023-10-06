@@ -46,7 +46,7 @@ impl CoverDownload {
         let http_client = self.http_client.lock().await.client.clone();
         task_manager
             .lock_spawn_with_data(async move {
-                let mut files = File::create(json_cover)?;
+                
                 let resps = http_client
                     .get(format!(
                         "{}/cover/{}",
@@ -57,6 +57,7 @@ impl CoverDownload {
                     .await?;
                 let bytes = resps.bytes().await?;
                 let bytes_string = String::from_utf8(bytes.to_vec())?;
+                let mut files = File::create(json_cover)?;
                 serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str())?;
                 files.write_all(&bytes)?;
                 Ok(())

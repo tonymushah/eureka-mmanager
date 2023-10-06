@@ -2,7 +2,7 @@ use log::info;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
-use std::{fs::File, io::ErrorKind, path::Path, sync::Arc};
+use std::{fs::File, io::{ErrorKind, BufReader}, path::Path, sync::Arc};
 use tokio_stream::{Stream, StreamExt};
 
 use crate::{
@@ -48,7 +48,7 @@ impl ChapterUtils {
                 .dirs_options
                 .chapters_add(format!("{}/data.json", chap_id).as_str());
             let chap_data: ApiData<ApiObject<ChapterAttributes>> =
-                serde_json::from_reader(File::open(path)?)?;
+                serde_json::from_reader(BufReader::new(File::open(path)?))?;
             let manga_id: uuid::Uuid = match chap_data
                 .data
                 .relationships
@@ -164,7 +164,7 @@ impl ChapterUtils {
             .dirs_options
             .chapters_add(format!("{}/data.json", chap_id.to_string()).as_str());
         let data: ApiData<ApiObject<ChapterAttributes>> =
-            serde_json::from_reader(File::open(path)?)?;
+            serde_json::from_reader(BufReader::new(File::open(path)?))?;
         Ok(data.data)
     }
     pub fn get_chapters_by_stream_id<'a, T>(
@@ -185,9 +185,7 @@ impl ChapterUtils {
     pub fn get_all_chapters_data(
         &self,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
-        let data_ = self.get_all_chapter_without_history()?;
-        let data_ = Box::pin(data_);
-        Ok(self.get_chapters_by_stream_id(data_))
+        Ok(self.get_chapters_by_stream_id(Box::pin(self.get_all_chapter_without_history()?)))
     }
     pub fn get_chapters_by_vec_id(
         &self,

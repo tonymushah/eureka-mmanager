@@ -1,4 +1,4 @@
-use std::{fs::File, path::Path, sync::Arc};
+use std::{fs::File, path::Path, sync::Arc, io::BufReader};
 
 use tokio_stream::{Stream, StreamExt};
 use mangadex_api::HttpClientRef;
@@ -47,7 +47,7 @@ impl CoverUtils {
                 .dirs_options
                 .covers_add(format!("{}.json", cover_id).as_str());
             let cover_data: ApiData<ApiObject<CoverAttributes>> =
-                serde_json::from_reader(File::open(path)?)?;
+                serde_json::from_reader(BufReader::new(File::open(path)?))?;
             let cover_file_name = cover_data.data.attributes.file_name;
             let cover_file_name_path = self
                 .dirs_options

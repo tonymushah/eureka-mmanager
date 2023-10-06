@@ -5,7 +5,7 @@ use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAggregate, MangaAttri
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::{RelationshipType, ResultType};
 use std::fs::File;
-use std::io::ErrorKind;
+use std::io::{ErrorKind, BufReader};
 use std::path::Path;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
@@ -142,7 +142,7 @@ impl<'a> MangaUtils {
             .mangas_add(format!("{}.json", manga_id).as_str());
         if Path::new(path.as_str()).exists() {
             let data: ApiData<ApiObject<MangaAttributes>> =
-                serde_json::from_str(std::fs::read_to_string(path.as_str())?.as_str())?;
+                serde_json::from_reader(BufReader::new(File::open(path)?))?;
             Ok(data.data)
         } else {
             Err(crate::core::Error::Io(std::io::Error::new(
@@ -163,7 +163,7 @@ impl<'a> MangaUtils {
                 ))
             } else {
                 let manga_data: ApiData<ApiObject<MangaAttributes>> =
-                    serde_json::from_reader(File::open(path)?)?;
+                    serde_json::from_reader(BufReader::new(File::open(path)?))?;
                 let cover_id: uuid::Uuid = match manga_data
                     .data
                     .relationships

@@ -1,4 +1,4 @@
-use std::{io::ErrorKind, sync::Arc};
+use std::{io::{ErrorKind, BufReader, BufWriter}, sync::Arc, fs::File};
 
 use tokio::sync::{
     OwnedRwLockReadGuard, OwnedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
@@ -56,8 +56,8 @@ impl HistoryWFile {
         self.file
     }
     pub fn from_file(file: String) -> Result<Self, std::io::Error> {
-        let file_data: String = std::fs::read_to_string(file.clone())?;
-        let history: History = serde_json::from_str(file_data.as_str())?;
+        let file_data = File::open(file.clone())?;
+        let history: History = serde_json::from_reader(BufReader::new(file_data))?;
         Ok(Self {
             history: history.into(),
             file,
@@ -121,7 +121,7 @@ impl Commitable for HistoryWFile {
             .write(true)
             .open(&(self.file))?;
         let history = self.write_history()?;
-        let mut serializer = serde_json::Serializer::new(to_use_file);
+        let mut serializer = serde_json::Serializer::new(BufWriter::new(to_use_file));
         history.serialize(&mut serializer)?;
         Ok(())
     }

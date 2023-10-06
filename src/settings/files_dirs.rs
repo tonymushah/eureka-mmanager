@@ -1,3 +1,5 @@
+use std::{fs::File, io::BufReader};
+
 use serde::{Deserialize, Serialize};
 
 use crate::core::ManagerCoreResult;
@@ -12,7 +14,8 @@ pub struct DirsOptions {
 
 impl DirsOptions {
     pub fn new_(path: &str) -> ManagerCoreResult<DirsOptions> {
-        let instance: DirsOptions = serde_json::from_str(std::fs::read_to_string(path)?.as_str())?;
+        let file = File::open(path)?;
+        let instance: DirsOptions = serde_json::from_reader(BufReader::new(file))?;
         Ok(instance)
     }
     pub fn new() -> ManagerCoreResult<DirsOptions> {
