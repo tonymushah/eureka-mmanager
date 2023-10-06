@@ -16,6 +16,7 @@ use crate::methods::put::{
     download_cover, download_cover_quality, download_manga_by_id, download_manga_cover,
     download_manga_cover_quality, download_manga_covers,
 };
+use actix_cors::Cors;
 use actix_web::body::MessageBody;
 use actix_web::dev::{self, Server, ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::http::header::{self};
@@ -93,10 +94,12 @@ pub fn get_actix_app(
             InitError = (),
         > + 'static,
 > {
+    let cors = Cors::default().allow_any_origin();
     App::new()
         .app_data(app_state)
         .wrap(ErrorHandlers::new().handler(StatusCode::NOT_FOUND, not_found_message))
         .wrap(ErrorHandlers::new().handler(StatusCode::METHOD_NOT_ALLOWED, not_allowed_message))
+        .wrap(cors)
         /*
             get Methods
         */
@@ -152,6 +155,6 @@ pub fn launch_async_server(
     Ok(
         HttpServer::new(move || get_actix_app(app_state_ref.clone()))
             .bind((address, port))?
-            .run(),
+            .run()
     )
 }
