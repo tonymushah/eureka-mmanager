@@ -292,18 +292,14 @@ impl<'a> MangaUtils {
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
         let chapter_utils: ChapterUtils = From::from(self);
         Ok(stream! {
-            if let Ok(data_) = chapter_utils.get_all_chapter_without_history(){
-                let data_ = Box::pin(data_);
-                let data_ = chapter_utils.get_chapters_by_stream_id(data_);
-                let mut data = Box::pin(data_);
-
-                while let Some(next) = data.next().await {
-                    if MangaUtils::is_chap_data_related_to_manga(&next, manga_id.clone()){
-                        yield next.clone()
-                    }
+            if let Ok(data) = chapter_utils.get_all_chapters_data(){
+                let mut data = Box::pin(data);
+            while let Some(next) = data.next().await {
+                if MangaUtils::is_chap_data_related_to_manga(&next, manga_id.clone()){
+                    yield next.clone()
                 }
             }
-
+            }
         })
     }
 
