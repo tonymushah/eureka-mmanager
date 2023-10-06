@@ -52,3 +52,4 @@ required-features = ["use_fern"]
 [[bench]]
 name = "aggregate"
 harness = false
+required-features = ["use_fern"]
