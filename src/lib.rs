@@ -12,14 +12,12 @@ mod r#core;
 pub use crate::r#core::{Error, ErrorType};
 
 pub mod download;
-#[cfg(feature = "feeds")]
-pub mod feeds;
+
 mod methods;
 pub mod server;
 pub mod settings;
 pub mod r#static;
-#[cfg(feature = "tauri")]
-pub mod tauri;
+
 pub mod utils;
 /// url not found handler
 ///

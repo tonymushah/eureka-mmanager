@@ -179,8 +179,13 @@ mod tests {
                 .with_id(manga_id);
         println!(
             "{}",
-            serde_json::to_string(&(manga_utils.aggregate_manga_chapters_async_friendly().await.unwrap()))
-                .unwrap()
+            serde_json::to_string(
+                &(manga_utils
+                    .aggregate_manga_chapters_async_friendly()
+                    .await
+                    .unwrap())
+            )
+            .unwrap()
         );
     }
 }

@@ -7,8 +7,10 @@ use tokio::task::AbortHandle;
 use crate::{
     core::ManagerCoreResult,
     settings::file_history::{
-        history_w_file::traits::{NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove}, NoLFAsyncInsert, NoLFAsyncRemove,
-        HistoryEntry, HistoryWFile, NoLFAsyncIsIn,
+        history_w_file::traits::{
+            NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
+        },
+        HistoryEntry, HistoryWFile, NoLFAsyncInsert, NoLFAsyncIsIn, NoLFAsyncRemove,
     },
 };
 
@@ -21,7 +23,10 @@ pub trait AccessHistory:
     + NoLFAsyncIsIn<HistoryEntry, Output = ManagerCoreResult<bool>>
     + Send
 {
-    async fn init_history<'a>(&'a self, relationship_type: RelationshipType) -> ManagerCoreResult<()>;
+    async fn init_history<'a>(
+        &'a self,
+        relationship_type: RelationshipType,
+    ) -> ManagerCoreResult<()>;
     async fn get_history_w_file_by_rel<'a>(
         &'a self,
         relationship_type: RelationshipType,
@@ -30,12 +35,18 @@ pub trait AccessHistory:
         &'a self,
         relationship_type: RelationshipType,
     ) -> ManagerCoreResult<HistoryWFile>;
-    async fn commit_rel<'a>(&'a mut self, relationship_type: RelationshipType) -> ManagerCoreResult<()>;
-    async fn rollback_rel<'a>(&'a mut self, relationship_type: RelationshipType) -> ManagerCoreResult<()>;
+    async fn commit_rel<'a>(
+        &'a mut self,
+        relationship_type: RelationshipType,
+    ) -> ManagerCoreResult<()>;
+    async fn rollback_rel<'a>(
+        &'a mut self,
+        relationship_type: RelationshipType,
+    ) -> ManagerCoreResult<()>;
 }
 
 #[async_trait::async_trait]
-pub trait AccessDownloadTasks : Send {
+pub trait AccessDownloadTasks: Send {
     async fn verify_limit(&self) -> bool;
     async fn spawn<F>(&mut self, task: F) -> ManagerCoreResult<AbortHandle>
     where

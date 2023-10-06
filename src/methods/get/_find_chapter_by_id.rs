@@ -13,7 +13,7 @@ pub async fn find_chapter_by_id(
     id: web::Path<String>,
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
-    let app_state : AppState = Into::into(app_state); 
+    let app_state: AppState = Into::into(app_state);
     //let path = format!("chapters/{}/data.json", id);
     let file_dirs = &app_state.dir_options;
     //let file_dir_clone = file_dirs.clone();
@@ -23,7 +23,15 @@ pub async fn find_chapter_by_id(
         let uuid_str = format!("urn:uuid:{}", id);
         match uuid::Uuid::from_str(uuid_str.as_str()) {
             Ok(uuid_data) => {
-                if <AppState as NoLFAsyncIsIn<HistoryEntry>>::is_in(&app_state, HistoryEntry::new(uuid_data, mangadex_api_types_rust::RelationshipType::Chapter)).await? {
+                if <AppState as NoLFAsyncIsIn<HistoryEntry>>::is_in(
+                    &app_state,
+                    HistoryEntry::new(
+                        uuid_data,
+                        mangadex_api_types_rust::RelationshipType::Chapter,
+                    ),
+                )
+                .await?
+                {
                     Ok(HttpResponse::Ok()
                         .insert_header(("X-DOWNLOAD-FAILED", "true"))
                         .content_type(ContentType::json())

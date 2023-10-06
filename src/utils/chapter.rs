@@ -253,7 +253,7 @@ impl ChapterUtils {
                     yield entry;
                 }
             }
-            })
+            }),
         ))
     }
     pub async fn get_all_downloaded_chapters<'a, H>(

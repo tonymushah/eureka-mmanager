@@ -24,19 +24,24 @@ async fn aggregate_stream(manga_id: uuid::Uuid) {
 fn criterion_benchmark(c: &mut Criterion) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let manga_id = uuid::Uuid::try_parse("1c8f0358-d663-4d60-8590-b5e82890a1e3").unwrap();
-    
+
     c.bench_with_input(
         BenchmarkId::new("aggregate", manga_id),
         &manga_id,
         |b, &s| {
-            b.to_async(&runtime).iter_batched(|| s, aggregate, criterion::BatchSize::LargeInput);
+            b.to_async(&runtime)
+                .iter_batched(|| s, aggregate, criterion::BatchSize::LargeInput);
         },
     );
     c.bench_with_input(
         BenchmarkId::new("aggregate_stream", manga_id),
         &manga_id,
         |b, &s| {
-            b.to_async(&runtime).iter_batched(|| s, aggregate_stream, criterion::BatchSize::LargeInput);
+            b.to_async(&runtime).iter_batched(
+                || s,
+                aggregate_stream,
+                criterion::BatchSize::LargeInput,
+            );
         },
     );
 }

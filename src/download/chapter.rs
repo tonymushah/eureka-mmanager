@@ -13,13 +13,12 @@ use uuid::Uuid;
 
 use crate::core::Error;
 use crate::server::traits::{AccessDownloadTasks, AccessHistory};
-use crate::settings::file_history::history_w_file::traits::{NoLFAsyncAutoCommitRollbackRemove, NoLFAsyncAutoCommitRollbackInsert};
+use crate::settings::file_history::history_w_file::traits::{
+    NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
+};
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::chapter::{ChapterUtils, ChapterUtilsWithID};
-use crate::{
-    core::ManagerCoreResult,
-    settings::file_history::HistoryEntry,
-};
+use crate::{core::ManagerCoreResult, settings::file_history::HistoryEntry};
 
 #[derive(Clone)]
 pub struct ChapterDownload {
@@ -107,7 +106,11 @@ impl ChapterDownload {
             chapter_id,
             mangadex_api_types_rust::RelationshipType::Chapter,
         );
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(history, history_entry).await?;
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
+            history,
+            history_entry,
+        )
+        .await?;
         Ok(history_entry)
     }
     pub async fn end_transation<'a, H>(
@@ -118,7 +121,10 @@ impl ChapterDownload {
     where
         H: AccessHistory,
     {
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(history, entry).await?;
+        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
+            history, entry,
+        )
+        .await?;
         Ok(())
     }
     pub async fn download_chapter<'a, H, D>(
@@ -137,11 +143,11 @@ impl ChapterDownload {
         let files_dirs = self.dirs_options.clone();
         let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
         let chapter_dir = format!("{}/data", chapter_top_dir);
-        
+
         std::fs::create_dir_all(&chapter_dir)?;
 
         info!("chapter dir created");
-        
+
         self.verify_chapter_and_manga(history, task_manager).await?;
 
         let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager
@@ -219,9 +225,9 @@ impl ChapterDownload {
                 Ok((files_, errors, has_error, chapter_dir.clone()))
             })
             .await?;
-        
+
         let (files_, errors, has_error, chapter_dir) = task?;
-        
+
         let jsons = json!({
             "result" : "ok",
             "dir" : chapter_dir,
@@ -254,11 +260,11 @@ impl ChapterDownload {
         let files_dirs = self.dirs_options.clone();
         let chapter_top_dir = files_dirs.chapters_add(chapter_id.hyphenated().to_string().as_str());
         let chapter_dir = format!("{}/data-saver", chapter_top_dir);
-        
+
         std::fs::create_dir_all(&chapter_dir)?;
 
         info!("chapter dir created");
-        
+
         self.verify_chapter_and_manga(history, task_manager).await?;
 
         let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager

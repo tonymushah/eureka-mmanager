@@ -1,6 +1,8 @@
 use std::{io::ErrorKind, sync::Arc};
 
-use tokio::sync::{RwLockReadGuard, RwLockWriteGuard, RwLock, OwnedRwLockWriteGuard, OwnedRwLockReadGuard};
+use tokio::sync::{
+    OwnedRwLockReadGuard, OwnedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
+};
 
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
@@ -9,7 +11,7 @@ use crate::{core::ManagerCoreResult, settings::files_dirs::DirsOptions, Error};
 
 use self::traits::{AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable};
 
-use super::{History, HistoryEntry, Insert, Remove, IsIn};
+use super::{History, HistoryEntry, Insert, IsIn, Remove};
 
 pub mod traits;
 
@@ -26,17 +28,29 @@ impl HistoryWFile {
             file,
         }
     }
-    pub fn read_history(& self) -> Result<RwLockReadGuard<'_, History>, std::io::Error> {
-        self.history.try_read().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+    pub fn read_history(&self) -> Result<RwLockReadGuard<'_, History>, std::io::Error> {
+        self.history
+            .try_read()
+            .map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
     }
     pub fn write_history(&mut self) -> Result<RwLockWriteGuard<'_, History>, std::io::Error> {
-        self.history.try_write().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+        self.history
+            .try_write()
+            .map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
     }
     pub fn owned_read_history(&self) -> Result<OwnedRwLockReadGuard<History>, std::io::Error> {
-        self.history.clone().try_read_owned().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+        self.history
+            .clone()
+            .try_read_owned()
+            .map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
     }
-    pub fn owned_write_history(&mut self) -> Result<OwnedRwLockWriteGuard<History>, std::io::Error> {
-        self.history.clone().try_write_owned().map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
+    pub fn owned_write_history(
+        &mut self,
+    ) -> Result<OwnedRwLockWriteGuard<History>, std::io::Error> {
+        self.history
+            .clone()
+            .try_write_owned()
+            .map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
     }
     pub fn get_file(self) -> String {
         self.file
@@ -44,7 +58,10 @@ impl HistoryWFile {
     pub fn from_file(file: String) -> Result<Self, std::io::Error> {
         let file_data: String = std::fs::read_to_string(file.clone())?;
         let history: History = serde_json::from_str(file_data.as_str())?;
-        Ok(Self { history : history.into(), file })
+        Ok(Self {
+            history: history.into(),
+            file,
+        })
     }
     pub fn init(
         relationship_type: RelationshipType,
@@ -171,7 +188,7 @@ impl AutoCommitRollbackRemove<uuid::Uuid> for HistoryWFile {
 impl AutoCommitRollbackInsert<HistoryEntry> for HistoryWFile {
     type Output = ManagerCoreResult<()>;
 
-    fn insert(&mut self, input : HistoryEntry) -> <Self as crate::settings::file_history::history_w_file::traits::AutoCommitRollbackInsert<HistoryEntry>>::Output {
+    fn insert(&mut self, input : HistoryEntry) -> <Self as crate::settings::file_history::history_w_file::traits::AutoCommitRollbackInsert<HistoryEntry>>::Output{
         if let Err(error) = <Self as Insert<HistoryEntry>>::insert(self, input) {
             if error.kind() == ErrorKind::AlreadyExists {
                 if let Err(error) = self.commit() {
@@ -216,18 +233,18 @@ impl AutoCommitRollbackRemove<HistoryEntry> for HistoryWFile {
     }
 }
 
-impl IsIn<uuid::Uuid> for HistoryWFile{
+impl IsIn<uuid::Uuid> for HistoryWFile {
     type Output = ManagerCoreResult<bool>;
-    
-    fn is_in(&self, to_use : uuid::Uuid) -> Self::Output {
+
+    fn is_in(&self, to_use: uuid::Uuid) -> Self::Output {
         Ok(self.read_history()?.is_in(to_use).is_some())
     }
 }
 
-impl IsIn<HistoryEntry> for HistoryWFile{
+impl IsIn<HistoryEntry> for HistoryWFile {
     type Output = <History as IsIn<HistoryEntry>>::Output;
 
-    fn is_in(&self, to_use : HistoryEntry) -> Self::Output {
+    fn is_in(&self, to_use: HistoryEntry) -> Self::Output {
         self.read_history()?.is_in(to_use)
     }
 }

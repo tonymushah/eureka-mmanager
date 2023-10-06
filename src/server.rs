@@ -155,6 +155,6 @@ pub fn launch_async_server(
     Ok(
         HttpServer::new(move || get_actix_app(app_state_ref.clone()))
             .bind((address, port))?
-            .run()
+            .run(),
     )
 }

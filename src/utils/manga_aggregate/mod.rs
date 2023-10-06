@@ -161,11 +161,10 @@ mod tests {
             MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default());
         let data: Vec<ApiObject<ChapterAttributes>> = (manga_utils
             .with_id(manga_id)
-            .get_all_downloaded_chapter_data()
-            )
-            .unwrap()
-            .collect()
-            .await;
+            .get_all_downloaded_chapter_data())
+        .unwrap()
+        .collect()
+        .await;
         for (volume, chapters) in group_chapter_to_volume_hash_map(data).unwrap() {
             println!(
                 "\"{}\" : {}",

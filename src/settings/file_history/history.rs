@@ -13,7 +13,7 @@ pub struct History {
     data_type: RelationshipType,
 }
 
-impl From<History> for Arc<RwLock<History>>{
+impl From<History> for Arc<RwLock<History>> {
     fn from(val: History) -> Self {
         Arc::new(RwLock::new(val))
     }
