@@ -2,7 +2,12 @@ use log::info;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
-use std::{fs::File, io::{ErrorKind, BufReader}, path::Path, sync::Arc};
+use std::{
+    fs::File,
+    io::{BufReader, ErrorKind},
+    path::Path,
+    sync::Arc,
+};
 use tokio_stream::{Stream, StreamExt};
 
 use crate::{

@@ -11,9 +11,7 @@ pub struct ServerOptions {
 impl ServerOptions {
     pub fn new() -> std::io::Result<ServerOptions> {
         let file = File::open("./settings/server-options.json")?;
-        let instance: ServerOptions = serde_json::from_reader(
-            BufReader::new(file)
-        )?;
+        let instance: ServerOptions = serde_json::from_reader(BufReader::new(file))?;
         Ok(instance)
     }
     pub fn get_hostname_port(&self) -> (String, u16) {

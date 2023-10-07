@@ -1,8 +1,8 @@
-use std::{fs::File, path::Path, sync::Arc, io::BufReader};
+use std::{fs::File, io::BufReader, path::Path, sync::Arc};
 
-use tokio_stream::{Stream, StreamExt};
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
+use tokio_stream::{Stream, StreamExt};
 
 use crate::{
     download::{chapter::ChapterDownload, cover::CoverDownload},
@@ -96,7 +96,10 @@ impl CoverUtils {
             Ok(tokio_stream::iter(list_dir).filter_map(move |file_| {
                 if let core::result::Result::Ok(metadata) = file_.metadata() {
                     if metadata.is_file() {
-                        file_.file_name().to_str().map(|data| data.to_string().replace(".json", ""))
+                        file_
+                            .file_name()
+                            .to_str()
+                            .map(|data| data.to_string().replace(".json", ""))
                     } else {
                         None
                     }

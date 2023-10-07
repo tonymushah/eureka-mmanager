@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Write, BufWriter};
+use std::io::{BufWriter, Write};
 use std::sync::Arc;
 
 use mangadex_api::HttpClientRef;

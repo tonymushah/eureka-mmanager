@@ -5,7 +5,7 @@ use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAggregate, MangaAttri
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::{RelationshipType, ResultType};
 use std::fs::File;
-use std::io::{ErrorKind, BufReader};
+use std::io::{BufReader, ErrorKind};
 use std::path::Path;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
@@ -225,10 +225,10 @@ impl<'a> MangaUtils {
         &'a self,
         manga_ids: Vec<String>,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<MangaAttributes>> + 'a> {
-        Ok(tokio_stream::iter(manga_ids).filter_map(|id|{
+        Ok(tokio_stream::iter(manga_ids).filter_map(|id| {
             if let Ok(data) = self.get_manga_data_by_id(id) {
                 Some(data)
-            }else {
+            } else {
                 None
             }
         }))
@@ -240,7 +240,10 @@ impl<'a> MangaUtils {
         if Path::new(path.as_str()).exists() {
             let list_dir = std::fs::read_dir(path.as_str())?.flatten();
             Ok(tokio_stream::iter(list_dir).filter_map(|file_| {
-                file_.file_name().to_str().map(|data| data.to_string().replace(".json", ""))
+                file_
+                    .file_name()
+                    .to_str()
+                    .map(|data| data.to_string().replace(".json", ""))
             }))
         } else {
             Err(crate::core::Error::Io(std::io::Error::new(
@@ -396,10 +399,11 @@ impl MangaUtilsWithMangaId {
         MangaUtils::is_chap_data_related_to_manga(&chapter, self.manga_id.clone())
     }
     pub fn find_all_downloades(&self) -> ManagerCoreResult<impl Stream<Item = String> + '_> {
-        let stream = Box::pin(self.manga_utils.get_all_downloaded_chapter_data(self.manga_id.clone())?);
-        Ok(stream.map(|chapter| {
-            chapter.id.to_string()
-        }))
+        let stream = Box::pin(
+            self.manga_utils
+                .get_all_downloaded_chapter_data(self.manga_id.clone())?,
+        );
+        Ok(stream.map(|chapter| chapter.id.to_string()))
     }
     pub async fn find_and_delete_all_downloades(&self) -> ManagerCoreResult<serde_json::Value> {
         self.manga_utils
