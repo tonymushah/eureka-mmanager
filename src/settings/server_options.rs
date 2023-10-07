@@ -1,3 +1,5 @@
+use std::{fs::File, io::BufReader};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -8,9 +10,8 @@ pub struct ServerOptions {
 
 impl ServerOptions {
     pub fn new() -> std::io::Result<ServerOptions> {
-        let instance: ServerOptions = serde_json::from_str(
-            std::fs::read_to_string("./settings/server-options.json")?.as_str(),
-        )?;
+        let file = File::open("./settings/server-options.json")?;
+        let instance: ServerOptions = serde_json::from_reader(BufReader::new(file))?;
         Ok(instance)
     }
     pub fn get_hostname_port(&self) -> (String, u16) {

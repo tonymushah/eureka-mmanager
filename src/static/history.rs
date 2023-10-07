@@ -6,7 +6,16 @@ use tokio::sync::{Mutex, MutexGuard};
 use crate::{
     core::{Error, ManagerCoreResult},
     settings::{
-        file_history::{HistoryEntry, HistoryWFile, AsyncInsert, AsyncRemove, Insert, Remove, history_w_file::traits::{Commitable, RollBackable, AsyncCommitableWInput, AsyncRollBackableWInput, AutoCommitRollbackInsert, AutoCommitRollbackRemove, AsyncAutoCommitRollbackRemove, AsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove}, AsyncIsIn, IsIn, NoLFAsyncRemove, NoLFAsyncInsert, NoLFAsyncIsIn},
+        file_history::{
+            history_w_file::traits::{
+                AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove,
+                AsyncCommitableWInput, AsyncRollBackableWInput, AutoCommitRollbackInsert,
+                AutoCommitRollbackRemove, Commitable, NoLFAsyncAutoCommitRollbackInsert,
+                NoLFAsyncAutoCommitRollbackRemove, RollBackable,
+            },
+            AsyncInsert, AsyncIsIn, AsyncRemove, HistoryEntry, HistoryWFile, Insert, IsIn,
+            NoLFAsyncInsert, NoLFAsyncIsIn, NoLFAsyncRemove, Remove,
+        },
         files_dirs::DirsOptions,
     },
 };
@@ -207,7 +216,7 @@ impl HistoryMapWithMutexGuardOnly for HistoryMap {}
 #[async_trait::async_trait]
 impl<'a> AsyncInsert<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn insert(&'a mut self, input : (HistoryEntry, &'a DirsOptions)) -> Self::Output{
+    async fn insert(&'a mut self, input: (HistoryEntry, &'a DirsOptions)) -> Self::Output {
         let (to_insert, dir_options) = input;
         let mut history = self.get_history().await;
         <Self as HistoryMapWithMutexGuardOnly>::insert_in_history(
@@ -222,7 +231,7 @@ impl<'a> AsyncInsert<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
 #[async_trait::async_trait]
 impl<'a> AsyncRemove<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn remove(&'a mut self, input : (HistoryEntry, &'a DirsOptions)) -> Self::Output{
+    async fn remove(&'a mut self, input: (HistoryEntry, &'a DirsOptions)) -> Self::Output {
         let (to_insert, dir_options) = input;
         let mut history = self.get_history().await;
         <Self as HistoryMapWithMutexGuardOnly>::remove_in_history(
@@ -237,7 +246,7 @@ impl<'a> AsyncRemove<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
 #[async_trait::async_trait]
 impl<'a> AsyncCommitableWInput<'a, RelationshipType> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn commit(&'a mut self, input : RelationshipType) -> Self::Output {
+    async fn commit(&'a mut self, input: RelationshipType) -> Self::Output {
         let mut history = self.get_history().await;
         <Self as HistoryMapWithMutexGuardOnly>::commit_rel(&mut history, input).await
     }
@@ -246,7 +255,7 @@ impl<'a> AsyncCommitableWInput<'a, RelationshipType> for HistoryMap {
 #[async_trait::async_trait]
 impl<'a> AsyncRollBackableWInput<'a, RelationshipType> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn rollback(&'a mut self, input : RelationshipType) -> Self::Output {
+    async fn rollback(&'a mut self, input: RelationshipType) -> Self::Output {
         let mut history = self.get_history().await;
         <Self as HistoryMapWithMutexGuardOnly>::rollback_rel(&mut history, input).await
     }
@@ -255,16 +264,20 @@ impl<'a> AsyncRollBackableWInput<'a, RelationshipType> for HistoryMap {
 #[async_trait::async_trait]
 impl<'a> AsyncAutoCommitRollbackInsert<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn insert(&'a mut self, input : (HistoryEntry, &'a DirsOptions)) -> Self::Output{
+    async fn insert(&'a mut self, input: (HistoryEntry, &'a DirsOptions)) -> Self::Output {
         let (to_insert, dir_options) = input;
         let mut history = self.get_history().await;
-        let mut history_w_file = <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
-            &mut history,
-            to_insert.get_data_type(),
-            dir_options,
-        )
-        .await?;
-        <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(&mut history_w_file, to_insert)?;
+        let mut history_w_file =
+            <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
+                &mut history,
+                to_insert.get_data_type(),
+                dir_options,
+            )
+            .await?;
+        <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(
+            &mut history_w_file,
+            to_insert,
+        )?;
         Ok(())
     }
 }
@@ -272,42 +285,48 @@ impl<'a> AsyncAutoCommitRollbackInsert<'a, (HistoryEntry, &'a DirsOptions)> for 
 #[async_trait::async_trait]
 impl<'a> AsyncAutoCommitRollbackRemove<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn remove(&'a mut self, input : (HistoryEntry, &'a DirsOptions)) -> Self::Output{
+    async fn remove(&'a mut self, input: (HistoryEntry, &'a DirsOptions)) -> Self::Output {
         let (to_remove, dir_options) = input;
         let mut history = self.get_history().await;
-        let mut history_w_file = <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
-            &mut history,
-            to_remove.get_data_type(),
-            dir_options,
-        )
-        .await?;
-        <HistoryWFile as AutoCommitRollbackRemove<HistoryEntry>>::remove(&mut history_w_file, to_remove)?;
+        let mut history_w_file =
+            <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
+                &mut history,
+                to_remove.get_data_type(),
+                dir_options,
+            )
+            .await?;
+        <HistoryWFile as AutoCommitRollbackRemove<HistoryEntry>>::remove(
+            &mut history_w_file,
+            to_remove,
+        )?;
         Ok(())
     }
 }
 
 #[async_trait::async_trait]
-impl<'a> AsyncIsIn<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap{
+impl<'a> AsyncIsIn<'a, (HistoryEntry, &'a DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<bool>;
-    async fn is_in(&'a self, to_use : (HistoryEntry, &'a DirsOptions)) -> Self::Output {
+    async fn is_in(&'a self, to_use: (HistoryEntry, &'a DirsOptions)) -> Self::Output {
         let (to_is_in, dir_options) = to_use;
         let mut history = self.get_history().await;
-        let history_w_file = <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
-            &mut history,
-            to_is_in.get_data_type(),
-            dir_options,
-        )
-        .await?;
-        Ok(<HistoryWFile as IsIn<HistoryEntry>>::is_in(&history_w_file, to_is_in)?)
+        let history_w_file =
+            <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
+                &mut history,
+                to_is_in.get_data_type(),
+                dir_options,
+            )
+            .await?;
+        Ok(<HistoryWFile as IsIn<HistoryEntry>>::is_in(
+            &history_w_file,
+            to_is_in,
+        )?)
     }
 }
-
-
 
 #[async_trait::async_trait]
 impl NoLFAsyncInsert<(HistoryEntry, DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn insert(&mut self, input : (HistoryEntry, DirsOptions)) -> Self::Output{
+    async fn insert(&mut self, input: (HistoryEntry, DirsOptions)) -> Self::Output {
         let (to_insert, dir_options) = input;
         let mut history = self.get_history().await;
         <Self as HistoryMapWithMutexGuardOnly>::insert_in_history(
@@ -322,7 +341,7 @@ impl NoLFAsyncInsert<(HistoryEntry, DirsOptions)> for HistoryMap {
 #[async_trait::async_trait]
 impl NoLFAsyncRemove<(HistoryEntry, DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn remove(&mut self, input : (HistoryEntry, DirsOptions)) -> Self::Output{
+    async fn remove(&mut self, input: (HistoryEntry, DirsOptions)) -> Self::Output {
         let (to_insert, dir_options) = input;
         let mut history = self.get_history().await;
         <Self as HistoryMapWithMutexGuardOnly>::remove_in_history(
@@ -337,16 +356,20 @@ impl NoLFAsyncRemove<(HistoryEntry, DirsOptions)> for HistoryMap {
 #[async_trait::async_trait]
 impl NoLFAsyncAutoCommitRollbackInsert<(HistoryEntry, DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn insert(&mut self, input : (HistoryEntry, DirsOptions)) -> Self::Output{
+    async fn insert(&mut self, input: (HistoryEntry, DirsOptions)) -> Self::Output {
         let (to_insert, dir_options) = input;
         let mut history = self.get_history().await;
-        let mut history_w_file = <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
-            &mut history,
-            to_insert.get_data_type(),
-            &dir_options,
-        )
-        .await?;
-        <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(&mut history_w_file, to_insert)?;
+        let mut history_w_file =
+            <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
+                &mut history,
+                to_insert.get_data_type(),
+                &dir_options,
+            )
+            .await?;
+        <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(
+            &mut history_w_file,
+            to_insert,
+        )?;
         Ok(())
     }
 }
@@ -354,32 +377,40 @@ impl NoLFAsyncAutoCommitRollbackInsert<(HistoryEntry, DirsOptions)> for HistoryM
 #[async_trait::async_trait]
 impl NoLFAsyncAutoCommitRollbackRemove<(HistoryEntry, DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<()>;
-    async fn remove(&mut self, input : (HistoryEntry, DirsOptions)) -> Self::Output{
+    async fn remove(&mut self, input: (HistoryEntry, DirsOptions)) -> Self::Output {
         let (to_remove, dir_options) = input;
         let mut history = self.get_history().await;
-        let mut history_w_file = <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
-            &mut history,
-            to_remove.get_data_type(),
-            &dir_options,
-        )
-        .await?;
-        <HistoryWFile as AutoCommitRollbackRemove<HistoryEntry>>::remove(&mut history_w_file, to_remove)?;
+        let mut history_w_file =
+            <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
+                &mut history,
+                to_remove.get_data_type(),
+                &dir_options,
+            )
+            .await?;
+        <HistoryWFile as AutoCommitRollbackRemove<HistoryEntry>>::remove(
+            &mut history_w_file,
+            to_remove,
+        )?;
         Ok(())
     }
 }
 
 #[async_trait::async_trait]
-impl NoLFAsyncIsIn<(HistoryEntry, DirsOptions)> for HistoryMap{
+impl NoLFAsyncIsIn<(HistoryEntry, DirsOptions)> for HistoryMap {
     type Output = ManagerCoreResult<bool>;
-    async fn is_in(&self, to_use : (HistoryEntry, DirsOptions)) -> Self::Output {
+    async fn is_in(&self, to_use: (HistoryEntry, DirsOptions)) -> Self::Output {
         let (to_is_in, dir_options) = to_use;
         let mut history = self.get_history().await;
-        let history_w_file = <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
-            &mut history,
-            to_is_in.get_data_type(),
-            &dir_options,
-        )
-        .await?;
-        Ok(<HistoryWFile as IsIn<HistoryEntry>>::is_in(&history_w_file, to_is_in)?)
+        let history_w_file =
+            <Self as HistoryMapWithMutexGuardOnly>::get_history_w_file_by_rel_or_init(
+                &mut history,
+                to_is_in.get_data_type(),
+                &dir_options,
+            )
+            .await?;
+        Ok(<HistoryWFile as IsIn<HistoryEntry>>::is_in(
+            &history_w_file,
+            to_is_in,
+        )?)
     }
 }

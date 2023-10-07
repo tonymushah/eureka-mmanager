@@ -1,8 +1,8 @@
 use futures::Future;
-use tokio::sync::{Semaphore, RwLock};
 use std::fmt::Debug;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::oneshot::channel;
+use tokio::sync::{RwLock, Semaphore};
 use tokio::{
     sync::Mutex,
     task::{AbortHandle, JoinSet},
@@ -18,8 +18,8 @@ pub mod manga;
 pub struct DownloadTaks {
     tasks: Arc<Mutex<JoinSet<()>>>,
     limit: u16,
-    sephamore : Arc<Semaphore>,
-    on_lock : Arc<RwLock<usize>>
+    sephamore: Arc<Semaphore>,
+    on_lock: Arc<RwLock<usize>>,
 }
 
 impl Default for DownloadTaks {
@@ -28,8 +28,8 @@ impl Default for DownloadTaks {
         Self {
             tasks: Arc::new(Mutex::new(JoinSet::default())),
             limit,
-            sephamore : Arc::new(Semaphore::new(limit.into())),
-            on_lock : Arc::new(RwLock::new(0))
+            sephamore: Arc::new(Semaphore::new(limit.into())),
+            on_lock: Arc::new(RwLock::new(0)),
         }
     }
 }
@@ -46,8 +46,8 @@ impl DownloadTaks {
         Self {
             tasks: Arc::new(Mutex::new(JoinSet::default())),
             limit,
-            sephamore : Arc::new(Semaphore::new(limit.into())),
-            on_lock : Arc::new(RwLock::new(0))
+            sephamore: Arc::new(Semaphore::new(limit.into())),
+            on_lock: Arc::new(RwLock::new(0)),
         }
     }
     pub async fn verify_limit(&self) -> bool {
@@ -111,8 +111,8 @@ impl DownloadTaks {
         let (sender, receiver) = channel::<T::Output>();
         self.spawn(async {
             match sender.send(task.await) {
-                Ok(_) => {},
-                Err(er) => println!("{:?}", er)
+                Ok(_) => {}
+                Err(er) => println!("{:?}", er),
             };
         })
         .await?;

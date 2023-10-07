@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.5.7"
+version = "0.5.7-alpha.1"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
@@ -39,7 +39,7 @@ async-trait = "0.1"
 actix-cors = "0.6.4"
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["async_tokio"]}
+criterion = { version = "0.5", features = ["async_tokio", "html_reports"]}
 
 [features]
 default = []
@@ -51,4 +51,8 @@ required-features = ["use_fern"]
 
 [[bench]]
 name = "aggregate"
+harness = false
+
+[[bench]]
+name = "chapter_listing"
 harness = false

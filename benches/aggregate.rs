@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{measurement::WallTime, BenchmarkGroup, BenchmarkId, Criterion, PlotConfiguration, AxisScale};
 use mangadex_desktop_api2::{settings::files_dirs::DirsOptions, utils::manga::MangaUtils};
 
 async fn aggregate(manga_id: uuid::Uuid) {
@@ -21,25 +21,35 @@ async fn aggregate_stream(manga_id: uuid::Uuid) {
     .unwrap();
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
+fn criterion_benchmark(c: &mut BenchmarkGroup<'_, WallTime>) {
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let manga_id = uuid::Uuid::try_parse("1c8f0358-d663-4d60-8590-b5e82890a1e3").unwrap();
-    
-    c.bench_with_input(
-        BenchmarkId::new("aggregate", manga_id),
-        &manga_id,
-        |b, &s| {
-            b.to_async(&runtime).iter_batched(|| s, aggregate, criterion::BatchSize::LargeInput);
-        },
-    );
     c.bench_with_input(
         BenchmarkId::new("aggregate_stream", manga_id),
         &manga_id,
         |b, &s| {
-            b.to_async(&runtime).iter_batched(|| s, aggregate_stream, criterion::BatchSize::LargeInput);
+            b.to_async(&runtime).iter_batched(
+                || s,
+                aggregate_stream,
+                criterion::BatchSize::LargeInput,
+            );
+        },
+    );
+    c.bench_with_input(
+        BenchmarkId::new("aggregate", manga_id),
+        &manga_id,
+        |b, &s| {
+            b.to_async(&runtime)
+                .iter_batched(|| s, aggregate, criterion::BatchSize::LargeInput);
         },
     );
 }
 
-criterion_group!(benches, criterion_benchmark);
-criterion_main!(benches);
+fn main() {
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+    let mut c = Criterion::default().with_plots().configure_from_args();
+    let mut aggregate_ = c.benchmark_group("aggregate benchmark");
+    aggregate_.plot_config(plot_config);
+    criterion_benchmark(&mut aggregate_);
+    aggregate_.finish();
+}

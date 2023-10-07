@@ -1,9 +1,8 @@
-use std::{fs::File, path::Path, sync::Arc};
+use std::{fs::File, io::BufReader, path::Path, sync::Arc};
 
-use async_stream::stream;
-use futures::Stream;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
+use tokio_stream::{Stream, StreamExt};
 
 use crate::{
     download::{chapter::ChapterDownload, cover::CoverDownload},
@@ -48,7 +47,7 @@ impl CoverUtils {
                 .dirs_options
                 .covers_add(format!("{}.json", cover_id).as_str());
             let cover_data: ApiData<ApiObject<CoverAttributes>> =
-                serde_json::from_reader(File::open(path)?)?;
+                serde_json::from_reader(BufReader::new(File::open(path)?))?;
             let cover_file_name = cover_data.data.attributes.file_name;
             let cover_file_name_path = self
                 .dirs_options
@@ -94,17 +93,20 @@ impl CoverUtils {
         let path = file_dirs.covers_add("");
         if Path::new(path.as_str()).exists() {
             let list_dir = (std::fs::read_dir(path.as_str()))?.flatten();
-            Ok(stream! {
-                for file_ in list_dir {
-                    if let core::result::Result::Ok(metadata) = file_.metadata() {
-                        if metadata.is_file() {
-                            if let Some(data) = file_.file_name().to_str() {
-                                yield data.to_string().replace(".json", "");
-                            }
-                        }
+            Ok(tokio_stream::iter(list_dir).filter_map(move |file_| {
+                if let core::result::Result::Ok(metadata) = file_.metadata() {
+                    if metadata.is_file() {
+                        file_
+                            .file_name()
+                            .to_str()
+                            .map(|data| data.to_string().replace(".json", ""))
+                    } else {
+                        None
                     }
+                } else {
+                    None
                 }
-            })
+            }))
         } else {
             Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
