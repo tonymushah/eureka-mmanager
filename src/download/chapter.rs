@@ -7,7 +7,7 @@ use mangadex_api_schema_rust::v5::ChapterAttributes;
 use mangadex_api_schema_rust::{ApiData, ApiObject};
 use serde_json::json;
 use std::fs::File;
-use std::io::{Write, BufWriter, BufReader};
+use std::io::{BufReader, BufWriter, Write};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -66,8 +66,9 @@ impl ChapterDownload {
                 .await?;
 
                 let chapter_data = File::create((path).as_str())?;
-                let _ = BufWriter::new(chapter_data.try_clone()?).write_all(&bytes_);
-
+                let mut writer = BufWriter::new(chapter_data.try_clone()?);
+                writer.write_all(&bytes_)?;
+                writer.flush()?;
             Ok(serde_json::from_reader(BufReader::new(chapter_data))?)
         }).await?
     }
@@ -236,8 +237,10 @@ impl ChapterDownload {
             "errors" : errors
         });
 
-        let mut file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
-        let _ = file.write_all(jsons.to_string().as_bytes());
+        let file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
+        let mut writer = BufWriter::new(file);
+        writer.write_all(jsons.to_string().as_bytes())?;
+        writer.flush()?;
         if !has_error {
             self.end_transation(history_entry, history).await?;
         }
@@ -314,7 +317,8 @@ impl ChapterDownload {
                                 )) {
                                     Ok(file) => match {
                                         let mut buf_writer = BufWriter::new(file);
-                                        buf_writer.write_all(&bytes)
+                                        buf_writer.write_all(&bytes)?;
+                                        buf_writer.flush()
                                     } {
                                         Ok(_) => {
                                             info!("{index} - {len} : Downloaded {filename}");
@@ -354,7 +358,9 @@ impl ChapterDownload {
             "errors" : errors
         });
         let file = File::create(format!("{}/{}", chapter_dir, "data.json"))?;
-        let _ = BufWriter::new(file).write_all(jsons.to_string().as_bytes());
+        let mut writer = BufWriter::new(file);
+        writer.write_all(jsons.to_string().as_bytes())?;
+        writer.flush()?;
         if !has_error {
             self.end_transation(history_entry, history).await?;
         }

@@ -1,7 +1,7 @@
 // Imports used for downloading the cover to a file.
 // They are not used because we're just printing the raw bytes.
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufWriter, Write};
 use std::sync::Arc;
 
 use mangadex_api::utils::download::cover::CoverQuality;
@@ -46,7 +46,6 @@ impl CoverDownload {
         let http_client = self.http_client.lock().await.client.clone();
         task_manager
             .lock_spawn_with_data(async move {
-                
                 let resps = http_client
                     .get(format!(
                         "{}/cover/{}",
@@ -57,9 +56,13 @@ impl CoverDownload {
                     .await?;
                 let bytes = resps.bytes().await?;
                 let bytes_string = String::from_utf8(bytes.to_vec())?;
-                let mut files = File::create(json_cover)?;
+                let files = File::create(json_cover)?;
                 serde_json::from_str::<ApiData<ApiObject<CoverAttributes>>>(bytes_string.as_str())?;
-                files.write_all(&bytes)?;
+                {
+                    let mut writer = BufWriter::new(files);
+                    writer.write_all(&bytes)?;
+                    writer.flush()?;
+                }
                 Ok(())
             })
             .await?
@@ -91,8 +94,12 @@ impl CoverDownload {
         let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
 
         if let Some(bytes) = bytes_ {
-            let mut file = File::create(file_path)?;
-            let _ = file.write_all(&bytes);
+            {
+                let file = File::create(file_path)?;
+                let mut writer = BufWriter::new(file);
+                writer.write_all(&bytes)?;
+                writer.flush()?;
+            }
 
             self.download_cover_data(task_manager).await?;
 
@@ -137,8 +144,12 @@ impl CoverDownload {
         let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
 
         if let Some(bytes) = bytes_ {
-            let mut file = File::create(file_path)?;
-            let _ = file.write_all(&bytes);
+            {
+                let file = File::create(file_path)?;
+                let mut writer = BufWriter::new(file);
+                writer.write_all(&bytes)?;
+                writer.flush()?;
+            }
             self.download_cover_data(task_manager).await?;
             Ok(serde_json::json!({
                 "result" : "ok",
@@ -329,9 +340,12 @@ impl CoverDownloadWithManga {
             "type" : "collection",
             "downloaded" : vecs
         });
-        let mut files = File::create(format!("covers/lists/{}.json", self.manga_id))?;
-        files.write_all(jsons.to_string().as_bytes())?;
-
+        {
+            let files = File::create(format!("covers/lists/{}.json", self.manga_id))?;
+            let mut writer = BufWriter::new(files);
+            writer.write_all(jsons.to_string().as_bytes())?;
+            writer.flush()?;
+        }
         Ok(jsons)
     }
 }

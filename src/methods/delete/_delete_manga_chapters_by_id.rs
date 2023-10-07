@@ -7,6 +7,7 @@ use mangadex_api_schema_rust::{ApiData, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
 
 /// delete a  manga
+/// TODO Refactor this function to utils
 #[delete("/manga/{id}")]
 pub async fn delete_manga_chapters_by_id(
     id: web::Path<uuid::Uuid>,

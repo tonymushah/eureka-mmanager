@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::Write;
+use std::io::{Write, BufWriter};
 use std::sync::Arc;
 
 use mangadex_api::HttpClientRef;
@@ -43,11 +43,15 @@ impl MangaDownload {
             let bytes = resp.bytes().await?;
             let bytes_string = String::from_utf8(bytes.to_vec())?;
             serde_json::from_str::<ApiData<ApiObject<MangaAttributes>>>(bytes_string.as_str())?;
-            let mut file = (File::create(
+            {
+                let file = (File::create(
                 DirsOptions::new()?
-                    .mangas_add(format!("{}.json", id).as_str())
-            ))?;
-            file.write_all(&bytes)?;
+                        .mangas_add(format!("{}.json", id).as_str())
+                ))?;
+                let mut writer = BufWriter::new(file);
+                writer.write_all(&bytes)?;
+                writer.flush()?;
+            }
             Ok(id)
         }).await?;
         task?;
