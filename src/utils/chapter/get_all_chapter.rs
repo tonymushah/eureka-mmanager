@@ -58,6 +58,7 @@ where
                             Err(_) => uuid::Uuid::NAMESPACE_DNS,
                         };
                         if self.history.is_in(id).is_none() {
+                            log::info!("id : {}", id);
                             Poll::Ready(Some(id.to_string()))
                         } else {
                             Poll::Pending
@@ -71,14 +72,10 @@ where
             } else {
                 Poll::Pending
             }
-        } else if let Poll::Ready(data) = self.all_history_entry.poll_next_unpin(cx) {
-            if let Some(id) = data {
-                Poll::Ready(Some(id.to_string()))
-            } else {
-                Poll::Ready(None)
-            }
+        } else if let Poll::Ready(Some(id)) = self.all_history_entry.poll_next_unpin(cx) {
+            Poll::Ready(Some(id.to_string()))
         } else {
-            Poll::Pending
+            Poll::Ready(None)
         }
     }
 }
