@@ -30,6 +30,7 @@ pub async fn find_all_downloaded_chapter(
     app_state: web::Data<AppState>,
 ) -> Result<impl Responder, Error> {
     let mut app_state: AppState = From::from(app_state);
+    log::info!("getted reqwest");
     let getted = app_state
         .chapter_utils()
         .get_all_downloaded_chapters(Some(query.into_inner()), &mut app_state)

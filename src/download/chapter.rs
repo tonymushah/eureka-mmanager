@@ -51,6 +51,7 @@ impl ChapterDownload {
             .dirs_options
             .chapters_add(format!("{}/data.json", id).as_str());
         let http_client = self.http_client.lock().await.client.clone();
+        log::info!("{path}");
         task_manager.lock_spawn_with_data(async move {
             let get_chapter = http_client
                 .get(
@@ -68,7 +69,9 @@ impl ChapterDownload {
                 let chapter_data = File::create((path).as_str())?;
                 let mut writer = BufWriter::new(chapter_data.try_clone()?);
                 writer.write_all(&bytes_)?;
+                log::info!("writed data");
                 writer.flush()?;
+                let chapter_data = File::open((path).as_str())?;
             Ok(serde_json::from_reader(BufReader::new(chapter_data))?)
         }).await?
     }
