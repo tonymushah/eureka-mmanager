@@ -4,7 +4,6 @@ use crate::settings::file_history::{History, IsIn};
 
 use super::GetAllChapter;
 use futures::StreamExt;
-use tokio::sync::OwnedRwLockReadGuard;
 use tokio_stream::Stream;
 
 pub struct OnlyFails<T>
@@ -33,11 +32,11 @@ where
     T: Stream<Item = String> + Unpin,
 {
     all_chapter: T,
-    history: OwnedRwLockReadGuard<History>
+    history: History
 }
 
 impl<T> NotIncludeFails<T> where T: Stream<Item = String> + Unpin  {
-    pub fn new(all_chapter: T, history: OwnedRwLockReadGuard<History>) -> Self{
+    pub fn new(all_chapter: T, history: History) -> Self{
         Self { all_chapter, history }
     }
 }
@@ -50,17 +49,22 @@ impl<T> Stream for NotIncludeFails<T> where T: Stream<Item = String> + Unpin  {
             if let Some(id) = getted {
                 if let Ok(uuid) = <uuid::Uuid as TryFrom<&str>>::try_from(id.clone().as_str()){
                     if self.history.is_in(uuid).is_none() {
+                        log::info!("{uuid}");
                         Poll::Ready(Some(id))
                     }else {
+                        log::info!("Pending 3");
                         Poll::Pending
                     }
                 }else {
+                    log::info!("Pending 2");
                     Poll::Pending
                 }
             }else {
+                log::info!("Exited");
                 Poll::Ready(None)
             }
         }else {
+            log::info!("Pending 1");
             Poll::Pending
         }
     }
@@ -86,10 +90,13 @@ where
 
     fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
         if self.parameters.only_fails {
+            log::info!("Only fails");
             self.only_fails.poll_next_unpin(cx)
         }else if !self.parameters.include_fails {
+            log::info!("not fails");
             self.not_fails.poll_next_unpin(cx)
         }else{
+            log::info!("all chapter");
             self.not_fails.all_chapter.poll_next_unpin(cx)
         }
     }

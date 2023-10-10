@@ -266,7 +266,7 @@ impl ChapterUtils {
                 }
             })),
             parameters,
-            not_fails: NotIncludeFails::new(all_chapters, h)
+            not_fails: NotIncludeFails::new(all_chapters, h.clone())
         })
     }
     pub async fn get_all_downloaded_chapters<'a, H>(
