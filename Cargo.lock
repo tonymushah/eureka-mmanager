@@ -1271,11 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "mangadex-desktop-api2"
-<<<<<<< HEAD
 version = "0.5.7-alpha.3"
-=======
-version = "0.5.7-alpha.2"
->>>>>>> cc2abb2dadd3e7754bc6106abe498d4f11b64fe4
 dependencies = [
  "actix-cors",
  "actix-web",

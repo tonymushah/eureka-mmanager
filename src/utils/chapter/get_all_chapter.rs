@@ -7,75 +7,90 @@ use futures::StreamExt;
 use tokio::sync::OwnedRwLockReadGuard;
 use tokio_stream::Stream;
 
-pub struct AsyncGetAllChapter<C, H>
+pub struct OnlyFails<T>
 where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = uuid::Uuid> + std::marker::Unpin,
+    T: Stream<Item = String> + Unpin,
 {
-    parameters: GetAllChapter,
-    history: OwnedRwLockReadGuard<History>,
-    all_chapter: C,
-    all_history_entry: H,
+    inner: T,
 }
 
-impl<C, H> AsyncGetAllChapter<C, H>
-where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = uuid::Uuid> + std::marker::Unpin,
-{
-    pub fn new(
-        parameters: GetAllChapter,
-        history: OwnedRwLockReadGuard<History>,
-        all_chapter: C,
-        all_history_entry: H,
-    ) -> Self {
-        Self {
-            parameters,
-            history,
-            all_chapter,
-            all_history_entry,
-        }
+impl<T> OnlyFails<T> where T: Stream<Item = String> + Unpin {
+    pub fn new(inner : T) -> Self{
+        Self { inner }
     }
 }
 
-impl<C, H> tokio_stream::Stream for AsyncGetAllChapter<C, H>
+impl<T> Stream for OnlyFails<T> where T: Stream<Item = String> + Unpin {
+    type Item = String;
+
+    fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+        self.inner.poll_next_unpin(cx)
+    }
+}
+
+pub struct NotIncludeFails<T>
+where
+    T: Stream<Item = String> + Unpin,
+{
+    all_chapter: T,
+    history: OwnedRwLockReadGuard<History>
+}
+
+impl<T> NotIncludeFails<T> where T: Stream<Item = String> + Unpin  {
+    pub fn new(all_chapter: T, history: OwnedRwLockReadGuard<History>) -> Self{
+        Self { all_chapter, history }
+    }
+}
+
+impl<T> Stream for NotIncludeFails<T> where T: Stream<Item = String> + Unpin  {
+    type Item = String;
+
+    fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+        if let Poll::Ready(getted) = self.all_chapter.poll_next_unpin(cx) {
+            if let Some(id) = getted {
+                if let Ok(uuid) = <uuid::Uuid as TryFrom<&str>>::try_from(id.clone().as_str()){
+                    if self.history.is_in(uuid).is_none() {
+                        Poll::Ready(Some(id))
+                    }else {
+                        Poll::Pending
+                    }
+                }else {
+                    Poll::Pending
+                }
+            }else {
+                Poll::Ready(None)
+            }
+        }else {
+            Poll::Pending
+        }
+    }
+    
+}
+
+pub struct AsyncGetAllChapter<C, H>
 where
     C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = uuid::Uuid> + std::marker::Unpin,
+    H: Stream<Item = String> + std::marker::Unpin,
+{
+    pub only_fails: OnlyFails<H>,
+    pub parameters: GetAllChapter,
+    pub not_fails: NotIncludeFails<C>
+}
+
+impl<C, H> Stream for AsyncGetAllChapter<C, H>
+where
+    C: Stream<Item = String> + std::marker::Unpin,
+    H: Stream<Item = String> + std::marker::Unpin,  
 {
     type Item = String;
 
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        if !self.parameters.only_fails {
-            if let Poll::Ready(data_) = self.all_chapter.poll_next_unpin(cx) {
-                if let Some(data) = data_ {
-                    if !self.parameters.include_fails {
-                        let id = match uuid::Uuid::parse_str(data.as_str()) {
-                            Ok(o) => o,
-                            Err(_) => uuid::Uuid::NAMESPACE_DNS,
-                        };
-                        if self.history.is_in(id).is_none() {
-                            log::info!("id : {}", id);
-                            Poll::Ready(Some(id.to_string()))
-                        } else {
-                            Poll::Pending
-                        }
-                    } else {
-                        Poll::Ready(Some(data.to_string()))
-                    }
-                } else {
-                    Poll::Ready(None)
-                }
-            } else {
-                Poll::Pending
-            }
-        } else if let Poll::Ready(Some(id)) = self.all_history_entry.poll_next_unpin(cx) {
-            Poll::Ready(Some(id.to_string()))
-        } else {
-            Poll::Ready(None)
+    fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.parameters.only_fails {
+            self.only_fails.poll_next_unpin(cx)
+        }else if !self.parameters.include_fails {
+            self.not_fails.poll_next_unpin(cx)
+        }else{
+            self.not_fails.all_chapter.poll_next_unpin(cx)
         }
     }
 }

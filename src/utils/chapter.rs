@@ -27,7 +27,7 @@ use crate::{
     },
 };
 
-use self::get_all_chapter::AsyncGetAllChapter;
+use self::get_all_chapter::{OnlyFails, NotIncludeFails, AsyncGetAllChapter};
 
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
 
@@ -241,29 +241,33 @@ impl ChapterUtils {
     where
         H: AccessHistory,
     {
+        let parameters = parameters.unwrap_or_default();
         let file_dirs = self.dirs_options.clone();
         let all_chapters = Box::pin(self.get_all_chapter_without_history()?);
-        let parameters = parameters.unwrap_or_default();
+        
         let hist: HistoryWFile = history
             .get_history_w_file_by_rel_or_init(RelationshipType::Chapter)
             .await?;
         let h = hist.owned_read_history()?;
         let re_h = h.clone();
-        Ok(AsyncGetAllChapter::new(
-            parameters,
-            h,
-            all_chapters,
-            tokio_stream::iter(re_h).filter(move |entry| {
-                Path::new(
+        Ok(AsyncGetAllChapter{
+            only_fails: OnlyFails::new(tokio_stream::iter(re_h).filter_map(move |entry| {
+                if Path::new(
                     format!(
                         "{}/data.json",
                         file_dirs.chapters_add(entry.to_string().as_str())
                     )
                     .as_str(),
                 )
-                .exists()
-            }),
-        ))
+                .exists() {
+                    Some(entry.to_string())
+                }else {
+                    None
+                }
+            })),
+            parameters,
+            not_fails: NotIncludeFails::new(all_chapters, h)
+        })
     }
     pub async fn get_all_downloaded_chapters<'a, H>(
         &'a self,
