@@ -4,81 +4,145 @@ use crate::settings::file_history::{History, IsIn};
 
 use super::GetAllChapter;
 use futures::StreamExt;
-use tokio::sync::OwnedRwLockReadGuard;
 use tokio_stream::Stream;
 
-pub struct AsyncGetAllChapter<C, H>
+pub struct OnlyFails<T>
 where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = uuid::Uuid> + std::marker::Unpin,
+    T: Stream<Item = String> + Unpin,
 {
-    parameters: GetAllChapter,
-    history: OwnedRwLockReadGuard<History>,
-    all_chapter: C,
-    all_history_entry: H,
+    inner: T,
 }
 
-impl<C, H> AsyncGetAllChapter<C, H>
+impl<T> OnlyFails<T>
 where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = uuid::Uuid> + std::marker::Unpin,
+    T: Stream<Item = String> + Unpin,
 {
-    pub fn new(
-        parameters: GetAllChapter,
-        history: OwnedRwLockReadGuard<History>,
-        all_chapter: C,
-        all_history_entry: H,
-    ) -> Self {
-        Self {
-            parameters,
-            history,
-            all_chapter,
-            all_history_entry,
-        }
+    pub fn new(inner: T) -> Self {
+        Self { inner }
     }
 }
 
-impl<C, H> tokio_stream::Stream for AsyncGetAllChapter<C, H>
+impl<T> Stream for OnlyFails<T>
 where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = uuid::Uuid> + std::marker::Unpin,
+    T: Stream<Item = String> + Unpin,
 {
     type Item = String;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        if !self.parameters.only_fails {
-            if let Poll::Ready(data_) = self.all_chapter.poll_next_unpin(cx) {
-                if let Some(data) = data_ {
-                    if !self.parameters.include_fails {
-                        let id = match uuid::Uuid::parse_str(data.as_str()) {
-                            Ok(o) => o,
-                            Err(_) => uuid::Uuid::NAMESPACE_DNS,
-                        };
-                        if self.history.is_in(id).is_none() {
-                            Poll::Ready(Some(id.to_string()))
-                        } else {
-                            Poll::Pending
+    ) -> Poll<Option<Self::Item>> {
+        self.inner.poll_next_unpin(cx)
+    }
+}
+
+pub struct NotIncludeFails<T>
+where
+    T: Stream<Item = String> + Unpin,
+{
+    all_chapter: T,
+    history: History,
+}
+
+impl<T> NotIncludeFails<T>
+where
+    T: Stream<Item = String> + Unpin,
+{
+    pub fn new(all_chapter: T, history: History) -> Self {
+        Self {
+            all_chapter,
+            history,
+        }
+    }
+}
+
+impl<T> Stream for NotIncludeFails<T>
+where
+    T: Stream<Item = String> + Unpin,
+{
+    type Item = String;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        loop {
+            if let Poll::Ready(getted) = self.all_chapter.poll_next_unpin(cx) {
+                if let Some(id) = getted {
+                    if let Ok(uuid) = uuid::Uuid::parse_str(id.clone().as_str()) {
+                        if self.history.is_in(uuid).is_none() {
+                            return Poll::Ready(Some(id.clone()));
                         }
-                    } else {
-                        Poll::Ready(Some(data.to_string()))
                     }
                 } else {
-                    Poll::Ready(None)
+                    //log::info!("Exited");
+                    return Poll::Ready(None);
                 }
             } else {
-                Poll::Pending
+                //log::info!("Pending 1");
+                return Poll::Pending;
             }
-        } else if let Poll::Ready(data) = self.all_history_entry.poll_next_unpin(cx) {
-            if let Some(id) = data {
-                Poll::Ready(Some(id.to_string()))
-            } else {
-                Poll::Ready(None)
-            }
+        }
+    }
+}
+
+pub struct AsyncGetAllChapter<C, H>
+where
+    C: Stream<Item = String> + std::marker::Unpin,
+    H: Stream<Item = String> + std::marker::Unpin,
+{
+    pub only_fails: OnlyFails<H>,
+    pub parameters: GetAllChapter,
+    pub not_fails: NotIncludeFails<C>,
+}
+
+impl<C, H> Stream for AsyncGetAllChapter<C, H>
+where
+    C: Stream<Item = String> + std::marker::Unpin,
+    H: Stream<Item = String> + std::marker::Unpin,
+{
+    type Item = String;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        if self.parameters.only_fails {
+            //log::info!("Only fails");
+            self.only_fails.poll_next_unpin(cx)
+        } else if !self.parameters.include_fails {
+            //log::info!("not fails");
+            self.not_fails.poll_next_unpin(cx)
         } else {
-            Poll::Pending
+            //log::info!("all chapter");
+            self.not_fails.all_chapter.poll_next_unpin(cx)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tokio_stream::StreamExt;
+
+    use crate::{
+        server::{traits::AccessHistory, AppState},
+        utils::chapter::get_all_chapter::NotIncludeFails,
+    };
+
+    #[tokio::test]
+    async fn test_not_fails() {
+        let app_state = AppState::init().await.unwrap();
+        let binding = app_state.chapter_utils();
+        let all_chapter = Box::pin(binding.get_all_chapter_without_history().unwrap());
+        let history = app_state
+            .get_history_w_file_by_rel_or_init(mangadex_api_types_rust::RelationshipType::Chapter)
+            .await
+            .unwrap();
+        let stream =
+            NotIncludeFails::new(all_chapter, history.owned_read_history().unwrap().clone());
+        let mut stream = Box::pin(stream);
+        while let Some(id) = stream.next().await {
+            println!("{id}")
         }
     }
 }

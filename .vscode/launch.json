@@ -1,0 +1,122 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'mangadex-desktop-api2'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=mangadex-desktop-api2"
+                ],
+                "filter": {
+                    "name": "mangadex-desktop-api2",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'special-eureka-downloader'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=special-eureka-downloader",
+                    "--package=mangadex-desktop-api2",
+                    "--features=use_fern"
+                ],
+                "filter": {
+                    "name": "special-eureka-downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'special-eureka-downloader'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=special-eureka-downloader",
+                    "--package=mangadex-desktop-api2"
+                ],
+                "filter": {
+                    "name": "special-eureka-downloader",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'requests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=requests",
+                    "--package=mangadex-desktop-api2"
+                ],
+                "filter": {
+                    "name": "requests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'aggregate'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=aggregate",
+                    "--package=mangadex-desktop-api2"
+                ],
+                "filter": {
+                    "name": "aggregate",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'chapter_listing'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=chapter_listing",
+                    "--package=mangadex-desktop-api2"
+                ],
+                "filter": {
+                    "name": "chapter_listing",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
