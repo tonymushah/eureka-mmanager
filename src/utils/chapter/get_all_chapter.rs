@@ -4,7 +4,6 @@ use crate::settings::file_history::{History, IsIn};
 
 use super::GetAllChapter;
 use futures::StreamExt;
-use log::info;
 use tokio_stream::Stream;
 
 pub struct OnlyFails<T>
@@ -42,16 +41,7 @@ where
     T: Stream<Item = String> + Unpin,
 {
     all_chapter: T,
-    history: Vec<String>,
-}
-
-impl IsIn<String> for Vec<String> {
-    type Output = Option<usize>;
-    fn is_in(&self, to_use: String) -> Self::Output {
-        let pos = self.iter().position(|d| d.cmp(&to_use).is_eq());
-        info!("{:?}", pos);
-        pos
-    }
+    history: History,
 }
 
 impl<T> NotIncludeFails<T>
@@ -61,11 +51,7 @@ where
     pub fn new(all_chapter: T, history: History) -> Self {
         Self {
             all_chapter,
-            history: history
-                .get_history_list()
-                .iter()
-                .map(|d| d.to_string())
-                .collect(),
+            history,
         }
     }
 }
@@ -74,22 +60,28 @@ impl<T> Stream for NotIncludeFails<T>
 where
     T: Stream<Item = String> + Unpin,
 {
-    type Item = (String, bool);
+    type Item = String;
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Poll::Ready(getted) = self.all_chapter.poll_next_unpin(cx) {
-            if let Some(id) = getted {
-                Poll::Ready(Some((id, self.history.is_in(id.clone()).is_none())))
+        loop {
+            if let Poll::Ready(getted) = self.all_chapter.poll_next_unpin(cx) {
+                if let Some(id) = getted {
+                    if let Ok(uuid) = uuid::Uuid::parse_str(id.clone().as_str()) {
+                        if self.history.is_in(uuid).is_none() {
+                            return Poll::Ready(Some(id.clone()));
+                        }
+                    }
+                } else {
+                    //log::info!("Exited");
+                    return Poll::Ready(None);
+                }
             } else {
-                log::info!("Exited");
-                Poll::Ready(None)
+                //log::info!("Pending 1");
+                return Poll::Pending;
             }
-        } else {
-            log::info!("Pending 1");
-            Poll::Pending
         }
     }
 }
@@ -120,10 +112,37 @@ where
             self.only_fails.poll_next_unpin(cx)
         } else if !self.parameters.include_fails {
             log::info!("not fails");
-            self.not_fails.filter(|(_, b)| async move { !b }).map(|(id, _)| id).poll_next_unpin(cx)
+            self.not_fails.poll_next_unpin(cx)
         } else {
             log::info!("all chapter");
             self.not_fails.all_chapter.poll_next_unpin(cx)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tokio_stream::StreamExt;
+
+    use crate::{
+        server::{traits::AccessHistory, AppState},
+        utils::chapter::get_all_chapter::NotIncludeFails,
+    };
+
+    #[tokio::test]
+    async fn test_not_fails() {
+        let app_state = AppState::init().await.unwrap();
+        let binding = app_state.chapter_utils();
+        let all_chapter = Box::pin(binding.get_all_chapter_without_history().unwrap());
+        let history = app_state
+            .get_history_w_file_by_rel_or_init(mangadex_api_types_rust::RelationshipType::Chapter)
+            .await
+            .unwrap();
+        let stream =
+            NotIncludeFails::new(all_chapter, history.owned_read_history().unwrap().clone());
+        let mut stream = Box::pin(stream);
+        while let Some(id) = stream.next().await {
+            println!("{id}")
         }
     }
 }
