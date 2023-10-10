@@ -108,13 +108,13 @@ where
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         if self.parameters.only_fails {
-            log::info!("Only fails");
+            //log::info!("Only fails");
             self.only_fails.poll_next_unpin(cx)
         } else if !self.parameters.include_fails {
-            log::info!("not fails");
+            //log::info!("not fails");
             self.not_fails.poll_next_unpin(cx)
         } else {
-            log::info!("all chapter");
+            //log::info!("all chapter");
             self.not_fails.all_chapter.poll_next_unpin(cx)
         }
     }
