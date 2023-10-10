@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use criterion::{measurement::WallTime, BenchmarkGroup, BenchmarkId, Criterion, PlotConfiguration, AxisScale};
+use criterion::{
+    measurement::WallTime, AxisScale, BenchmarkGroup, BenchmarkId, Criterion, PlotConfiguration,
+};
 use mangadex_desktop_api2::{settings::files_dirs::DirsOptions, utils::manga::MangaUtils};
 
 async fn aggregate(manga_id: uuid::Uuid) {

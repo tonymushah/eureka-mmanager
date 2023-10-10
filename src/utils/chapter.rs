@@ -27,7 +27,7 @@ use crate::{
     },
 };
 
-use self::get_all_chapter::{OnlyFails, NotIncludeFails, AsyncGetAllChapter};
+use self::get_all_chapter::{AsyncGetAllChapter, NotIncludeFails, OnlyFails};
 
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
 
@@ -244,13 +244,13 @@ impl ChapterUtils {
         let parameters = parameters.unwrap_or_default();
         let file_dirs = self.dirs_options.clone();
         let all_chapters = Box::pin(self.get_all_chapter_without_history()?);
-        
+
         let hist: HistoryWFile = history
             .get_history_w_file_by_rel_or_init(RelationshipType::Chapter)
             .await?;
         let h = hist.owned_read_history()?;
         let re_h = h.clone();
-        Ok(AsyncGetAllChapter{
+        Ok(AsyncGetAllChapter {
             only_fails: OnlyFails::new(tokio_stream::iter(re_h).filter_map(move |entry| {
                 if Path::new(
                     format!(
@@ -259,14 +259,15 @@ impl ChapterUtils {
                     )
                     .as_str(),
                 )
-                .exists() {
+                .exists()
+                {
                     Some(entry.to_string())
-                }else {
+                } else {
                     None
                 }
             })),
             parameters,
-            not_fails: NotIncludeFails::new(all_chapters, h.clone())
+            not_fails: NotIncludeFails::new(all_chapters, h.clone()),
         })
     }
     pub async fn get_all_downloaded_chapters<'a, H>(
