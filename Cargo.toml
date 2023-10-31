@@ -29,7 +29,7 @@ mangadex-api-schema-rust = { version = "0.4.1", default-features = false, featur
 mangadex-api-types-rust = { version = "0.4", default-features = false }
 log = "^0.4.20"
 fern = {version = "0.6.2", optional = true}
-futures = { version = "0.3.28" }
+futures = { version = "0.3.29" }
 tokio-stream = { version = "0.1"}
 async-stream = { version = "0.3"}
 bytes = { version = "1.5"}
