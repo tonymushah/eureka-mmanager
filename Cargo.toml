@@ -18,7 +18,7 @@ reqwest = { version = "0.11.22", features = [
 ] }
 serde = { version = "1.0.190", features = ["derive"] }
 thiserror = "1.0.50"
-uuid = { version = "1.5.0", features = ["serde", "v4"] }
+uuid = { version = "1.6.1", features = ["serde", "v4"] }
 url = { version = "2.4.1", features = ["serde"] }
 mangadex-api = { version = "2.3.1", default-features = false, features = ["multi-thread", "utils", "deserializable-endpoint"] }
 anyhow = "1.0.75"
