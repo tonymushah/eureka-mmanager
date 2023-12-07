@@ -648,10 +648,11 @@ dependencies = [
 
 [[package]]
 name = "deranged"
-version = "0.3.8"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2696e8a945f658fd14dc3b87242e6b80cd0f36ff04ea560fa39082368847946"
+checksum = "8eb30d70a07a3b04884d2677f06bec33509dc67ca60d92949e5535352d3191dc"
 dependencies = [
+ "powerfmt",
  "serde",
 ]
 
@@ -1204,9 +1205,9 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
 name = "mangadex-api"
-version = "2.3.1"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b194d20f8177bb8b0cfc3cbb0bcfa448abd292e900b6064d1a93a6ed7579291c"
+checksum = "2d27828f2d0621bc665129b2a09df1f422ed98895ae8d35648cc7a92bb43107f"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1214,8 +1215,8 @@ dependencies = [
  "derive_builder",
  "futures",
  "getset",
- "mangadex-api-schema-rust",
- "mangadex-api-types-rust",
+ "mangadex-api-schema-rust 0.6.0",
+ "mangadex-api-types-rust 0.6.0",
  "reqwest",
  "serde",
  "serde_qs",
@@ -1233,7 +1234,22 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1fcef97ae7f91d34227b328fc880681f0af4dd4f8cd197e659c4df70cd104d5"
 dependencies = [
- "mangadex-api-types-rust",
+ "mangadex-api-types-rust 0.4.0",
+ "reqwest",
+ "serde",
+ "serde_qs",
+ "thiserror",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "mangadex-api-schema-rust"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcdd0f828f398ac72cda0d11c7804f5063333772582748cffa32fbe5f6bdb1ec"
+dependencies = [
+ "mangadex-api-types-rust 0.6.0",
  "reqwest",
  "serde",
  "serde_qs",
@@ -1247,6 +1263,22 @@ name = "mangadex-api-types-rust"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59e463f14028aeccba92e444aae67c3d0ff7c05b10f45278d6eee071795d029c"
+dependencies = [
+ "anyhow",
+ "derive_builder",
+ "reqwest",
+ "serde",
+ "thiserror",
+ "time",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "mangadex-api-types-rust"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6625e59988767c41f00c698c5d1bbb66934bfc89c19cde8aef3036eb61874f89"
 dependencies = [
  "anyhow",
  "derive_builder",
@@ -1274,8 +1306,8 @@ dependencies = [
  "itertools 0.12.0",
  "log",
  "mangadex-api",
- "mangadex-api-schema-rust",
- "mangadex-api-types-rust",
+ "mangadex-api-schema-rust 0.4.1",
+ "mangadex-api-types-rust 0.4.0",
  "reqwest",
  "serde",
  "serde_json",
@@ -1536,6 +1568,12 @@ checksum = "38f6d39893cca0701371e3c27294f09797214b86f1fb951b89ade8ec04e2abab"
 dependencies = [
  "plotters-backend",
 ]
+
+[[package]]
+name = "powerfmt"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
 name = "ppv-lite86"
@@ -2081,14 +2119,15 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.29"
+version = "0.3.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "426f806f4089c493dcac0d24c29c01e2c38baf8e30f1b716ee37e83d200b18fe"
+checksum = "c4a34ab300f2dee6e562c10a046fc05e358b29f9bf92277f30c3c8d82275f6f5"
 dependencies = [
  "deranged",
  "itoa",
  "libc",
  "num_threads",
+ "powerfmt",
  "serde",
  "time-core",
  "time-macros",
