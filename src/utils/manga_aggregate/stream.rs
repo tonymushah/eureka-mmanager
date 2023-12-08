@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use futures::Stream;
 use mangadex_api_schema_rust::{
     v5::{
         manga_aggregate::{ChapterAggregate, VolumeAggregate},
@@ -8,7 +7,7 @@ use mangadex_api_schema_rust::{
     },
     ApiObject,
 };
-use tokio_stream::StreamExt;
+use tokio_stream::{StreamExt, Stream};
 
 use crate::settings::file_history::IsIn;
 

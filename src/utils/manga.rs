@@ -1,5 +1,5 @@
 use async_stream::stream;
-use futures::Stream;
+use tokio_stream::Stream;
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAggregate, MangaAttributes};
 use mangadex_api_schema_rust::{ApiData, ApiObject};

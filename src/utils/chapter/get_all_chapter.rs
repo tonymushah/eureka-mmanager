@@ -3,7 +3,6 @@ use std::task::Poll;
 use crate::settings::file_history::{History, IsIn};
 
 use super::GetAllChapter;
-use futures::StreamExt;
 use tokio_stream::Stream;
 
 pub struct OnlyFails<T>

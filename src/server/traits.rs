@@ -1,6 +1,5 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, future::Future};
 
-use futures::Future;
 use mangadex_api_types_rust::RelationshipType;
 use tokio::task::AbortHandle;
 

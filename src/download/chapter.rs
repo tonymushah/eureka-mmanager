@@ -1,4 +1,4 @@
-use futures::StreamExt;
+
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
 use log::info;

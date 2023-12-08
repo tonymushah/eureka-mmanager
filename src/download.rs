@@ -1,5 +1,5 @@
-use futures::Future;
 use std::fmt::Debug;
+use std::future::Future;
 use std::{ops::Deref, sync::Arc};
 use tokio::sync::oneshot::channel;
 use tokio::sync::{RwLock, Semaphore};
