@@ -76,20 +76,18 @@ impl ChapterUtils {
             )))
         }
     }
-    pub(self) async fn update_chap_by_id<'a, H, D>(
+    pub(self) async fn update_chap_by_id<'a, T>(
         &'a self,
         id: String,
-        history: &'a mut H,
-        task_manager: &'a mut D,
+        ctx: &'a mut T,
     ) -> ManagerCoreResult<ApiData<ApiObject<ChapterAttributes>>>
     where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
+        T: AccessHistory + AccessDownloadTasks,
     {
         let chap_id = uuid::Uuid::parse_str(id.as_str())?;
         let entry = HistoryEntry::new(chap_id, RelationshipType::Chapter);
         <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
-            history, entry,
+            ctx, entry,
         )
         .await?;
         let data = ChapterDownload::new(
@@ -97,23 +95,21 @@ impl ChapterUtils {
             self.dirs_options.clone(),
             self.http_client_ref.clone(),
         )
-        .download_json_data(task_manager)
+        .download_json_data(ctx)
         .await?;
         <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
-            history, entry,
+            ctx, entry,
         )
         .await?;
         Ok(data)
     }
-    pub(self) async fn patch_manga_by_chapter<'a, H, D>(
+    pub(self) async fn patch_manga_by_chapter<'a, T>(
         &'a self,
         chap_id: String,
-        history: &'a mut H,
-        task_manager: &'a mut D,
+        ctx: &'a mut T
     ) -> ManagerCoreResult<serde_json::Value>
     where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
+        T: AccessHistory + AccessDownloadTasks,
     {
         let manga_utils: MangaUtils = From::from(self);
         let chapter: ApiObject<ChapterAttributes> = self.get_chapter_by_id(chap_id.clone())?;
@@ -134,7 +130,7 @@ impl ChapterUtils {
         let type_ = manga.type_;
         let history_entry = HistoryEntry::new(manga_id, type_);
         <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
-            history,
+            ctx,
             history_entry,
         )
         .await?;
@@ -143,7 +139,7 @@ impl ChapterUtils {
             manga_utils.dirs_options,
             manga_utils.http_client_ref,
         )
-        .download_manga(task_manager)
+        .download_manga(ctx)
         .await?;
         let jsons = serde_json::json!({
             "result" : "ok",
@@ -152,7 +148,7 @@ impl ChapterUtils {
         });
         info!("downloaded {}.json", manga_id.hyphenated());
         <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
-            history,
+            ctx,
             history_entry,
         )
         .await?;
