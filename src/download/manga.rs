@@ -37,7 +37,7 @@ impl MangaDownload {
     {
         let manga_utils: MangaUtilsWithMangaId = From::from(self);
         let id = format!("{}", self.manga_id);
-        let http_client = self.http_client.lock().await.client.clone();
+        let http_client = self.http_client.read().await.client.clone();
         let task : ManagerCoreResult<String> = task_manager.lock_spawn_with_data(async move {
             let resp = send_request(http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)), 5).await?;
             let bytes = resp.bytes().await?;

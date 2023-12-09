@@ -18,6 +18,8 @@ use crate::settings::{self};
 use crate::utils::cover::CoverUtilsWithId;
 use crate::utils::manga::MangaUtilsWithMangaId;
 
+use mangadex_api_types_rust::error::Result as MangadexResult;
+
 use super::manga::MangaDownload;
 
 #[derive(Clone)]
@@ -43,7 +45,7 @@ impl CoverDownload {
         let json_cover = self
             .dirs_options
             .covers_add(format!("{}.json", cover_id).as_str());
-        let http_client = self.http_client.lock().await.client.clone();
+        let http_client = self.http_client.read().await.client.clone();
         task_manager
             .lock_spawn_with_data(async move {
                 let resps = http_client
@@ -76,7 +78,7 @@ impl CoverDownload {
     {
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
         let cover_id = self.cover_id;
-        let res: ManagerCoreResult<(String, Option<bytes::Bytes>)> = task_manager
+        let res: ManagerCoreResult<(String, MangadexResult<bytes::Bytes>)> = task_manager
             .lock_spawn_with_data(async move {
                 let resp = client
                     .download()
@@ -93,7 +95,7 @@ impl CoverDownload {
         let files_dirs = settings::files_dirs::DirsOptions::new()?;
         let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
 
-        if let Some(bytes) = bytes_ {
+        if let Ok(bytes) = bytes_ {
             {
                 let file = File::create(file_path)?;
                 let mut writer = BufWriter::new(file);
@@ -125,7 +127,7 @@ impl CoverDownload {
     {
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
         let cover_id = self.cover_id;
-        let res: ManagerCoreResult<(String, Option<bytes::Bytes>)> = task_manager
+        let res: ManagerCoreResult<(String, MangadexResult<bytes::Bytes>)> = task_manager
             .lock_spawn_with_data(async move {
                 let resp = client
                     .download()
@@ -143,7 +145,7 @@ impl CoverDownload {
         let files_dirs = settings::files_dirs::DirsOptions::new()?;
         let file_path = files_dirs.covers_add(format!("images/{}", filename.as_str()).as_str());
 
-        if let Some(bytes) = bytes_ {
+        if let Ok(bytes) = bytes_ {
             {
                 let file = File::create(file_path)?;
                 let mut writer = BufWriter::new(file);
@@ -235,9 +237,8 @@ impl CoverDownloadWithManga {
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
         let manga = client
             .manga()
+            .id(self.manga_id)
             .get()
-            .manga_id(self.manga_id)
-            .build()?
             .send()
             .await?;
         let cover_id = match manga
@@ -274,9 +275,8 @@ impl CoverDownloadWithManga {
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
         let manga = client
             .manga()
+            .id(self.manga_id)
             .get()
-            .manga_id(self.manga_id)
-            .build()?
             .send()
             .await?;
         let cover_id = match manga
@@ -314,10 +314,9 @@ impl CoverDownloadWithManga {
 
         let covers = client
             .cover()
-            .list()
+            .get()
             .add_manga_id(self.manga_id)
             .limit(limit)
-            .build()?
             .send()
             .await?;
         let mut vecs: Vec<String> = Vec::new();

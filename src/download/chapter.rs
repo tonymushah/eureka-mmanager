@@ -1,4 +1,3 @@
-
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
 use log::info;
@@ -9,6 +8,7 @@ use serde_json::json;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::sync::Arc;
+use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use crate::core::Error;
@@ -50,7 +50,7 @@ impl ChapterDownload {
         let path = self
             .dirs_options
             .chapters_add(format!("{}/data.json", id).as_str());
-        let http_client = self.http_client.lock().await.client.clone();
+        let http_client = self.http_client.read().await.client.clone();
         //log::info!("{path}");
         task_manager.lock_spawn_with_data(async move {
             let get_chapter = http_client
@@ -187,43 +187,38 @@ impl ChapterDownload {
 
                 tokio::pin!(stream);
 
-                while let Some((result, index, len, opt_filename)) = stream.next().await {
-                    match result {
-                        Ok((filename, bytes_)) => {
-                            if let Some(bytes) = bytes_ {
-                                match File::create(format!(
-                                    "{}/{}",
-                                    chapter_dir.clone(),
-                                    filename.clone()
-                                )) {
-                                    Ok(file) => match {
-                                        let mut buf_writer = BufWriter::new(file);
-                                        buf_writer.write_all(&bytes)
-                                    } {
-                                        Ok(_) => {
-                                            info!("{index} - {len} : Downloaded {filename}");
-                                            files_.push(filename);
-                                        }
-                                        Err(e) => {
-                                            log::error!("{index} - {len} : {}", e.to_string());
-                                            errors.push(filename);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        log::error!("{index} - {len} : {}", e.to_string());
-                                        errors.push(filename);
-                                    }
+                while let Some(((filename, bytes_), index, len)) = stream.next().await {
+                    if let Ok(bytes) = bytes_ {
+                        match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone()))
+                        {
+                            Ok(file) => match {
+                                let mut buf_writer = BufWriter::new(file);
+                                buf_writer.write_all(&bytes)
+                            } {
+                                Ok(_) => {
+                                    info!("{index} - {len} : Downloaded {filename}");
+                                    files_.push(filename);
                                 }
-                            } else {
-                                info!("{index} - {len} : Skipped {}", filename);
+                                Err(e) => {
+                                    log::error!("{index} - {len} : {}", e.to_string());
+                                    errors.push(filename);
+                                }
+                            },
+                            Err(e) => {
+                                log::error!("{index} - {len} : {}", e.to_string());
+                                errors.push(filename);
                             }
                         }
-                        Err(error) => {
+                    } else if let Err(error) = bytes_ {
+                        if let mangadex_api_types_rust::error::Error::SkippedDownload(f) = error {
+                            info!("{index} - {len} : Skipped {}", f);
+                        } else {
                             log::error!("{index} - {len} : {}", error.to_string());
-                            errors.push(opt_filename);
+                            errors.push(filename);
                         }
                     }
                 }
+
                 if !errors.is_empty() {
                     has_error = true;
                 }
@@ -309,41 +304,34 @@ impl ChapterDownload {
 
                 tokio::pin!(stream);
 
-                while let Some((result, index, len, opt_filename)) = stream.next().await {
-                    match result {
-                        Ok((filename, bytes_)) => {
-                            if let Some(bytes) = bytes_ {
-                                match File::create(format!(
-                                    "{}/{}",
-                                    chapter_dir.clone(),
-                                    filename.clone()
-                                )) {
-                                    Ok(file) => match {
-                                        let mut buf_writer = BufWriter::new(file);
-                                        buf_writer.write_all(&bytes)?;
-                                        buf_writer.flush()
-                                    } {
-                                        Ok(_) => {
-                                            info!("{index} - {len} : Downloaded {filename}");
-                                            files_.push(filename);
-                                        }
-                                        Err(e) => {
-                                            log::error!("{index} - {len} : {}", e.to_string());
-                                            errors.push(filename);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        log::error!("{index} - {len} : {}", e.to_string());
-                                        errors.push(filename);
-                                    }
+                while let Some(((filename, bytes_), index, len)) = stream.next().await {
+                    if let Ok(bytes) = bytes_ {
+                        match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone()))
+                        {
+                            Ok(file) => match {
+                                let mut buf_writer = BufWriter::new(file);
+                                buf_writer.write_all(&bytes)
+                            } {
+                                Ok(_) => {
+                                    info!("{index} - {len} : Downloaded {filename}");
+                                    files_.push(filename);
                                 }
-                            } else {
-                                info!("{index} - {len} : Skipped {}", filename);
+                                Err(e) => {
+                                    log::error!("{index} - {len} : {}", e.to_string());
+                                    errors.push(filename);
+                                }
+                            },
+                            Err(e) => {
+                                log::error!("{index} - {len} : {}", e.to_string());
+                                errors.push(filename);
                             }
                         }
-                        Err(error) => {
+                    } else if let Err(error) = bytes_ {
+                        if let mangadex_api_types_rust::error::Error::SkippedDownload(f) = error {
+                            info!("{index} - {len} : Skipped {}", f);
+                        } else {
                             log::error!("{index} - {len} : {}", error.to_string());
-                            errors.push(opt_filename);
+                            errors.push(filename);
                         }
                     }
                 }

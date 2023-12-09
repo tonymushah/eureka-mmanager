@@ -140,17 +140,10 @@ impl ResponseError for Error {
             }),
             Error::MangadexBuilderError(e) => actix_web::HttpResponse::InternalServerError()
                 .json(WhenError {
-                    type_: ErrorType::ChapterDownloadBuilderError,
+                    type_: ErrorType::MangadexBuilderError,
                     message: e.to_string(),
                     result: "error".to_string(),
                 }),
-            Error::ListCoverBuilderError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::ListCoverBuilderError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
             Error::DownloadTaskLimitExceded { current, limit } => {
                 actix_web::HttpResponse::TooManyRequests().json(WhenError {
                     type_: ErrorType::DownloadTaskLimitExceded,

@@ -1,3 +1,4 @@
+use std::pin::Pin;
 use std::task::Poll;
 
 use crate::settings::file_history::{History, IsIn};
@@ -31,7 +32,7 @@ where
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        self.inner.poll_next_unpin(cx)
+        Pin::new(&mut self.inner).poll_next(cx)
     }
 }
 
@@ -66,7 +67,7 @@ where
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         loop {
-            if let Poll::Ready(getted) = self.all_chapter.poll_next_unpin(cx) {
+            if let Poll::Ready(getted) = Pin::new(&mut self.all_chapter).poll_next(cx) {
                 if let Some(id) = getted {
                     if let Ok(uuid) = uuid::Uuid::parse_str(id.clone().as_str()) {
                         if self.history.is_in(uuid).is_none() {
@@ -108,13 +109,13 @@ where
     ) -> Poll<Option<Self::Item>> {
         if self.parameters.only_fails {
             //log::info!("Only fails");
-            self.only_fails.poll_next_unpin(cx)
+            Pin::new(&mut self.only_fails).poll_next(cx)
         } else if !self.parameters.include_fails {
             //log::info!("not fails");
-            self.not_fails.poll_next_unpin(cx)
+            Pin::new(&mut self.not_fails).poll_next(cx)
         } else {
             //log::info!("all chapter");
-            self.not_fails.all_chapter.poll_next_unpin(cx)
+            Pin::new(&mut self.not_fails.all_chapter).poll_next(cx)
         }
     }
 }
