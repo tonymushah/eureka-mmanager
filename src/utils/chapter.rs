@@ -1,10 +1,8 @@
-use log::info;
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiData, ApiObject};
+use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiObject};
 use mangadex_api_types_rust::RelationshipType;
+use uuid::Uuid;
 use std::{
-    fs::File,
-    io::{BufReader, ErrorKind},
     path::Path,
     sync::Arc,
 };
@@ -13,16 +11,10 @@ use tokio_stream::{Stream, StreamExt};
 use crate::{
     core::{Error, ManagerCoreResult},
     download::chapter::ChapterDownload,
-    download::manga::MangaDownload,
     methods::get::_find_all_downloaded_chapter::GetChapterQuery,
-    server::traits::{AccessDownloadTasks, AccessHistory},
+    server::traits::AccessHistory,
     settings::{
-        file_history::{
-            history_w_file::traits::{
-                NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
-            },
-            HistoryEntry, HistoryWFile,
-        },
+        file_history:: HistoryWFile,
         files_dirs::DirsOptions,
     },
 };
@@ -32,6 +24,10 @@ use self::get_all_chapter::{AsyncGetAllChapter, NotIncludeFails, OnlyFails};
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
 
 mod get_all_chapter;
+mod with_id;
+
+pub use with_id::{ChapterUtilsWithID, AccessChapterUtisWithID};
+pub use get_all_chapter::GetAllChapter;
 
 #[derive(Clone)]
 pub struct ChapterUtils {
@@ -46,137 +42,15 @@ impl ChapterUtils {
             http_client_ref,
         }
     }
-    pub(self) fn is_chapter_manga_there(&self, chap_id: String) -> ManagerCoreResult<bool> {
-        let manga_utils: MangaUtils = From::from(self);
-        if !chap_id.is_empty() {
-            let path = self
-                .dirs_options
-                .chapters_add(format!("{}/data.json", chap_id).as_str());
-            let chap_data: ApiData<ApiObject<ChapterAttributes>> =
-                serde_json::from_reader(BufReader::new(File::open(path)?))?;
-            let manga_id: uuid::Uuid = match chap_data
-                .data
-                .relationships
-                .iter()
-                .find(|rel| rel.type_ == RelationshipType::Manga)
-            {
-                Some(data) => data.id,
-                None => {
-                    return ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Seems like your chapter has no manga related to him",
-                    )));
-                }
-            };
-            Ok(manga_utils.with_id(format!("{}", manga_id)).is_there()?)
-        } else {
-            ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "the chap_id should'nt be empty",
-            )))
-        }
-    }
-    pub(self) async fn update_chap_by_id<'a, T>(
-        &'a self,
-        id: String,
-        ctx: &'a mut T,
-    ) -> ManagerCoreResult<ApiData<ApiObject<ChapterAttributes>>>
-    where
-        T: AccessHistory + AccessDownloadTasks,
-    {
-        let chap_id = uuid::Uuid::parse_str(id.as_str())?;
-        let entry = HistoryEntry::new(chap_id, RelationshipType::Chapter);
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
-            ctx, entry,
-        )
-        .await?;
-        let data = ChapterDownload::new(
-            chap_id,
-            self.dirs_options.clone(),
-            self.http_client_ref.clone(),
-        )
-        .download_json_data(ctx)
-        .await?;
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
-            ctx, entry,
-        )
-        .await?;
-        Ok(data)
-    }
-    pub(self) async fn patch_manga_by_chapter<'a, T>(
-        &'a self,
-        chap_id: String,
-        ctx: &'a mut T
-    ) -> ManagerCoreResult<serde_json::Value>
-    where
-        T: AccessHistory + AccessDownloadTasks,
-    {
-        let manga_utils: MangaUtils = From::from(self);
-        let chapter: ApiObject<ChapterAttributes> = self.get_chapter_by_id(chap_id.clone())?;
-        let manga = match chapter
-            .relationships
-            .iter()
-            .find(|related| related.type_ == RelationshipType::Manga)
-        {
-            None => {
-                return Err(Error::Io(std::io::Error::new(
-                    ErrorKind::Other,
-                    format!("can't find manga in the chapter {}", chap_id.clone()).as_str(),
-                )));
-            }
-            Some(data) => data,
-        };
-        let manga_id = manga.id;
-        let type_ = manga.type_;
-        let history_entry = HistoryEntry::new(manga_id, type_);
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
-            ctx,
-            history_entry,
-        )
-        .await?;
-        MangaDownload::new(
-            manga_id,
-            manga_utils.dirs_options,
-            manga_utils.http_client_ref,
-        )
-        .download_manga(ctx)
-        .await?;
-        let jsons = serde_json::json!({
-            "result" : "ok",
-            "type" : "manga",
-            "id" : manga_id.hyphenated()
-        });
-        info!("downloaded {}.json", manga_id.hyphenated());
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
-            ctx,
-            history_entry,
-        )
-        .await?;
-        Ok(jsons)
-    }
-    pub(self) fn get_chapter_by_id<T>(
-        &self,
-        chap_id: T,
-    ) -> ManagerCoreResult<ApiObject<ChapterAttributes>>
-    where
-        T: ToString,
-    {
-        let path = self
-            .dirs_options
-            .chapters_add(format!("{}/data.json", chap_id.to_string()).as_str());
-        let data: ApiData<ApiObject<ChapterAttributes>> =
-            serde_json::from_reader(BufReader::new(File::open(path)?))?;
-        Ok(data.data)
-    }
     pub fn get_chapters_by_stream_id<'a, T>(
         &'a self,
         chap_ids: T,
     ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + 'a
     where
-        T: Stream<Item = String> + std::marker::Unpin + 'a,
+        T: Stream<Item = Uuid> + std::marker::Unpin + 'a,
     {
         chap_ids.filter_map(|id| {
-            if let Ok(data_) = self.get_chapter_by_id(id) {
+            if let Ok(data_) = self.with_id(id).get_data() {
                 Some(data_)
             } else {
                 None
@@ -190,10 +64,10 @@ impl ChapterUtils {
     }
     pub fn get_chapters_by_vec_id(
         &self,
-        chap_ids: Vec<String>,
+        chap_ids: Vec<Uuid>,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
         Ok(tokio_stream::iter(chap_ids).filter_map(move |id| {
-            if let Ok(data_) = self.get_chapter_by_id(id) {
+            if let Ok(data_) = self.with_id(id).get_data() {
                 Some(data_)
             } else {
                 None
@@ -202,7 +76,7 @@ impl ChapterUtils {
     }
     pub fn get_all_chapter_without_history(
         &self,
-    ) -> ManagerCoreResult<impl Stream<Item = String> + '_> {
+    ) -> ManagerCoreResult<impl Stream<Item = Uuid> + '_> {
         let file_dirs = self.dirs_options.clone();
         let path = file_dirs.chapters_add("");
         if Path::new(path.as_str()).exists() {
@@ -220,7 +94,13 @@ impl ChapterUtils {
                     } else {
                         None
                     }
-                }),
+                }).filter_map(|input| {
+                    if let Ok(id) = Uuid::parse_str(&input) {
+                        Some(id)
+                    }else{
+                        None
+                    }
+                })
             )
         } else {
             Err(Error::Io(std::io::Error::new(
@@ -233,7 +113,7 @@ impl ChapterUtils {
         &'a self,
         parameters: Option<GetAllChapter>,
         history: &'a mut H,
-    ) -> ManagerCoreResult<impl Stream<Item = String> + 'a>
+    ) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a>
     where
         H: AccessHistory,
     {
@@ -257,7 +137,7 @@ impl ChapterUtils {
                 )
                 .exists()
                 {
-                    Some(entry.to_string())
+                    Some(entry)
                 } else {
                     None
                 }
@@ -270,7 +150,7 @@ impl ChapterUtils {
         &'a self,
         parameters: Option<GetChapterQuery>,
         history: &'a mut H,
-    ) -> ManagerCoreResult<Collection<String>>
+    ) -> ManagerCoreResult<Collection<Uuid>>
     where
         H: AccessHistory,
     {
@@ -278,7 +158,7 @@ impl ChapterUtils {
             let stream = self
                 .get_all_chapter(Some(GetAllChapter::from(param.clone())), history)
                 .await?;
-            let collection: Collection<String> = Collection::from_async_stream(
+            let collection: Collection<Uuid> = Collection::from_async_stream(
                 stream,
                 param.clone().limit.unwrap_or(10),
                 param.offset.unwrap_or(0),
@@ -287,12 +167,12 @@ impl ChapterUtils {
             Ok(collection)
         } else {
             let stream = self.get_all_chapter(None, history).await?;
-            let collection: Collection<String> =
+            let collection: Collection<Uuid> =
                 Collection::from_async_stream(stream, 10, 0).await?;
             Ok(collection)
         }
     }
-    pub fn with_id(&self, chapter_id: String) -> ChapterUtilsWithID {
+    pub fn with_id(&self, chapter_id: Uuid) -> ChapterUtilsWithID {
         ChapterUtilsWithID {
             chapter_utils: self.clone(),
             chapter_id,
@@ -300,74 +180,6 @@ impl ChapterUtils {
     }
 }
 
-#[derive(Clone)]
-pub struct ChapterUtilsWithID {
-    pub chapter_utils: ChapterUtils,
-    pub(crate) chapter_id: String,
-}
-
-impl ChapterUtilsWithID {
-    pub fn new(chapter_id: String, chapter_utils: ChapterUtils) -> Self {
-        Self {
-            chapter_utils,
-            chapter_id,
-        }
-    }
-    pub fn is_manga_there(&self) -> ManagerCoreResult<bool> {
-        self.chapter_utils
-            .is_chapter_manga_there(self.chapter_id.clone())
-    }
-    pub async fn update<'a, H, D>(
-        &'a self,
-        history: &'a mut H,
-        task_manager: &'a mut D,
-    ) -> ManagerCoreResult<ApiData<ApiObject<ChapterAttributes>>>
-    where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
-    {
-        self.chapter_utils
-            .update_chap_by_id(self.chapter_id.clone(), history, task_manager)
-            .await
-    }
-    pub async fn patch_manga<'a, H, D>(
-        &'a self,
-        history: &'a mut H,
-        task_manager: &'a mut D,
-    ) -> ManagerCoreResult<serde_json::Value>
-    where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
-    {
-        self.chapter_utils
-            .patch_manga_by_chapter(self.chapter_id.clone(), history, task_manager)
-            .await
-    }
-    pub fn get_chapter(&self) -> ManagerCoreResult<ApiObject<ChapterAttributes>> {
-        self.chapter_utils
-            .get_chapter_by_id(self.chapter_id.clone())
-    }
-}
-
-#[async_trait::async_trait]
-pub trait AccessChapterUtisWithID:
-    AccessDownloadTasks + AccessHistory + Sized + Send + Sync + Clone
-{
-    async fn update<'a>(
-        &'a mut self,
-        chapter_util_with_id: &'a ChapterUtilsWithID,
-    ) -> ManagerCoreResult<ApiData<ApiObject<ChapterAttributes>>> {
-        let mut reself = self.clone();
-        chapter_util_with_id.update(self, &mut reself).await
-    }
-    async fn patch_manga<'a>(
-        &'a mut self,
-        chapter_util_with_id: &'a ChapterUtilsWithID,
-    ) -> ManagerCoreResult<serde_json::Value> {
-        let mut reself = self.clone();
-        chapter_util_with_id.patch_manga(self, &mut reself).await
-    }
-}
 
 impl From<MangaUtils> for ChapterUtils {
     fn from(value: MangaUtils) -> Self {
@@ -420,49 +232,6 @@ impl<'a> From<&'a mut ChapterDownload> for ChapterUtils {
     }
 }
 
-impl From<ChapterDownload> for ChapterUtilsWithID {
-    fn from(value: ChapterDownload) -> Self {
-        let chapter_id = value.chapter_id.to_string();
-        Self {
-            chapter_utils: From::from(value),
-            chapter_id,
-        }
-    }
-}
-
-impl From<&ChapterDownload> for ChapterUtilsWithID {
-    fn from(value: &ChapterDownload) -> Self {
-        Self {
-            chapter_utils: From::from(value),
-            chapter_id: value.chapter_id.to_string(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct GetAllChapter {
-    pub include_fails: bool,
-    pub only_fails: bool,
-}
-
-impl Default for GetAllChapter {
-    fn default() -> Self {
-        Self {
-            include_fails: true,
-            only_fails: false,
-        }
-    }
-}
-
-impl From<GetChapterQuery> for GetAllChapter {
-    fn from(value: GetChapterQuery) -> Self {
-        Self {
-            include_fails: value.include_fails.unwrap_or(true),
-            only_fails: value.only_fails.unwrap_or(false),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -473,7 +242,8 @@ mod tests {
             Arc::new(DirsOptions::new().unwrap()),
             HttpClientRef::default(),
         )
-        .get_chapter_by_id("167fb8f3-1180-4b1c-ac02-a01dc24b8865".to_string())
+        .with_id(Uuid::parse_str("167fb8f3-1180-4b1c-ac02-a01dc24b8865").unwrap())
+        .get_data()
         .unwrap();
         println!("{}", serde_json::to_string(&data).unwrap());
     }
