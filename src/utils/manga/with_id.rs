@@ -15,7 +15,6 @@ use uuid::Uuid;
 
 use crate::{
     download::manga::MangaDownload,
-    server::traits::AccessHistory,
     utils::{chapter::ChapterUtils, collection::Collection, cover::CoverUtils, manga_aggregate},
     ManagerCoreResult,
 };
@@ -49,14 +48,14 @@ impl MangaUtilsWithMangaId {
         Ok(stream.map(|chapter| chapter.id))
     }
 
-    pub fn get_downloaded_covers<'a>(
-        &'a self,
-    ) -> impl Stream<Item = ApiObject<CoverAttributes>> + 'a {
+    pub fn get_downloaded_covers(
+        &self,
+    ) -> impl Stream<Item = ApiObject<CoverAttributes>> + '_ {
         stream! {
             let cover_utils: CoverUtils = From::from(self.manga_utils.clone());
             if let Ok(vecs) = cover_utils.get_all_cover_data(){
                 let vecs = Box::pin(vecs);
-                let mut data = vecs.filter(move |data| self.is_cover_related(&data));
+                let mut data = vecs.filter(move |data| self.is_cover_related(data));
                 while let Some(data) = data.next().await{
                     yield data;
                 }
@@ -78,9 +77,9 @@ impl MangaUtilsWithMangaId {
             serde_json::from_reader(BufReader::new(File::open(Into::<PathBuf>::into(self))?))?;
         Ok(data.data)
     }
-    pub fn get_all_downloaded_chapter_data<'a>(
-        &'a self,
-    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + 'a {
+    pub fn get_all_downloaded_chapter_data(
+        &self,
+    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + '_ {
         let chapter_utils: ChapterUtils = From::from(self.manga_utils.clone());
         stream! {
             if let Ok(data) = chapter_utils.get_all_chapters_data() {
@@ -145,7 +144,7 @@ impl MangaUtilsWithMangaId {
             volumes,
         })
     }
-    pub fn delete_chapters<'a>(&'a self) -> impl Stream<Item = Uuid> + 'a {
+    pub fn delete_chapters(&self) -> impl Stream<Item = Uuid> + '_ {
         let stream = Box::pin(self.get_all_downloaded_chapter_data());
         stream.filter_map(|chapter| {
             if std::fs::remove_dir_all(
@@ -161,7 +160,7 @@ impl MangaUtilsWithMangaId {
             }
         })
     }
-    pub fn delete_covers<'a>(&'a self) -> impl Stream<Item = Uuid> + 'a {
+    pub fn delete_covers(&self) -> impl Stream<Item = Uuid> + '_ {
         let cover_utils: CoverUtils = From::from(self.manga_utils.clone());
         self.get_downloaded_covers().filter_map(move |cover| {
             if cover_utils.with_id(cover.id).delete().is_ok() {

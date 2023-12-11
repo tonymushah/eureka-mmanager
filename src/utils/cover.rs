@@ -1,6 +1,6 @@
 mod with_id;
 
-use std::{fs::Metadata, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use mangadex_api::HttpClientRef;
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiObject};
@@ -52,9 +52,9 @@ impl CoverUtils {
             ))
         }
     }
-    pub fn get_all_cover_data<'a>(
-        &'a self,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<CoverAttributes>> + 'a> {
+    pub fn get_all_cover_data(
+        &self,
+    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<CoverAttributes>> + '_> {
         Ok(Box::pin(self.get_all_cover()?).filter_map(|id| self.with_id(id).get_data().ok()))
     }
     pub fn with_id(&self, cover_id: Uuid) -> CoverUtilsWithId {
