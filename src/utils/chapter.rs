@@ -57,9 +57,9 @@ impl ChapterUtils {
             }
         })
     }
-    pub fn get_all_chapters_data<'a>(
-        &'a self,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
+    pub fn get_all_chapters_data(
+        &self,
+    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
         Ok(self.get_chapters_by_stream_id(Box::pin(self.get_all_chapter_without_history()?)))
     }
     pub fn get_chapters_by_vec_id(

@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufReader, ErrorKind}, path::Path};
+use std::{fs::File, io::{BufReader, ErrorKind}, path::{Path, PathBuf}};
 
 use log::info;
 use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiData, ApiObject};
@@ -34,7 +34,7 @@ impl ChapterUtilsWithID {
         }
     }
     pub fn is_manga_there(&self) -> ManagerCoreResult<bool> {
-        let manga_utils: MangaUtils = From::from(self.chapter_utils);
+        let manga_utils: MangaUtils = From::from(self.chapter_utils.clone());
         let chap_data = self.get_data()?;
         let manga_id = chap_data
             .find_first_relationships(RelationshipType::Manga)
@@ -126,17 +126,26 @@ impl ChapterUtilsWithID {
         Ok(data.data)
     }
     pub fn delete(&self) -> ManagerCoreResult<()> {
-        std::fs::remove_dir_all(self)?;
+        std::fs::remove_dir_all(std::convert::Into::<PathBuf>::into(self))?;
         Ok(())
     }
 }
 
-impl AsRef<Path> for ChapterUtilsWithID {
-    fn as_ref(&self) -> &Path {
-        &Path::new(&self
+impl From<ChapterUtilsWithID> for PathBuf {
+    fn from(value: ChapterUtilsWithID) -> Self {
+        Path::new(&value
             .chapter_utils
             .dirs_options
-            .chapters_add(self.chapter_id.to_string().as_str()))
+            .chapters_add(value.chapter_id.to_string().as_str())).to_path_buf()
+    }
+}
+
+impl From<&ChapterUtilsWithID> for PathBuf {
+    fn from(value: &ChapterUtilsWithID) -> Self {
+        Path::new(&value
+            .chapter_utils
+            .dirs_options
+            .chapters_add(value.chapter_id.to_string().as_str())).to_path_buf()
     }
 }
 

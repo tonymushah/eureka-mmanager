@@ -7,13 +7,13 @@ use mangadex_desktop_api2::{settings::files_dirs::DirsOptions, utils::manga::Man
 
 async fn aggregate(manga_id: uuid::Uuid) {
     let manga_utils = MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default())
-        .with_id(manga_id.to_string());
+        .with_id(manga_id);
     serde_json::to_string(&(manga_utils.aggregate_manga_chapters().await.unwrap())).unwrap();
 }
 
 async fn aggregate_stream(manga_id: uuid::Uuid) {
     let manga_utils = MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default())
-        .with_id(manga_id.to_string());
+        .with_id(manga_id);
     serde_json::to_string(
         &(manga_utils
             .aggregate_manga_chapters_async_friendly()

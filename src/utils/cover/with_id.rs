@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
 use uuid::Uuid;
 
@@ -33,7 +33,7 @@ impl CoverUtilsWithId {
     }
     pub fn get_data(&self) -> ManagerCoreResult<ApiObject<CoverAttributes>> {
         let data: ApiData<ApiObject<CoverAttributes>> =
-            serde_json::from_reader(BufReader::new(File::open(self)?))?;
+            serde_json::from_reader(BufReader::new(File::open(Into::<PathBuf>::into(self))?))?;
         Ok(data.data)
     }
     pub fn get_image_path(&self) -> ManagerCoreResult<PathBuf> {
@@ -52,9 +52,9 @@ impl CoverUtilsWithId {
         Ok(BufWriter::new(File::create(self.get_image_path()?)?))
     }
     pub fn get_image_buf(&self) -> ManagerCoreResult<Bytes> {
-        let mut bytes = Bytes::new();
-        self.get_image_buf_reader()?.read(&mut bytes)?;
-        Ok(bytes)
+        let mut bytes = BytesMut::new();
+        self.get_image_buf_reader()?.read_exact(&mut bytes)?;
+        Ok(bytes.into())
     }
     pub fn delete_image(&self) -> ManagerCoreResult<()> {
         std::fs::remove_file(self.get_image_path()?)?;
@@ -62,19 +62,30 @@ impl CoverUtilsWithId {
     }
     pub fn delete(&self) -> ManagerCoreResult<()> {
         self.delete_image()?;
-        std::fs::remove_file(self)?;
+        std::fs::remove_file(Into::<PathBuf>::into(self))?;
         Ok(())
     }
 }
 
-impl AsRef<Path> for CoverUtilsWithId {
-    fn as_ref(&self) -> &Path {
-        &Path::new(
-            &self
+impl From<CoverUtilsWithId> for PathBuf {
+    fn from(value: CoverUtilsWithId) -> Self {
+        Path::new(
+            &value
                 .cover_utils
                 .dirs_options
-                .covers_add(format!("{}.json", self.cover_id).as_str()),
-        )
+                .covers_add(format!("{}.json", value.cover_id).as_str()),
+        ).to_path_buf()
+    }
+}
+
+impl From<&CoverUtilsWithId> for PathBuf {
+    fn from(value: &CoverUtilsWithId) -> Self {
+        Path::new(
+            &value
+                .cover_utils
+                .dirs_options
+                .covers_add(format!("{}.json", value.cover_id).as_str()),
+        ).to_path_buf()
     }
 }
 

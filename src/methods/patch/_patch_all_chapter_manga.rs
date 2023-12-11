@@ -20,11 +20,9 @@ pub async fn patch_all_chapter_manga(
     while let Some(id) = stream.next().await {
         let utils = app_state.chapter_utils().with_id(id);
         if let Ok(is_there) = utils.is_manga_there() {
-            if !is_there {
-                if let Ok(_) = app_state.patch_manga(&utils).await {
-                    vecs.push(id);
-                    info!("downloaded manga data {}", id);
-                }
+            if !is_there && (app_state.patch_manga(&utils).await).is_ok() {
+                vecs.push(id);
+                info!("downloaded manga data {}", id);
             }
         }
     }

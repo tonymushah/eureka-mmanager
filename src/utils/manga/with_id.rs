@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::BufReader,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use async_stream::stream;
@@ -75,7 +75,7 @@ impl MangaUtilsWithMangaId {
     }
     pub fn get_data(&self) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
         let data: ApiData<ApiObject<MangaAttributes>> =
-            serde_json::from_reader(BufReader::new(File::open(self)?))?;
+            serde_json::from_reader(BufReader::new(File::open(Into::<PathBuf>::into(self))?))?;
         Ok(data.data)
     }
     pub fn get_all_downloaded_chapter_data<'a>(
@@ -174,7 +174,7 @@ impl MangaUtilsWithMangaId {
     pub async fn delete(&self) -> ManagerCoreResult<()> {
         self.delete_chapters().collect::<Vec<Uuid>>().await;
         self.delete_covers().collect::<Vec<Uuid>>().await;
-        std::fs::remove_file(self)?;
+        std::fs::remove_file(Into::<PathBuf>::into(self))?;
         Ok(())
     }
 }
@@ -198,13 +198,24 @@ impl From<MangaDownload> for MangaUtilsWithMangaId {
     }
 }
 
-impl AsRef<Path> for MangaUtilsWithMangaId {
-    fn as_ref(&self) -> &Path {
-        &Path::new(
-            &self
+impl From<MangaUtilsWithMangaId> for PathBuf {
+    fn from(value: MangaUtilsWithMangaId) -> Self {
+        Path::new(
+            &value
                 .manga_utils
                 .dirs_options
-                .mangas_add(format!("{}.json", self.manga_id).as_str()),
-        )
+                .mangas_add(format!("{}.json", value.manga_id).as_str()),
+        ).to_path_buf()
+    }
+}
+
+impl From<&MangaUtilsWithMangaId> for PathBuf {
+    fn from(value: &MangaUtilsWithMangaId) -> Self {
+        Path::new(
+            &value
+                .manga_utils
+                .dirs_options
+                .mangas_add(format!("{}.json", value.manga_id).as_str()),
+        ).to_path_buf()
     }
 }
