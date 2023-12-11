@@ -1,5 +1,5 @@
 use log::info;
-use std::io::ErrorKind;
+use std::{io::ErrorKind, process::Output};
 
 pub mod chapter;
 pub mod collection;

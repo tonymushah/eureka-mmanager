@@ -167,25 +167,23 @@ impl CoverDownload {
     }
 }
 
-impl TryFrom<CoverUtilsWithId> for CoverDownload {
-    type Error = uuid::Error;
-    fn try_from(value: CoverUtilsWithId) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<CoverUtilsWithId> for CoverDownload {
+    fn from(value: CoverUtilsWithId) -> Self {
+        Self {
             dirs_options: value.cover_utils.dirs_options,
             http_client: value.cover_utils.http_client_ref,
-            cover_id: Uuid::try_from(value.cover_id.as_str())?,
-        })
+            cover_id: value.cover_id,
+        }
     }
 }
 
-impl<'a> TryFrom<&'a CoverUtilsWithId> for CoverDownload {
-    type Error = uuid::Error;
-    fn try_from(value: &'a CoverUtilsWithId) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl<'a> From<&'a CoverUtilsWithId> for CoverDownload {
+    fn from(value: &'a CoverUtilsWithId) -> Self {
+        Self {
             dirs_options: value.cover_utils.dirs_options.clone(),
             http_client: value.cover_utils.http_client_ref.clone(),
-            cover_id: Uuid::try_from(value.cover_id.as_str())?,
-        })
+            cover_id: value.cover_id,
+        }
     }
 }
 
@@ -349,25 +347,23 @@ impl CoverDownloadWithManga {
     }
 }
 
-impl TryFrom<MangaUtilsWithMangaId> for CoverDownloadWithManga {
-    type Error = uuid::Error;
-    fn try_from(value: MangaUtilsWithMangaId) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl From<MangaUtilsWithMangaId> for CoverDownloadWithManga {
+    fn from(value: MangaUtilsWithMangaId) -> Self {
+        Self {
             dirs_options: value.manga_utils.dirs_options,
             http_client: value.manga_utils.http_client_ref,
-            manga_id: Uuid::try_from(value.manga_id.as_str())?,
-        })
+            manga_id: value.manga_id,
+        }
     }
 }
 
-impl<'a> TryFrom<&'a MangaUtilsWithMangaId> for CoverDownloadWithManga {
-    type Error = uuid::Error;
-    fn try_from(value: &'a MangaUtilsWithMangaId) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl<'a> From<&'a MangaUtilsWithMangaId> for CoverDownloadWithManga {
+    fn from(value: &'a MangaUtilsWithMangaId) -> Self {
+        Self {
             dirs_options: value.manga_utils.dirs_options.clone(),
             http_client: value.manga_utils.http_client_ref.clone(),
-            manga_id: Uuid::try_from(value.manga_id.as_str())?,
-        })
+            manga_id: value.manga_id,
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufReader, ErrorKind}};
+use std::{fs::File, io::{BufReader, ErrorKind}, path::Path};
 
 use log::info;
 use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiData, ApiObject};
@@ -45,7 +45,7 @@ impl ChapterUtilsWithID {
                 ),
             ))?
             .id;
-        manga_utils.with_id(format!("{}", manga_id)).is_there()
+        Ok(manga_utils.with_id(manga_id).is_there())
     }
     pub async fn update<'a, T>(
         &'a self,
@@ -124,6 +124,19 @@ impl ChapterUtilsWithID {
         let data: ApiData<ApiObject<ChapterAttributes>> =
             serde_json::from_reader(BufReader::new(File::open(path)?))?;
         Ok(data.data)
+    }
+    pub fn delete(&self) -> ManagerCoreResult<()> {
+        std::fs::remove_dir_all(self)?;
+        Ok(())
+    }
+}
+
+impl AsRef<Path> for ChapterUtilsWithID {
+    fn as_ref(&self) -> &Path {
+        &Path::new(&self
+            .chapter_utils
+            .dirs_options
+            .chapters_add(self.chapter_id.to_string().as_str()))
     }
 }
 

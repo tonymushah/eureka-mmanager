@@ -1,26 +1,25 @@
 mod with_id;
 
-use async_stream::stream;
-use tokio_stream::Stream;
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAggregate, MangaAttributes};
-use mangadex_api_schema_rust::{ApiData, ApiObject};
-use mangadex_api_types_rust::{RelationshipType, ResultType};
-use std::fs::File;
-use std::io::{BufReader, ErrorKind};
+use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes};
+use mangadex_api_schema_rust::ApiObject;
+use mangadex_api_types_rust::RelationshipType;
 use std::path::Path;
 use std::sync::Arc;
+use tokio_stream::Stream;
 use tokio_stream::StreamExt;
+use uuid::Uuid;
 
 use crate::core::ManagerCoreResult;
 use crate::download::chapter::ChapterDownload;
 use crate::download::manga::MangaDownload;
-use crate::server::traits::AccessHistory;
 use crate::settings::files_dirs::DirsOptions;
 
 use super::chapter::ChapterUtils;
 use super::collection::Collection;
 use super::cover::CoverUtils;
+
+pub use with_id::MangaUtilsWithMangaId;
 
 #[derive(Clone)]
 pub struct MangaUtils {
@@ -35,209 +34,33 @@ impl<'a> MangaUtils {
             http_client_ref,
         }
     }
-    async fn is_chap_related_to_manga(
-        &self,
-        chap_id: String,
-        manga_id: String,
-    ) -> ManagerCoreResult<bool> {
-        let chapter_utils: ChapterUtils = From::from(self);
-        let chapter: ApiObject<ChapterAttributes> = chapter_utils.with_id(chap_id).get_chapter()?;
-
-        Ok(MangaUtils::is_chap_data_related_to_manga(
-            &chapter, manga_id,
-        ))
-    }
     pub fn is_chap_data_related_to_manga(
         chapter: &ApiObject<ChapterAttributes>,
-        manga_id: String,
+        manga_id: Uuid,
     ) -> bool {
         chapter
             .relationships
             .iter()
-            .any(|relas| relas.type_ == RelationshipType::Manga && relas.id.to_string() == manga_id)
-    }
-
-    pub(self) async fn find_and_delete_all_downloades_by_manga_id(
-        &'a self,
-        manga_id: String,
-    ) -> ManagerCoreResult<serde_json::Value> {
-        let mut vecs: Vec<String> = Vec::new();
-        let mut stream = Box::pin(self.get_all_downloaded_chapter_data(manga_id)?);
-        while let Some(chapter) = stream.next().await {
-            if std::fs::remove_dir_all(
-                self.dirs_options
-                    .chapters_add(chapter.id.to_string().as_str()),
-            )
-            .is_ok()
-            {
-                vecs.push(chapter.id.to_string());
-            }
-        }
-        Ok(serde_json::json!(vecs))
-    }
-    pub(self) fn get_downloaded_cover_of_a_manga<H>(
-        &'a self,
-        manga_id: String,
-        _history: &'a mut H,
-    ) -> ManagerCoreResult<impl Stream<Item = String> + 'a>
-    where
-        H: AccessHistory,
-    {
-        Ok(stream! {
-            let cover_utils: CoverUtils = From::from(self);
-            if let Ok(vecs) = cover_utils.get_all_cover(){
-                let vecs = Box::pin(vecs);
-                let mut data = vecs.filter_map(move |data| {
-                    let manga_id = manga_id.clone();
-                    let data = data.clone();
-                    let data_clone = data.clone();
-                    if let core::result::Result::Ok(result) = self.is_cover_related_to_manga(manga_id, data)
-                    {
-                        if result {
-                            Some(data_clone)
-                        }else{
-                            None
-                        }
-                    }else{
-                        None
-                    }
-                });
-                while let Some(data) = data.next().await{
-                    yield data;
-                }
-            };
-        })
-    }
-    pub(self) async fn get_downloaded_cover_of_a_manga_collection<H>(
-        &'a self,
-        manga_id: String,
-        offset: usize,
-        limit: usize,
-        history: &'a mut H,
-    ) -> ManagerCoreResult<Collection<String>>
-    where
-        H: AccessHistory,
-    {
-        let mut downloaded_covers =
-            Box::pin(self.get_downloaded_cover_of_a_manga(manga_id, history)?);
-        Collection::from_async_stream(&mut downloaded_covers, limit, offset).await
-    }
-    pub(self) fn is_manga_there(&self, manga_id: String) -> ManagerCoreResult<bool> {
-        if !manga_id.is_empty() {
-            let path = self
-                .dirs_options
-                .mangas_add(format!("{}.json", manga_id).as_str());
-            ManagerCoreResult::Ok(Path::new(path.as_str()).exists())
-        } else {
-            ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "the manga_id should'nt be empty",
-            )))
-        }
-    }
-    pub(self) fn get_manga_data_by_id(
-        &self,
-        manga_id: String,
-    ) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
-        let path = self
-            .dirs_options
-            .mangas_add(format!("{}.json", manga_id).as_str());
-        if Path::new(path.as_str()).exists() {
-            let data: ApiData<ApiObject<MangaAttributes>> =
-                serde_json::from_reader(BufReader::new(File::open(path)?))?;
-            Ok(data.data)
-        } else {
-            Err(crate::core::Error::Io(std::io::Error::new(
-                ErrorKind::NotFound,
-                format!("manga {} not found", manga_id),
-            )))
-        }
-    }
-    pub(self) fn is_manga_cover_there(&self, manga_id: String) -> Result<bool, std::io::Error> {
-        if !manga_id.is_empty() {
-            let path = self
-                .dirs_options
-                .mangas_add(format!("{}.json", manga_id).as_str());
-            if !Path::new(path.as_str()).exists() {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "this manga hasn't been downloaded",
-                ))
-            } else {
-                let manga_data: ApiData<ApiObject<MangaAttributes>> =
-                    serde_json::from_reader(BufReader::new(File::open(path)?))?;
-                let cover_id: uuid::Uuid = match manga_data
-                    .data
-                    .relationships
-                    .iter()
-                    .find(|rel| rel.type_ == RelationshipType::CoverArt)
-                {
-                    None => {
-                        return core::result::Result::Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "this manga has no cover_art",
-                        ))
-                    }
-                    Some(d) => d.id,
-                };
-                let cover_utils: CoverUtils = From::from(self);
-                cover_utils.with_id(cover_id.to_string()).is_there()
-            }
-        } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "the manga_id should'nt be empty",
-            ))
-        }
-    }
-    pub(self) fn is_cover_related_to_manga(
-        &self,
-        manga_id: String,
-        cover_id: String,
-    ) -> ManagerCoreResult<bool> {
-        let cover_utils: CoverUtils = From::from(self);
-        match cover_utils
-            .with_id(cover_id)
-            .get_data()?
-            .data
-            .relationships
-            .iter()
-            .find(|rel| rel.type_ == RelationshipType::Manga && rel.id.to_string() == manga_id)
-        {
-            None => Ok(false),
-            Some(_) => self.is_manga_there(manga_id),
-        }
+            .any(|relas| relas.type_ == RelationshipType::Manga && relas.id == manga_id)
     }
     pub fn get_manga_data_by_ids<T>(
         &'a self,
         manga_ids: T,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<MangaAttributes>> + 'a>
+    ) -> impl Stream<Item = ApiObject<MangaAttributes>> + 'a
     where
-        T: Stream<Item = String> + std::marker::Unpin + 'a,
+        T: Stream<Item = Uuid> + std::marker::Unpin + 'a,
     {
-        Ok(manga_ids.filter_map(|id| {
-            if let Ok(data) = self.get_manga_data_by_id(id) {
-                Some(data)
-            } else {
-                None
-            }
-        }))
+        manga_ids.filter_map(|id| self.with_id(id).get_data().ok())
     }
     pub fn get_manga_data_by_ids_old(
         &'a self,
-        manga_ids: Vec<String>,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<MangaAttributes>> + 'a> {
-        Ok(tokio_stream::iter(manga_ids).filter_map(|id| {
-            if let Ok(data) = self.get_manga_data_by_id(id) {
-                Some(data)
-            } else {
-                None
-            }
-        }))
+        manga_ids: Vec<Uuid>,
+    ) -> impl Stream<Item = ApiObject<MangaAttributes>> + 'a {
+        tokio_stream::iter(manga_ids).filter_map(|id| self.with_id(id).get_data().ok())
     }
     pub fn get_all_downloaded_manga(
         &'a self,
-    ) -> ManagerCoreResult<impl Stream<Item = String> + 'a> {
+    ) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a> {
         let path = self.dirs_options.mangas_add("");
         if Path::new(path.as_str()).exists() {
             let list_dir = std::fs::read_dir(path.as_str())?.flatten();
@@ -246,7 +69,7 @@ impl<'a> MangaUtils {
                     .file_name()
                     .to_str()
                     .map(|data| data.to_string().replace(".json", ""))
-            }))
+            }).filter_map(|id| Uuid::parse_str(&id).ok()))
         } else {
             Err(crate::core::Error::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -259,22 +82,14 @@ impl<'a> MangaUtils {
         offset: usize,
         limit: usize,
         title__: Option<String>,
-    ) -> ManagerCoreResult<Collection<String>> {
+    ) -> ManagerCoreResult<Collection<Uuid>> {
         let vecs = Box::pin(self.get_all_downloaded_manga()?);
-        let manga_data = Box::pin(self.get_manga_data_by_ids(vecs)?);
+        let manga_data = Box::pin(self.get_manga_data_by_ids(vecs));
         if let Some(title) = title__ {
-            let mut data: Vec<String> = manga_data
-                .filter(|data| {
-                    for title_ in data.attributes.title.values() {
-                        if title_
-                            .to_lowercase()
-                            .contains(title.to_lowercase().as_str())
-                        {
-                            return true;
-                        }
-                    }
-                    for entry in &data.attributes.alt_titles {
-                        for title_ in entry.values() {
+            Collection::from_async_stream(
+                manga_data
+                    .filter(|data| {
+                        for title_ in data.attributes.title.values() {
                             if title_
                                 .to_lowercase()
                                 .contains(title.to_lowercase().as_str())
@@ -282,54 +97,28 @@ impl<'a> MangaUtils {
                                 return true;
                             }
                         }
-                    }
-                    false
-                })
-                .map(|d| d.id.to_string())
-                .collect()
-                .await;
-            Collection::new(&mut data, limit, offset)
+                        for entry in &data.attributes.alt_titles {
+                            for title_ in entry.values() {
+                                if title_
+                                    .to_lowercase()
+                                    .contains(title.to_lowercase().as_str())
+                                {
+                                    return true;
+                                }
+                            }
+                        }
+                        false
+                    })
+                    .map(|d| d.id),
+                limit,
+                offset,
+            )
+            .await
         } else {
-            let mut data: Vec<String> = manga_data.map(|d| d.id.to_string()).collect().await;
-            Collection::new(&mut data, limit, offset)
+            Collection::from_async_stream(manga_data.map(|d| d.id), limit, offset).await
         }
     }
-    pub(self) fn get_all_downloaded_chapter_data(
-        &'a self,
-        manga_id: String,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
-        let chapter_utils: ChapterUtils = From::from(self);
-        Ok(stream! {
-            if let Ok(data) = chapter_utils.get_all_chapters_data() {
-                let data = Box::pin(data);
-                let mut data = data.filter_map(|next| {
-                    if MangaUtils::is_chap_data_related_to_manga(&next, manga_id.clone()){
-                        Some(next.clone())
-                    }else{
-                        None
-                    }
-                });
-                while let Some(next) = data.next().await {
-                    yield next;
-                }
-            }
-        })
-    }
-
-    pub(self) async fn get_downloaded_chapter_of_a_manga(
-        &'a self,
-        manga_id: String,
-        offset: usize,
-        limit: usize,
-    ) -> ManagerCoreResult<Collection<String>> {
-        let all_downloaded = self.get_all_downloaded_chapter_data(manga_id)?;
-        let mut data = Box::pin(all_downloaded);
-        let to_use: Collection<String> = Collection::from_async_stream(&mut data, limit, offset)
-            .await?
-            .convert_to(|d| d.id.to_string())?;
-        Ok(to_use)
-    }
-    pub fn with_id(&self, manga_id: String) -> MangaUtilsWithMangaId {
+    pub fn with_id(&self, manga_id: Uuid) -> MangaUtilsWithMangaId {
         MangaUtilsWithMangaId {
             manga_utils: self.clone(),
             manga_id,

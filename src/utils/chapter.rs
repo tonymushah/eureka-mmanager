@@ -57,9 +57,9 @@ impl ChapterUtils {
             }
         })
     }
-    pub fn get_all_chapters_data(
-        &self,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
+    pub fn get_all_chapters_data<'a>(
+        &'a self,
+    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + 'a> {
         Ok(self.get_chapters_by_stream_id(Box::pin(self.get_all_chapter_without_history()?)))
     }
     pub fn get_chapters_by_vec_id(
@@ -253,7 +253,7 @@ mod tests {
         let client = HttpClientRef::default();
         let chapter_utils = ChapterUtils::new(dir_options, client);
         let manga_utils: MangaUtils = From::from(chapter_utils.clone());
-        let manga_id = "17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8".to_string();
+        let manga_id = Uuid::parse_str("17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8").unwrap();
         let this_manga_utils = manga_utils.with_id(manga_id);
         let manga_downloads = Box::pin(this_manga_utils.find_all_downloades().unwrap());
         let datas = chapter_utils.get_chapters_by_stream_id(manga_downloads);
