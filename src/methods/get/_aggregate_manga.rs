@@ -10,7 +10,7 @@ pub async fn aggregate_manga(
 ) -> ManagerCoreResult<impl Responder> {
     let aggregate = app_state
         .manga_utils()
-        .with_id(id.to_string())
+        .with_id(*id)
         .aggregate_manga_chapters()
         .await?;
     Ok(HttpResponse::Ok().content_type(ContentType::json()).body(

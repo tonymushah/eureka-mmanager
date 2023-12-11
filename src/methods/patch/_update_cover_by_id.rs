@@ -16,7 +16,7 @@ pub async fn update_cover_by_id(
         .download(&mut app_state)
         .await?;
 
-    let returns = app_state.cover_utils().with_id(id.to_string()).get_data()?;
+    let returns = app_state.cover_utils().with_id(*id).get_data()?;
 
     Ok(HttpResponse::Ok().json(returns))
 }
