@@ -1,121 +1,33 @@
-use std::task::Poll;
+mod only_fails;
+mod not_include_fails;
+mod async_get_all_chapter;
 
-use crate::settings::file_history::{History, IsIn};
+use crate::methods::get::_find_all_downloaded_chapter::GetChapterQuery;
 
-use super::GetAllChapter;
-use futures::StreamExt;
-use tokio_stream::Stream;
+pub use only_fails::OnlyFails;
+pub use not_include_fails::NotIncludeFails;
+pub use async_get_all_chapter::AsyncGetAllChapter;
 
-pub struct OnlyFails<T>
-where
-    T: Stream<Item = String> + Unpin,
-{
-    inner: T,
+#[derive(Clone)]
+pub struct GetAllChapter {
+    pub include_fails: bool,
+    pub only_fails: bool,
 }
 
-impl<T> OnlyFails<T>
-where
-    T: Stream<Item = String> + Unpin,
-{
-    pub fn new(inner: T) -> Self {
-        Self { inner }
-    }
-}
-
-impl<T> Stream for OnlyFails<T>
-where
-    T: Stream<Item = String> + Unpin,
-{
-    type Item = String;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        self.inner.poll_next_unpin(cx)
-    }
-}
-
-pub struct NotIncludeFails<T>
-where
-    T: Stream<Item = String> + Unpin,
-{
-    all_chapter: T,
-    history: History,
-}
-
-impl<T> NotIncludeFails<T>
-where
-    T: Stream<Item = String> + Unpin,
-{
-    pub fn new(all_chapter: T, history: History) -> Self {
+impl Default for GetAllChapter {
+    fn default() -> Self {
         Self {
-            all_chapter,
-            history,
+            include_fails: true,
+            only_fails: false,
         }
     }
 }
 
-impl<T> Stream for NotIncludeFails<T>
-where
-    T: Stream<Item = String> + Unpin,
-{
-    type Item = String;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        loop {
-            if let Poll::Ready(getted) = self.all_chapter.poll_next_unpin(cx) {
-                if let Some(id) = getted {
-                    if let Ok(uuid) = uuid::Uuid::parse_str(id.clone().as_str()) {
-                        if self.history.is_in(uuid).is_none() {
-                            return Poll::Ready(Some(id.clone()));
-                        }
-                    }
-                } else {
-                    //log::info!("Exited");
-                    return Poll::Ready(None);
-                }
-            } else {
-                //log::info!("Pending 1");
-                return Poll::Pending;
-            }
-        }
-    }
-}
-
-pub struct AsyncGetAllChapter<C, H>
-where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = String> + std::marker::Unpin,
-{
-    pub only_fails: OnlyFails<H>,
-    pub parameters: GetAllChapter,
-    pub not_fails: NotIncludeFails<C>,
-}
-
-impl<C, H> Stream for AsyncGetAllChapter<C, H>
-where
-    C: Stream<Item = String> + std::marker::Unpin,
-    H: Stream<Item = String> + std::marker::Unpin,
-{
-    type Item = String;
-
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        if self.parameters.only_fails {
-            //log::info!("Only fails");
-            self.only_fails.poll_next_unpin(cx)
-        } else if !self.parameters.include_fails {
-            //log::info!("not fails");
-            self.not_fails.poll_next_unpin(cx)
-        } else {
-            //log::info!("all chapter");
-            self.not_fails.all_chapter.poll_next_unpin(cx)
+impl From<GetChapterQuery> for GetAllChapter {
+    fn from(value: GetChapterQuery) -> Self {
+        Self {
+            include_fails: value.include_fails.unwrap_or(true),
+            only_fails: value.only_fails.unwrap_or(false),
         }
     }
 }

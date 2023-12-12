@@ -1,32 +1,43 @@
 mod app_state;
 pub mod traits;
+#[cfg(feature = "actix_web")]
 use crate::methods::delete::{delete_chapter_by_id, delete_manga_chapters_by_id};
+#[cfg(feature = "actix_web")]
 use crate::methods::get::{
     aggregate_manga, find_all_downloaded_chapter, find_all_downloaded_manga, find_chapter_by_id,
     find_chapters_data_by_id, find_chapters_data_img_by_id, find_chapters_data_saver_by_id,
     find_chapters_data_saver_img_by_id, find_cover_by_id, find_cover_image_by_id, find_manga_by_id,
     find_manga_chapters_by_id, find_manga_cover_by_id, find_manga_covers_by_id, hello,
 };
+#[cfg(feature = "actix_web")]
 use crate::methods::patch::{
     patch_all_chapter, patch_all_chapter_manga, patch_all_manga_cover, update_chapter_by_id,
     update_chapter_manga_by_id, update_cover_by_id,
 };
+#[cfg(feature = "actix_web")]
 use crate::methods::put::{
     download_chapter_byid, download_chapter_data_byid, download_chapter_data_saver_byid,
     download_cover, download_cover_quality, download_manga_by_id, download_manga_cover,
     download_manga_cover_quality, download_manga_covers,
 };
+#[cfg(feature = "actix_web")]
 use actix_cors::Cors;
+#[cfg(feature = "actix_web")]
 use actix_web::body::MessageBody;
+#[cfg(feature = "actix_web")]
 use actix_web::dev::{self, Server, ServiceFactory, ServiceRequest, ServiceResponse};
+#[cfg(feature = "actix_web")]
 use actix_web::http::header::{self};
+#[cfg(feature = "actix_web")]
 use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
+#[cfg(feature = "actix_web")]
 use actix_web::{
     http::StatusCode,
     App,
     HttpServer,
     //web
 };
+#[cfg(feature = "actix_web")]
 use actix_web::{web, Error};
 pub use app_state::AppState;
 #[cfg(feature = "unix-socket-support")]
@@ -43,7 +54,7 @@ pub mod state;
 ///
 ///
 ///
-
+#[cfg(feature = "actix_web")]
 fn not_found_message<B>(
     mut res: dev::ServiceResponse<B>,
 ) -> Result<ErrorHandlerResponse<B>, actix_web::Error> {
@@ -62,7 +73,7 @@ fn not_found_message<B>(
         .map_into_right_body();
     Ok(ErrorHandlerResponse::Response(res))
 }
-
+#[cfg(feature = "actix_web")]
 fn not_allowed_message<B>(
     mut res: dev::ServiceResponse<B>,
 ) -> Result<ErrorHandlerResponse<B>, actix_web::Error> {
@@ -82,7 +93,7 @@ fn not_allowed_message<B>(
         .map_into_right_body();
     Ok(ErrorHandlerResponse::Response(res))
 }
-
+#[cfg(feature = "actix_web")]
 pub fn get_actix_app(
     app_state: web::Data<AppState>,
 ) -> App<
@@ -146,6 +157,7 @@ pub fn get_actix_app(
         .service(download_chapter_data_saver_byid)
 }
 
+#[cfg(feature = "actix_web")]
 /// Get the server handle
 pub fn launch_async_server(
     app_state: AppState,

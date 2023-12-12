@@ -37,7 +37,7 @@ pub async fn find_manga_chapters_by_id(
 ) -> ManagerCoreResult<impl Responder> {
     let to_use = app_state
         .manga_utils()
-        .with_id(id.to_string())
+        .with_id(*id)
         .get_downloaded_chapter(params.offset, params.limit)
         .await?;
     Ok(HttpResponse::Ok().content_type(ContentType::json()).body(

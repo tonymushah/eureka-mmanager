@@ -5,6 +5,7 @@ use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FindMangaCoversByIdParams {
@@ -40,16 +41,16 @@ impl DefaultOffsetLimit<'_> for FindMangaCoversByIdParams {
 /// find a downloaded covers manga
 #[get("/manga/{id}/covers")]
 pub async fn find_manga_covers_by_id(
-    id: web::Path<String>,
+    id: web::Path<Uuid>,
     params: QsQuery<FindMangaCoversByIdParams>,
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
-    let mut app_state: AppState = From::from(app_state);
+    // let mut app_state: AppState = From::from(app_state);
     let offset = params.offset;
     let limit = params.limit;
-    let utils = app_state.manga_utils().with_id(format!("{}", id));
+    let utils = app_state.manga_utils().with_id(*id);
     let getted = utils
-        .get_downloaded_cover_of_a_manga_collection(offset, limit, &mut app_state)
+        .get_downloaded_cover_of_a_manga_collection(offset, limit)
         .await?;
     Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
         serde_json::json!({

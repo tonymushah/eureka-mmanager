@@ -1,5 +1,5 @@
 use std::num::TryFromIntError;
-
+#[cfg(feature = "actix_web")]
 use actix_web::ResponseError;
 use serde::Serialize;
 
@@ -33,22 +33,8 @@ pub enum Error {
     StringParseError(#[from] std::string::ParseError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
-    #[error("An error occured when building mangadex_api::utils::download::chapter::ChapterDownload \n Details : {0}")]
-    ChapterDownloadBuilderError(
-        #[from] mangadex_api::utils::download::chapter::ChapterDownloadBuilderError,
-    ),
-    #[error("An error occured when building mangadex_api::utils::download::cover::CoverDownload \n Details : {0}")]
-    CoverDownloadBuilderError(
-        #[from] mangadex_api::utils::download::cover::CoverDownloadBuilderError,
-    ),
-    #[error(
-        "An error occured when building mangadex_api::v5::manga::get::GetManga \n Details : {0}"
-    )]
-    GetMangaBuilderError(#[from] mangadex_api::v5::manga::get::GetMangaBuilderError),
-    #[error(
-        "An error occured when building mangadex_api::v5::cover::list::ListCover \n Details : {0}"
-    )]
-    ListCoverBuilderError(#[from] mangadex_api::v5::cover::list::ListCoverBuilderError),
+    #[error("An error occured when building a mangdex_api request \n Details : {0}")]
+    MangadexBuilderError(#[from] mangadex_api_types_rust::error::BuilderError),
     #[error("An Download Tasks limit Exceded {current}/{limit}")]
     DownloadTaskLimitExceded { current: u16, limit: u16 },
     #[error("An error occured when converting into a int")]
@@ -75,10 +61,7 @@ pub enum ErrorType {
     StringUTF16Error,
     StringParseError,
     Other,
-    ChapterDownloadBuilderError,
-    CoverDownloadBuilderError,
-    GetMangaBuilderError,
-    ListCoverBuilderError,
+    MangadexBuilderError,
     DownloadTaskLimitExceded,
     TryIntError,
     OneshotRecvError,
@@ -87,6 +70,7 @@ pub enum ErrorType {
     RwLockError,
 }
 
+#[cfg(feature = "actix_web")]
 impl ResponseError for Error {
     fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
         match self {
@@ -154,32 +138,12 @@ impl ResponseError for Error {
                 message: e.to_string(),
                 result: "error".to_string(),
             }),
-            Error::ChapterDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError()
+            Error::MangadexBuilderError(e) => actix_web::HttpResponse::InternalServerError()
                 .json(WhenError {
-                    type_: ErrorType::ChapterDownloadBuilderError,
+                    type_: ErrorType::MangadexBuilderError,
                     message: e.to_string(),
                     result: "error".to_string(),
                 }),
-            Error::CoverDownloadBuilderError(e) => actix_web::HttpResponse::InternalServerError()
-                .json(WhenError {
-                    type_: ErrorType::CoverDownloadBuilderError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                }),
-            Error::GetMangaBuilderError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::GetMangaBuilderError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::ListCoverBuilderError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::ListCoverBuilderError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
             Error::DownloadTaskLimitExceded { current, limit } => {
                 actix_web::HttpResponse::TooManyRequests().json(WhenError {
                     type_: ErrorType::DownloadTaskLimitExceded,

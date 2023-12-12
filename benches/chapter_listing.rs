@@ -4,12 +4,13 @@ use criterion::Criterion;
 use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiObject};
 use mangadex_desktop_api2::{settings::files_dirs::DirsOptions, utils::chapter::ChapterUtils};
 use tokio_stream::StreamExt;
+use uuid::Uuid;
 
 async fn id_only() {
     ChapterUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default())
         .get_all_chapter_without_history()
         .unwrap()
-        .collect::<Vec<String>>()
+        .collect::<Vec<Uuid>>()
         .await;
 }
 

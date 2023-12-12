@@ -1,6 +1,5 @@
 use std::cmp::Ordering;
 
-use futures::Stream;
 use mangadex_api_schema_rust::{
     v5::{
         manga_aggregate::{ChapterAggregate, VolumeAggregate},
@@ -8,7 +7,7 @@ use mangadex_api_schema_rust::{
     },
     ApiObject,
 };
-use tokio_stream::StreamExt;
+use tokio_stream::{StreamExt, Stream};
 
 use crate::settings::file_history::IsIn;
 
@@ -153,11 +152,13 @@ where
 mod tests {
     use std::sync::Arc;
 
+    use uuid::Uuid;
+
     use crate::{settings::files_dirs::DirsOptions, utils::manga::MangaUtils};
 
     #[tokio::test]
     async fn test_to_volume_aggregate() {
-        let manga_id = "1c8f0358-d663-4d60-8590-b5e82890a1e3".to_string();
+        let manga_id = Uuid::parse_str("1c8f0358-d663-4d60-8590-b5e82890a1e3").unwrap();
         let manga_utils =
             MangaUtils::new(Arc::new(DirsOptions::new().unwrap()), Default::default())
                 .with_id(manga_id);

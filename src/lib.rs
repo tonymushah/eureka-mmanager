@@ -1,12 +1,13 @@
-use crate::r#core::ManagerCoreResult;
+pub use crate::r#core::ManagerCoreResult;
 
 use crate::settings::verifications::{
     data::{initialise_data_dir, verify_data_dir},
     settings::{initialise_settings_dir, verify_settings_dir},
 };
+#[cfg(feature = "actix_web")]
 use actix_web::dev::Server;
 use log::{info, warn};
-use server::AppState;
+pub use server::AppState;
 mod r#core;
 
 pub use crate::r#core::{Error, ErrorType};
@@ -21,9 +22,10 @@ pub mod r#static;
 pub mod utils;
 /// url not found handler
 ///
-///
+#[cfg(feature = "actix_web")]
 pub use crate::server::launch_async_server;
 
+#[cfg(feature = "actix_web")]
 /// it's launch the server in the given adrress and the given port
 /// a call like this
 ///
@@ -50,11 +52,13 @@ pub async fn launch_server(
     habdle
 }
 
+#[cfg(feature = "actix_web")]
 pub async fn launch_server_w_app_state(app_state: AppState) -> ManagerCoreResult<Server> {
     let hostname_port = app_state.get_hostname_port();
     Ok(launch_async_server(app_state, hostname_port)?)
 }
 
+#[cfg(feature = "actix_web")]
 pub async fn launch_async_server_default() -> ManagerCoreResult<Server> {
     info!("launching server");
     let app_state = AppState::init().await?;
@@ -106,6 +110,7 @@ pub fn verify_all_fs() -> std::io::Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "actix_web")]
 /// It's launch the server with the given data in the settings/server_option.json
 ///
 /// # Example

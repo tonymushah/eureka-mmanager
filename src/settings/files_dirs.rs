@@ -39,4 +39,26 @@ impl DirsOptions {
         let covers_path_defpath = self.data_dir_add(covers_path);
         format!("{}/{}", covers_path_defpath, path)
     }
+    
+    /* 
+    pub fn _data_dir_add<'a>(&'a self, path: &'a str) -> &'a str {
+        (&self.data_dir).join("/").join(path)
+        //&format!("{}/{}", self.data_dir, path)
+    }
+    pub fn _chapters_add<'a>(&'a self, path: &'a str) -> &'a str {
+        let chapters_path = self.chapters.as_str();
+        let chapters_path_defpath = self._data_dir_add(chapters_path);
+        &format!("{}/{}", chapters_path_defpath, path)
+    }
+    pub fn _mangas_add<'a>(&'a self, path: &'a str) -> &'a str {
+        let mangas_path = self.mangas.as_str();
+        let mangas_path_defpath = self._data_dir_add(mangas_path);
+        &format!("{}/{}", mangas_path_defpath, path)
+    }
+    pub fn _covers_add<'a>(&'a self, path: &'a str) -> &'a str {
+        let covers_path = self.covers.as_str();
+        let covers_path_defpath = self._data_dir_add(covers_path);
+        &format!("{}/{}", covers_path_defpath, path)
+    }
+    */
 }

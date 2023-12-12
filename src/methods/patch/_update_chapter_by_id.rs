@@ -10,7 +10,7 @@ pub async fn update_chapter_by_id(
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
     let mut app_state: AppState = From::from(app_state.clone());
-    let utils = app_state.chapter_utils().with_id(id.to_string());
+    let utils = app_state.chapter_utils().with_id(*id);
     let data = <AppState as AccessChapterUtisWithID>::update(&mut app_state, &utils).await?;
     Ok(HttpResponse::Ok().json(data))
 }

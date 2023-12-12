@@ -1,4 +1,3 @@
-use futures::StreamExt;
 // Imports used for downloading the pages to a file.
 // They are not used because we're just printing the raw bytes.
 use log::info;
@@ -9,9 +8,9 @@ use serde_json::json;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
 use std::sync::Arc;
+use tokio_stream::StreamExt;
 use uuid::Uuid;
 
-use crate::core::Error;
 use crate::server::traits::{AccessDownloadTasks, AccessHistory};
 use crate::settings::file_history::history_w_file::traits::{
     NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
@@ -50,7 +49,7 @@ impl ChapterDownload {
         let path = self
             .dirs_options
             .chapters_add(format!("{}/data.json", id).as_str());
-        let http_client = self.http_client.lock().await.client.clone();
+        let http_client = self.http_client.read().await.client.clone();
         //log::info!("{path}");
         task_manager.lock_spawn_with_data(async move {
             let get_chapter = http_client
@@ -75,24 +74,21 @@ impl ChapterDownload {
             Ok(serde_json::from_reader(BufReader::new(chapter_data))?)
         }).await?
     }
-    async fn verify_chapter_and_manga<'a, H, D>(
+    async fn verify_chapter_and_manga<'a, T>(
         &'a self,
-        history: &'a mut H,
-        task_manager: &'a mut D,
+        ctx: &'a mut T,
     ) -> ManagerCoreResult<()>
     where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
+        T: AccessHistory + AccessDownloadTasks,
     {
-        let chapter_id = self.chapter_id.to_string();
-        let chapter_utils = <ChapterUtils as From<&'a Self>>::from(self).with_id(chapter_id);
-        self.download_json_data(task_manager).await?;
+        let chapter_utils = <ChapterUtils as From<&'a Self>>::from(self).with_id(self.chapter_id);
+        self.download_json_data(ctx).await?;
         if let Ok(data) = chapter_utils.is_manga_there() {
             if !data {
-                (chapter_utils).patch_manga(history, task_manager).await?;
+                (chapter_utils).patch_manga(ctx).await?;
             }
         } else {
-            (chapter_utils).patch_manga(history, task_manager).await?;
+            (chapter_utils).patch_manga(ctx).await?;
         }
         Ok(())
     }
@@ -129,16 +125,14 @@ impl ChapterDownload {
         .await?;
         Ok(())
     }
-    pub async fn download_chapter<'a, H, D>(
+    pub async fn download_chapter<'a, T>(
         &'a self,
-        history: &'a mut H,
-        task_manager: &'a mut D,
+        ctx: &'a mut T,
     ) -> ManagerCoreResult<serde_json::Value>
     where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
+        T: AccessHistory + AccessDownloadTasks,
     {
-        let history_entry = self.start_transation(history).await?;
+        let history_entry = self.start_transation(ctx).await?;
         let chapter_id = history_entry.get_id();
 
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
@@ -150,9 +144,9 @@ impl ChapterDownload {
 
         info!("chapter dir created");
 
-        self.verify_chapter_and_manga(history, task_manager).await?;
+        self.verify_chapter_and_manga(ctx).await?;
 
-        let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager
+        let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = ctx
             .lock_spawn_with_data(async move {
                 let mut files_: Vec<String> = Vec::new();
 
@@ -187,43 +181,38 @@ impl ChapterDownload {
 
                 tokio::pin!(stream);
 
-                while let Some((result, index, len, opt_filename)) = stream.next().await {
-                    match result {
-                        Ok((filename, bytes_)) => {
-                            if let Some(bytes) = bytes_ {
-                                match File::create(format!(
-                                    "{}/{}",
-                                    chapter_dir.clone(),
-                                    filename.clone()
-                                )) {
-                                    Ok(file) => match {
-                                        let mut buf_writer = BufWriter::new(file);
-                                        buf_writer.write_all(&bytes)
-                                    } {
-                                        Ok(_) => {
-                                            info!("{index} - {len} : Downloaded {filename}");
-                                            files_.push(filename);
-                                        }
-                                        Err(e) => {
-                                            log::error!("{index} - {len} : {}", e.to_string());
-                                            errors.push(filename);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        log::error!("{index} - {len} : {}", e.to_string());
-                                        errors.push(filename);
-                                    }
+                while let Some(((filename, bytes_), index, len)) = stream.next().await {
+                    if let Ok(bytes) = bytes_ {
+                        match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone()))
+                        {
+                            Ok(file) => match {
+                                let mut buf_writer = BufWriter::new(file);
+                                buf_writer.write_all(&bytes)
+                            } {
+                                Ok(_) => {
+                                    info!("{index} - {len} : Downloaded {filename}");
+                                    files_.push(filename);
                                 }
-                            } else {
-                                info!("{index} - {len} : Skipped {}", filename);
+                                Err(e) => {
+                                    log::error!("{index} - {len} : {}", e.to_string());
+                                    errors.push(filename);
+                                }
+                            },
+                            Err(e) => {
+                                log::error!("{index} - {len} : {}", e.to_string());
+                                errors.push(filename);
                             }
                         }
-                        Err(error) => {
+                    } else if let Err(error) = bytes_ {
+                        if let mangadex_api_types_rust::error::Error::SkippedDownload(f) = error {
+                            info!("{index} - {len} : Skipped {}", f);
+                        } else {
                             log::error!("{index} - {len} : {}", error.to_string());
-                            errors.push(opt_filename);
+                            errors.push(filename);
                         }
                     }
                 }
+
                 if !errors.is_empty() {
                     has_error = true;
                 }
@@ -245,22 +234,20 @@ impl ChapterDownload {
         writer.write_all(jsons.to_string().as_bytes())?;
         writer.flush()?;
         if !has_error {
-            self.end_transation(history_entry, history).await?;
+            self.end_transation(history_entry, ctx).await?;
         }
 
         Ok(jsons)
     }
 
-    pub async fn download_chapter_data_saver<'a, H, D>(
+    pub async fn download_chapter_data_saver<'a, T>(
         &'a self,
-        history: &'a mut H,
-        task_manager: &'a mut D,
+        ctx: &'a mut T,
     ) -> ManagerCoreResult<serde_json::Value>
     where
-        H: AccessHistory,
-        D: AccessDownloadTasks,
+        T: AccessHistory + AccessDownloadTasks,
     {
-        let history_entry = self.start_transation(history).await?;
+        let history_entry = self.start_transation(ctx).await?;
         let chapter_id = history_entry.get_id();
 
         let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
@@ -272,9 +259,9 @@ impl ChapterDownload {
 
         info!("chapter dir created");
 
-        self.verify_chapter_and_manga(history, task_manager).await?;
+        self.verify_chapter_and_manga(ctx).await?;
 
-        let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = task_manager
+        let task: ManagerCoreResult<(Vec<String>, Vec<String>, bool, String)> = ctx
             .lock_spawn_with_data(async move {
                 let mut files_: Vec<String> = Vec::new();
 
@@ -309,41 +296,34 @@ impl ChapterDownload {
 
                 tokio::pin!(stream);
 
-                while let Some((result, index, len, opt_filename)) = stream.next().await {
-                    match result {
-                        Ok((filename, bytes_)) => {
-                            if let Some(bytes) = bytes_ {
-                                match File::create(format!(
-                                    "{}/{}",
-                                    chapter_dir.clone(),
-                                    filename.clone()
-                                )) {
-                                    Ok(file) => match {
-                                        let mut buf_writer = BufWriter::new(file);
-                                        buf_writer.write_all(&bytes)?;
-                                        buf_writer.flush()
-                                    } {
-                                        Ok(_) => {
-                                            info!("{index} - {len} : Downloaded {filename}");
-                                            files_.push(filename);
-                                        }
-                                        Err(e) => {
-                                            log::error!("{index} - {len} : {}", e.to_string());
-                                            errors.push(filename);
-                                        }
-                                    },
-                                    Err(e) => {
-                                        log::error!("{index} - {len} : {}", e.to_string());
-                                        errors.push(filename);
-                                    }
+                while let Some(((filename, bytes_), index, len)) = stream.next().await {
+                    if let Ok(bytes) = bytes_ {
+                        match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone()))
+                        {
+                            Ok(file) => match {
+                                let mut buf_writer = BufWriter::new(file);
+                                buf_writer.write_all(&bytes)
+                            } {
+                                Ok(_) => {
+                                    info!("{index} - {len} : Downloaded {filename}");
+                                    files_.push(filename);
                                 }
-                            } else {
-                                info!("{index} - {len} : Skipped {}", filename);
+                                Err(e) => {
+                                    log::error!("{index} - {len} : {}", e.to_string());
+                                    errors.push(filename);
+                                }
+                            },
+                            Err(e) => {
+                                log::error!("{index} - {len} : {}", e.to_string());
+                                errors.push(filename);
                             }
                         }
-                        Err(error) => {
+                    } else if let Err(error) = bytes_ {
+                        if let mangadex_api_types_rust::error::Error::SkippedDownload(f) = error {
+                            info!("{index} - {len} : Skipped {}", f);
+                        } else {
                             log::error!("{index} - {len} : {}", error.to_string());
-                            errors.push(opt_filename);
+                            errors.push(filename);
                         }
                     }
                 }
@@ -365,40 +345,38 @@ impl ChapterDownload {
         writer.write_all(jsons.to_string().as_bytes())?;
         writer.flush()?;
         if !has_error {
-            self.end_transation(history_entry, history).await?;
+            self.end_transation(history_entry, ctx).await?;
         }
 
         Ok(jsons)
     }
 }
 
-impl TryFrom<ChapterUtilsWithID> for ChapterDownload {
-    type Error = Error;
+impl From<ChapterUtilsWithID> for ChapterDownload {
 
-    fn try_from(value: ChapterUtilsWithID) -> Result<Self, Self::Error> {
-        Ok(Self {
+    fn from(value: ChapterUtilsWithID) -> Self {
+        Self {
             dirs_options: value.chapter_utils.dirs_options,
             http_client: value.chapter_utils.http_client_ref,
-            chapter_id: Uuid::parse_str(value.chapter_id.as_str())?,
-        })
+            chapter_id: value.chapter_id,
+        }
     }
 }
 
-impl TryFrom<&ChapterUtilsWithID> for ChapterDownload {
-    type Error = Error;
+impl From<&ChapterUtilsWithID> for ChapterDownload {
 
-    fn try_from(value: &ChapterUtilsWithID) -> Result<Self, Self::Error> {
-        Ok(Self {
+    fn from(value: &ChapterUtilsWithID) -> Self {
+        Self {
             dirs_options: value.chapter_utils.dirs_options.clone(),
             http_client: value.chapter_utils.http_client_ref.clone(),
-            chapter_id: Uuid::parse_str(value.chapter_id.as_str())?,
-        })
+            chapter_id: value.chapter_id,
+        }
     }
 }
 
 #[async_trait::async_trait]
 pub trait AccessChapterDownload:
-    AccessDownloadTasks + AccessHistory + Sized + Send + Sync + Clone
+    AccessDownloadTasks + AccessHistory + Sized + Send + Sync
 {
     async fn download_json_data<'a>(
         &'a mut self,
@@ -410,16 +388,14 @@ pub trait AccessChapterDownload:
         &'a mut self,
         chapter_download: &'a ChapterDownload,
     ) -> ManagerCoreResult<serde_json::Value> {
-        let mut re_self = self.clone();
-        chapter_download.download_chapter(self, &mut re_self).await
+        chapter_download.download_chapter(self).await
     }
     async fn download_data_saver<'a>(
         &'a mut self,
         chapter_download: &'a ChapterDownload,
     ) -> ManagerCoreResult<serde_json::Value> {
-        let mut re_self = self.clone();
         chapter_download
-            .download_chapter_data_saver(self, &mut re_self)
+            .download_chapter_data_saver(self)
             .await
     }
 }

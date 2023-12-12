@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::future::Future;
 use std::sync::Arc;
 
 use crate::core::ManagerCoreResult;
@@ -21,13 +22,13 @@ use crate::utils::chapter::{AccessChapterUtisWithID, ChapterUtils};
 use crate::utils::cover::CoverUtils;
 use crate::utils::manga::MangaUtils;
 use crate::verify_all_fs;
+#[cfg(feature = "actix_web")]
 use actix_web::web::Data;
-use futures::lock::Mutex;
-use futures::Future;
 use mangadex_api::{HttpClient, HttpClientRef, MangaDexClient};
 use mangadex_api_types_rust::RelationshipType;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
+use tokio::sync::RwLock;
 use tokio::task::AbortHandle;
 
 use super::traits::{AccessDownloadTasks, AccessHistory};
@@ -35,6 +36,7 @@ use super::traits::{AccessDownloadTasks, AccessHistory};
 pub struct AppState {
     pub http_client: HttpClientRef,
     pub dir_options: Arc<DirsOptions>,
+    #[cfg(feature = "actix_web")]
     pub server_options: Arc<ServerOptions>,
     pub download_tasks: DownloadTaks,
     pub history: HistoryMap,
@@ -45,6 +47,7 @@ impl Clone for AppState {
         Self {
             http_client: self.http_client.clone(),
             dir_options: self.dir_options.clone(),
+            #[cfg(feature = "actix_web")]
             server_options: self.server_options.clone(),
             download_tasks: self.download_tasks.clone(),
             history: self.history.clone(),
@@ -53,6 +56,7 @@ impl Clone for AppState {
 }
 
 impl AppState {
+    #[cfg(feature = "actix_web")]
     pub fn get_hostname_port(&self) -> (String, u16) {
         self.server_options.get_hostname_port()
     }
@@ -69,6 +73,7 @@ impl AppState {
         Self {
             http_client: http_client_ref,
             dir_options: Arc::new(dir_options),
+            #[cfg(feature = "actix_web")]
             server_options: Arc::new(server_options),
             download_tasks,
             history,
@@ -81,7 +86,7 @@ impl AppState {
             HeaderValue::from_static("special-eureka-manager/0.4.0"),
         );
         let client = Client::builder().default_headers(headers).build()?;
-        Ok(HttpClientRef::new(Mutex::new(HttpClient::new(client))))
+        Ok(HttpClientRef::new(RwLock::new(HttpClient::new(client))))
     }
     pub async fn load_dir_options_history() -> ManagerCoreResult<(DirsOptions, HistoryMap)> {
         let dir_options = DirsOptions::new()?;
@@ -100,10 +105,12 @@ impl AppState {
         verify_all_fs()?;
         let http_client = Self::load_default_http_client()?;
         let (dir_options, history) = Self::load_dir_options_history().await?;
+        #[cfg(feature = "actix_web")]
         let server_options = ServerOptions::new()?;
         Ok(Self {
             http_client,
             dir_options: Arc::new(dir_options),
+            #[cfg(feature = "actix_web")]
             server_options: Arc::new(server_options),
             download_tasks: Default::default(),
             history,
@@ -298,6 +305,7 @@ impl AccessCoverDownloadWithManga for AppState {}
 #[async_trait::async_trait]
 impl AccessChapterUtisWithID for AppState {}
 
+#[cfg(feature = "actix_web")]
 impl From<Data<AppState>> for AppState {
     fn from(value: Data<AppState>) -> Self {
         let value = value.as_ref().clone();

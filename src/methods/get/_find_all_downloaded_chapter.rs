@@ -1,7 +1,12 @@
+#[cfg(feature = "actix_web")]
 use crate::core::Error;
+#[cfg(feature = "actix_web")]
 use crate::server::AppState;
+#[cfg(feature = "actix_web")]
 use actix_web::http::header::ContentType;
+#[cfg(feature = "actix_web")]
 use actix_web::{get, web, HttpResponse, Responder};
+#[cfg(feature = "actix_web")]
 use serde_qs::actix::QsQuery;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -24,6 +29,7 @@ impl Default for GetChapterQuery {
 }
 
 /// get all dowloaded chapter
+#[cfg(feature = "actix_web")]
 #[get("/chapter")]
 pub async fn find_all_downloaded_chapter(
     query: QsQuery<GetChapterQuery>,
