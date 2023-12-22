@@ -1222,6 +1222,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "mangadex-api-input-types"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b430e794362ae4285d9d61e0734779f4cad64312ce6ee31a0d3b2adaa8cde0c"
+dependencies = [
+ "anyhow",
+ "mangadex-api-schema-rust",
+ "mangadex-api-types-rust",
+ "serde",
+ "tokio",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "mangadex-api-schema-rust"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1254,7 +1269,7 @@ dependencies = [
 
 [[package]]
 name = "mangadex-desktop-api2"
-version = "0.6.0-alpha.1"
+version = "0.6.0-alpha.2"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -1267,6 +1282,7 @@ dependencies = [
  "itertools 0.12.0",
  "log",
  "mangadex-api",
+ "mangadex-api-input-types",
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
  "reqwest",

@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.6.0-alpha.1"
+version = "0.6.0-alpha.2"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
@@ -36,6 +36,7 @@ serde_qs = { version = "0", features = ["actix4"], optional = true }
 async-trait = "0.1"
 actix-cors = { version = "0.6.5", optional = true }
 fern = { version = "0.6", optional = true }
+mangadex-api-input-types = { version = "0.2", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"]}
@@ -47,7 +48,7 @@ actix_web = ["dep:actix-web", "dep:actix-cors", "dep:serde_qs"]
 
 [[bin]]
 name = "special-eureka-downloader"
-required-features = ["use_fern"]
+required-features = ["use_fern", "actix_web"]
 
 [[bench]]
 name = "aggregate"
