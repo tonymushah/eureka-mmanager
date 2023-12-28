@@ -59,29 +59,18 @@ impl ExtractData for ChapterUtilsWithID {
                 input.relationships = current_data.relationships;
             } else {
                 let contains_rels = input.relationships.iter().all(|i| match i.type_ {
-                    RelationshipType::Manga => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::Manga(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
-                    RelationshipType::User => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::User(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
-                    RelationshipType::ScanlationGroup => {
-                        i.attributes.as_ref().is_some_and(|attr| {
-                            if let RelatedAttributes::ScanlationGroup(_) = attr {
-                                true
-                            } else {
-                                false
-                            }
-                        })
-                    }
+                    RelationshipType::Manga => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::Manga(_))),
+                    RelationshipType::User => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::User(_))),
+                    RelationshipType::ScanlationGroup => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::ScanlationGroup(_))),
                     _ => false,
                 });
                 if !contains_rels {

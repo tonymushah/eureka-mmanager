@@ -44,49 +44,30 @@ impl ExtractData for MangaUtilsWithMangaId {
                 let contains_rels = input.relationships.iter().all(|i| match i.type_ {
                     RelationshipType::Manga => {
                         i.related.is_some()
-                            && i.attributes.as_ref().is_some_and(|attr| {
-                                if let RelatedAttributes::Manga(_) = attr {
-                                    true
-                                } else {
-                                    false
-                                }
-                            })
+                            && i.attributes
+                                .as_ref()
+                                .is_some_and(|attr| matches!(attr, RelatedAttributes::Manga(_)))
                     }
-                    RelationshipType::User => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::User(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
-                    RelationshipType::Artist => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::Author(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
-                    RelationshipType::Author => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::Author(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
-                    RelationshipType::Creator => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::User(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
-                    RelationshipType::CoverArt => i.attributes.as_ref().is_some_and(|attr| {
-                        if let RelatedAttributes::CoverArt(_) = attr {
-                            true
-                        } else {
-                            false
-                        }
-                    }),
+                    RelationshipType::User => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::User(_))),
+                    RelationshipType::Artist => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::Author(_))),
+                    RelationshipType::Author => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::Author(_))),
+                    RelationshipType::Creator => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::User(_))),
+                    RelationshipType::CoverArt => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::CoverArt(_))),
                     _ => false,
                 });
                 if !contains_rels {
