@@ -18,7 +18,7 @@ use crate::{
 
 use self::filter::{filter, includes::map_fn_via_includes};
 
-use super::{chapter::ChapterUtils, collection::Collection, manga::MangaUtils};
+use super::{chapter::ChapterUtils, collection::Collection, manga::MangaUtils, ExtractData};
 
 pub use with_id::CoverUtilsWithId;
 

@@ -2,30 +2,31 @@ use crate::core::ManagerCoreResult;
 use crate::server::AppState;
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpResponse, Responder};
-use std::path::Path;
+use bytes::BytesMut;
+use std::io::Read;
+use uuid::Uuid;
+
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct ThisPath {
+    id: Uuid,
+    filename: String,
+}
 
 /// find a chapters data-saver image by his id
 #[get("/chapter/{id}/data-saver/{filename}")]
 pub async fn find_chapters_data_saver_img_by_id(
-    data: web::Path<(String, String)>,
+    data: web::Path<ThisPath>,
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
-    let (id, filename) = data.into_inner();
-    let file_dirs = &app_state.dir_options;
-    let path = file_dirs.chapters_add(format!("{}/data-saver/{}", id, filename).as_str());
-    if Path::new(path.as_str()).exists() {
-        Ok(HttpResponse::Ok()
-            .content_type(ContentType::jpeg())
-            .body(std::fs::read(path)?))
-    } else {
-        let jsons = serde_json::json!({
-            "result" : "error",
-            "type" : "manga",
-            "id" : id.as_str(),
-            "message" : format!("Cannot find the chapter {} data-saver in the api", id)
-        });
-        Ok(HttpResponse::NotFound()
-            .content_type(ContentType::json())
-            .body(jsons.to_string()))
-    }
+    let mut buf_reader = app_state
+        .chapter_utils()
+        .with_id(data.id)
+        .get_data_saver_image(&data.filename)?;
+    let mut buf: BytesMut = BytesMut::new();
+    buf_reader.read_exact(&mut buf)?;
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::jpeg())
+        .body(buf))
 }

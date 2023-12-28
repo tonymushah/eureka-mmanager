@@ -21,7 +21,7 @@ use self::{
     get_all_chapter::{AsyncGetAllChapter, NotIncludeFails, OnlyFails},
 };
 
-use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
+use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils, ExtractData};
 
 pub mod filter;
 mod get_all_chapter;
@@ -237,6 +237,8 @@ impl<'a> From<&'a mut ChapterDownload> for ChapterUtils {
 
 #[cfg(test)]
 mod tests {
+
+    use crate::utils::ExtractData;
 
     use super::*;
     #[tokio::test]

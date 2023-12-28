@@ -5,10 +5,14 @@ use std::{
 };
 
 use bytes::{Bytes, BytesMut};
-use mangadex_api_schema_rust::{v5::CoverAttributes, ApiData, ApiObject};
+use mangadex_api_schema_rust::{
+    v5::{CoverObject, RelatedAttributes},
+    ApiData,
+};
+use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
 use uuid::Uuid;
 
-use crate::{download::cover::CoverDownload, ManagerCoreResult};
+use crate::{download::cover::CoverDownload, utils::ExtractData, ManagerCoreResult};
 
 use super::CoverUtils;
 
@@ -16,6 +20,59 @@ use super::CoverUtils;
 pub struct CoverUtilsWithId {
     pub cover_utils: CoverUtils,
     pub(crate) cover_id: Uuid,
+}
+
+impl ExtractData for CoverUtilsWithId {
+    type Input = CoverObject;
+    type Output = CoverObject;
+
+    fn get_file_path(&self) -> ManagerCoreResult<PathBuf> {
+        Ok(self.into())
+    }
+
+    fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
+        let current_data = self.get_data()?;
+        let buf_writer = self.get_buf_writer()?;
+        let to_input_data = {
+            if input.relationships.is_empty() {
+                input.relationships = current_data.relationships;
+            } else {
+                let contains_rels = input.relationships.iter().all(|i| match i.type_ {
+                    RelationshipType::Manga => i.attributes.as_ref().is_some_and(|attr| {
+                        if let RelatedAttributes::Manga(_) = attr {
+                            true
+                        } else {
+                            false
+                        }
+                    }),
+                    RelationshipType::User => i.attributes.as_ref().is_some_and(|attr| {
+                        if let RelatedAttributes::User(_) = attr {
+                            true
+                        } else {
+                            false
+                        }
+                    }),
+                    _ => false,
+                });
+                if !contains_rels {
+                    input.relationships = current_data.relationships;
+                }
+            }
+            ApiData {
+                response: ResponseType::Entity,
+                result: ResultType::Ok,
+                data: input,
+            }
+        };
+        serde_json::to_writer(buf_writer, &to_input_data)?;
+        Ok(())
+    }
+
+    fn delete(&self) -> ManagerCoreResult<()> {
+        self.delete_image()?;
+        std::fs::remove_file(self.get_file_path()?)?;
+        Ok(())
+    }
 }
 
 impl CoverUtilsWithId {
@@ -30,11 +87,6 @@ impl CoverUtilsWithId {
     }
     pub fn is_image_there(&self) -> bool {
         self.get_image_buf_reader().is_ok()
-    }
-    pub fn get_data(&self) -> ManagerCoreResult<ApiObject<CoverAttributes>> {
-        let data: ApiData<ApiObject<CoverAttributes>> =
-            serde_json::from_reader(BufReader::new(File::open(Into::<PathBuf>::into(self))?))?;
-        Ok(data.data)
     }
     pub fn get_image_path(&self) -> ManagerCoreResult<PathBuf> {
         let cover_data = self.get_data()?;
@@ -58,11 +110,6 @@ impl CoverUtilsWithId {
     }
     pub fn delete_image(&self) -> ManagerCoreResult<()> {
         std::fs::remove_file(self.get_image_path()?)?;
-        Ok(())
-    }
-    pub fn delete(&self) -> ManagerCoreResult<()> {
-        self.delete_image()?;
-        std::fs::remove_file(Into::<PathBuf>::into(self))?;
         Ok(())
     }
 }

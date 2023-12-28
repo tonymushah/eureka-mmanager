@@ -1,8 +1,15 @@
-use std::{fs::File, io::{BufReader, ErrorKind}, path::{Path, PathBuf}};
+use std::{
+    fs::{File, ReadDir},
+    io::{BufReader, ErrorKind},
+    path::{Path, PathBuf},
+};
 
 use log::info;
-use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiData, ApiObject};
-use mangadex_api_types_rust::RelationshipType;
+use mangadex_api_schema_rust::{
+    v5::{ChapterAttributes, ChapterObject, RelatedAttributes},
+    ApiData, ApiObject,
+};
+use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
 use uuid::Uuid;
 
 use crate::{
@@ -14,7 +21,7 @@ use crate::{
         },
         HistoryEntry,
     },
-    utils::manga::MangaUtils,
+    utils::{manga::MangaUtils, ExtractData},
     ManagerCoreResult,
 };
 
@@ -24,6 +31,72 @@ use super::ChapterUtils;
 pub struct ChapterUtilsWithID {
     pub chapter_utils: ChapterUtils,
     pub(crate) chapter_id: Uuid,
+}
+
+impl ExtractData for ChapterUtilsWithID {
+    type Input = ChapterObject;
+    type Output = ChapterObject;
+    fn delete(&self) -> ManagerCoreResult<()> {
+        std::fs::remove_dir_all(std::convert::Into::<PathBuf>::into(self))?;
+        Ok(())
+    }
+
+    fn get_file_path(&self) -> ManagerCoreResult<PathBuf> {
+        Ok(Path::new(
+            &self
+                .chapter_utils
+                .dirs_options
+                .chapters_add(format!("{}/data.json", self.chapter_id).as_str()),
+        )
+        .to_path_buf())
+    }
+
+    fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
+        let current_data = self.get_data()?;
+        let buf_writer = self.get_buf_writer()?;
+        let to_input_data = {
+            if input.relationships.is_empty() {
+                input.relationships = current_data.relationships;
+            } else {
+                let contains_rels = input.relationships.iter().all(|i| match i.type_ {
+                    RelationshipType::Manga => i.attributes.as_ref().is_some_and(|attr| {
+                        if let RelatedAttributes::Manga(_) = attr {
+                            true
+                        } else {
+                            false
+                        }
+                    }),
+                    RelationshipType::User => i.attributes.as_ref().is_some_and(|attr| {
+                        if let RelatedAttributes::User(_) = attr {
+                            true
+                        } else {
+                            false
+                        }
+                    }),
+                    RelationshipType::ScanlationGroup => {
+                        i.attributes.as_ref().is_some_and(|attr| {
+                            if let RelatedAttributes::ScanlationGroup(_) = attr {
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                    }
+                    _ => false,
+                });
+                if !contains_rels {
+                    input.relationships = current_data.relationships;
+                }
+            }
+            ApiData {
+                result: ResultType::Ok,
+                response: ResponseType::Entity,
+                data: input,
+            }
+        };
+        serde_json::to_writer(buf_writer, &to_input_data)?;
+        Ok(())
+    }
 }
 
 impl ChapterUtilsWithID {
@@ -38,12 +111,10 @@ impl ChapterUtilsWithID {
         let chap_data = self.get_data()?;
         let manga_id = chap_data
             .find_first_relationships(RelationshipType::Manga)
-            .ok_or(crate::core::Error::Io(
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Seems like your chapter has no manga related to him",
-                ),
-            ))?
+            .ok_or(crate::core::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Seems like your chapter has no manga related to him",
+            )))?
             .id;
         Ok(manga_utils.with_id(manga_id).is_there())
     }
@@ -68,10 +139,7 @@ impl ChapterUtilsWithID {
             .await?;
         Ok(data)
     }
-    pub async fn patch_manga<'a, T>(
-        &'a self,
-        ctx: &'a mut T,
-    ) -> ManagerCoreResult<()>
+    pub async fn patch_manga<'a, T>(&'a self, ctx: &'a mut T) -> ManagerCoreResult<()>
     where
         T: AccessHistory + AccessDownloadTasks,
     {
@@ -106,7 +174,7 @@ impl ChapterUtilsWithID {
             "id" : manga_id.hyphenated()
         });
          */
-        
+
         info!("downloaded {}.json", manga_id.hyphenated());
         <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
             ctx,
@@ -116,36 +184,88 @@ impl ChapterUtilsWithID {
         //Ok(jsons)
         Ok(())
     }
-    pub fn get_data(&self) -> ManagerCoreResult<ApiObject<ChapterAttributes>> {
+    fn get_path_bufs(list_dir: ReadDir) -> Vec<PathBuf> {
+        list_dir
+            .into_iter()
+            .flatten()
+            .flat_map(|file| -> std::io::Result<PathBuf> {
+                let filename_os = file.file_name().clone();
+                let filename = Path::new(&filename_os);
+                if !filename
+                    .extension()
+                    .and_then(|f| f.to_str())
+                    .ok_or(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "can't reconize file".to_string().to_string(),
+                    ))?
+                    .ends_with(".json")
+                {
+                    Ok(filename.to_path_buf())
+                } else {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "can't reconize file".to_string().to_string(),
+                    ))
+                }
+            })
+            .collect()
+    }
+    pub fn get_data_images(&self) -> ManagerCoreResult<Vec<PathBuf>> {
         let path = self
             .chapter_utils
             .dirs_options
-            .chapters_add(format!("{}/data.json", self.chapter_id).as_str());
-        let data: ApiData<ApiObject<ChapterAttributes>> =
-            serde_json::from_reader(BufReader::new(File::open(path)?))?;
-        Ok(data.data)
+            .chapters_add(format!("{}/data", self.chapter_id).as_str());
+        let list_dir = std::fs::read_dir(path.as_str())?;
+        Ok(Self::get_path_bufs(list_dir))
     }
-    pub fn delete(&self) -> ManagerCoreResult<()> {
-        std::fs::remove_dir_all(std::convert::Into::<PathBuf>::into(self))?;
-        Ok(())
+    pub fn get_data_saver_images(&self) -> ManagerCoreResult<Vec<PathBuf>> {
+        let path = self
+            .chapter_utils
+            .dirs_options
+            .chapters_add(format!("{}/data-saver", self.chapter_id).as_str());
+        let list_dir = std::fs::read_dir(path.as_str())?;
+        Ok(Self::get_path_bufs(list_dir))
+    }
+    pub fn get_data_image<I: AsRef<str>>(&self, image: I) -> ManagerCoreResult<BufReader<File>> {
+        let path = self
+            .chapter_utils
+            .dirs_options
+            .chapters_add(format!("{}/data/{}", self.chapter_id, image.as_ref()).as_str());
+        Ok(BufReader::new(File::open(path)?))
+    }
+    pub fn get_data_saver_image<I: AsRef<str>>(
+        &self,
+        image: I,
+    ) -> ManagerCoreResult<BufReader<File>> {
+        let path = self
+            .chapter_utils
+            .dirs_options
+            .chapters_add(format!("{}/data-saver/{}", self.chapter_id, image.as_ref()).as_str());
+        Ok(BufReader::new(File::open(path)?))
     }
 }
 
 impl From<ChapterUtilsWithID> for PathBuf {
     fn from(value: ChapterUtilsWithID) -> Self {
-        Path::new(&value
-            .chapter_utils
-            .dirs_options
-            .chapters_add(value.chapter_id.to_string().as_str())).to_path_buf()
+        Path::new(
+            &value
+                .chapter_utils
+                .dirs_options
+                .chapters_add(value.chapter_id.to_string().as_str()),
+        )
+        .to_path_buf()
     }
 }
 
 impl From<&ChapterUtilsWithID> for PathBuf {
     fn from(value: &ChapterUtilsWithID) -> Self {
-        Path::new(&value
-            .chapter_utils
-            .dirs_options
-            .chapters_add(value.chapter_id.to_string().as_str())).to_path_buf()
+        Path::new(
+            &value
+                .chapter_utils
+                .dirs_options
+                .chapters_add(value.chapter_id.to_string().as_str()),
+        )
+        .to_path_buf()
     }
 }
 

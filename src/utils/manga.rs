@@ -22,6 +22,7 @@ use crate::utils::manga::stream_filters::includes::map_fn_via_includes;
 use super::chapter::ChapterUtils;
 use super::collection::Collection;
 use super::cover::CoverUtils;
+use super::ExtractData;
 
 pub use with_id::MangaUtilsWithMangaId;
 
@@ -60,7 +61,7 @@ impl<'a> MangaUtils {
         &'a self,
         manga_ids: Vec<Uuid>,
     ) -> impl Stream<Item = ApiObject<MangaAttributes>> + 'a {
-        tokio_stream::iter(manga_ids).filter_map(|id| self.with_id(id).get_data().ok())
+        self.get_manga_data_by_ids(tokio_stream::iter(manga_ids))
     }
     pub fn get_all_downloaded_manga(&'a self) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a> {
         let path = self.dirs_options.mangas_add("");
