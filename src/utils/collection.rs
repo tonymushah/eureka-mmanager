@@ -1,11 +1,15 @@
+use std::num::TryFromIntError;
+
+use mangadex_api_schema_rust::v5::Results;
+use serde::{Deserialize, Serialize};
 use tokio_stream::{Stream, StreamExt};
 
 use crate::core::ManagerCoreResult;
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, Serialize)]
 pub struct Collection<T>
 where
-    T: serde::Serialize,
+    T: Serialize,
     T: Clone,
 {
     data: Vec<T>,
@@ -16,7 +20,7 @@ where
 
 impl<T> Collection<T>
 where
-    T: serde::Serialize,
+    T: Serialize,
     T: Clone,
 {
     pub fn new(
@@ -52,31 +56,26 @@ where
             }
         }
     }
-    pub fn get_data(self) -> Vec<T> {
-        self.data
+    pub fn get_data(&self) -> &Vec<T> {
+        &self.data
     }
-    pub fn get_total(self) -> usize {
+    pub fn get_total(&self) -> usize {
         self.total
     }
-    pub fn get_offset(self) -> usize {
+    pub fn get_offset(&self) -> usize {
         self.offset
     }
-    pub fn get_limit(self) -> usize {
+    pub fn get_limit(&self) -> usize {
         self.limit
     }
-    pub fn convert_to<S, F>(&mut self, f: F) -> ManagerCoreResult<Collection<S>>
+    pub fn convert_to<S, F>(&self, f: F) -> ManagerCoreResult<Collection<S>>
     where
         F: Fn(T) -> S,
         S: Clone,
         S: serde::Serialize,
     {
-        let mut new_data: Vec<S> = Vec::new();
-        let old_data = self.data.clone();
-        for data in old_data {
-            new_data.push(f(data));
-        }
         ManagerCoreResult::Ok(Collection {
-            data: new_data,
+            data: self.data.iter().cloned().map(f).collect(),
             offset: self.offset,
             limit: self.limit,
             total: self.total,
@@ -94,5 +93,22 @@ where
         tokio::pin!(stream);
         let mut to_use: Vec<T> = stream.collect().await;
         Self::new(&mut to_use, limit, offset)
+    }
+}
+
+impl<'de, T> TryFrom<Collection<T>> for Results<T>
+where
+    T: Serialize + Deserialize<'de> + Clone,
+{
+    type Error = TryFromIntError;
+    fn try_from(value: Collection<T>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            result: mangadex_api_types_rust::ResultType::Ok,
+            response: mangadex_api_types_rust::ResponseType::Collection,
+            data: value.data,
+            limit: value.limit.try_into()?,
+            offset: value.offset.try_into()?,
+            total: value.total.try_into()?,
+        })
     }
 }

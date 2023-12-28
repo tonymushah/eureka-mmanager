@@ -1,7 +1,9 @@
+pub mod stream_filters;
 mod with_id;
 
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes};
+use mangadex_api_input_types::manga::list::MangaListParams;
+use mangadex_api_schema_rust::v5::{ChapterAttributes, MangaAttributes, MangaCollection};
 use mangadex_api_schema_rust::ApiObject;
 use mangadex_api_types_rust::RelationshipType;
 use std::path::Path;
@@ -14,10 +16,13 @@ use crate::core::ManagerCoreResult;
 use crate::download::chapter::ChapterDownload;
 use crate::download::manga::MangaDownload;
 use crate::settings::files_dirs::DirsOptions;
+use crate::utils::manga::stream_filters::filter;
+use crate::utils::manga::stream_filters::includes::map_fn_via_includes;
 
 use super::chapter::ChapterUtils;
 use super::collection::Collection;
 use super::cover::CoverUtils;
+use super::ExtractData;
 
 pub use with_id::MangaUtilsWithMangaId;
 
@@ -56,20 +61,20 @@ impl<'a> MangaUtils {
         &'a self,
         manga_ids: Vec<Uuid>,
     ) -> impl Stream<Item = ApiObject<MangaAttributes>> + 'a {
-        tokio_stream::iter(manga_ids).filter_map(|id| self.with_id(id).get_data().ok())
+        self.get_manga_data_by_ids(tokio_stream::iter(manga_ids))
     }
-    pub fn get_all_downloaded_manga(
-        &'a self,
-    ) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a> {
+    pub fn get_all_downloaded_manga(&'a self) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a> {
         let path = self.dirs_options.mangas_add("");
         if Path::new(path.as_str()).exists() {
             let list_dir = std::fs::read_dir(path.as_str())?.flatten();
-            Ok(tokio_stream::iter(list_dir).filter_map(|file_| {
-                file_
-                    .file_name()
-                    .to_str()
-                    .map(|data| data.to_string().replace(".json", ""))
-            }).filter_map(|id| Uuid::parse_str(&id).ok()))
+            Ok(tokio_stream::iter(list_dir)
+                .filter_map(|file_| {
+                    file_
+                        .file_name()
+                        .to_str()
+                        .map(|data| data.to_string().replace(".json", ""))
+                })
+                .filter_map(|id| Uuid::parse_str(&id).ok()))
         } else {
             Err(crate::core::Error::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -79,44 +84,20 @@ impl<'a> MangaUtils {
     }
     pub async fn get_downloaded_manga(
         &'a self,
-        offset: usize,
-        limit: usize,
-        title__: Option<String>,
-    ) -> ManagerCoreResult<Collection<Uuid>> {
+        params: MangaListParams,
+    ) -> ManagerCoreResult<MangaCollection> {
         let vecs = Box::pin(self.get_all_downloaded_manga()?);
         let manga_data = Box::pin(self.get_manga_data_by_ids(vecs));
-        if let Some(title) = title__ {
-            Collection::from_async_stream(
-                manga_data
-                    .filter(|data| {
-                        for title_ in data.attributes.title.values() {
-                            if title_
-                                .to_lowercase()
-                                .contains(title.to_lowercase().as_str())
-                            {
-                                return true;
-                            }
-                        }
-                        for entry in &data.attributes.alt_titles {
-                            for title_ in entry.values() {
-                                if title_
-                                    .to_lowercase()
-                                    .contains(title.to_lowercase().as_str())
-                                {
-                                    return true;
-                                }
-                            }
-                        }
-                        false
-                    })
-                    .map(|d| d.id),
-                limit,
-                offset,
-            )
-            .await
-        } else {
-            Collection::from_async_stream(manga_data.map(|d| d.id), limit, offset).await
-        }
+
+        let collection = Collection::from_async_stream(
+            manga_data
+                .filter(|item| filter(item, &params))
+                .map(|o| map_fn_via_includes(o, &params.includes)),
+            params.limit.unwrap_or(10) as usize,
+            params.offset.unwrap_or_default() as usize,
+        )
+        .await?;
+        Ok(collection.try_into()?)
     }
     pub fn with_id(&self, manga_id: Uuid) -> MangaUtilsWithMangaId {
         MangaUtilsWithMangaId {

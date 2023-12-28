@@ -1,21 +1,20 @@
-use std::{
-    fs::File,
-    io::BufReader,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use async_stream::stream;
 use mangadex_api_schema_rust::{
-    v5::{ChapterAttributes, CoverAttributes, MangaAggregate, MangaAttributes},
+    v5::{ChapterAttributes, CoverAttributes, MangaAggregate, MangaObject, RelatedAttributes},
     ApiData, ApiObject,
 };
-use mangadex_api_types_rust::{RelationshipType, ResultType};
+use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use crate::{
     download::manga::MangaDownload,
-    utils::{chapter::ChapterUtils, collection::Collection, cover::CoverUtils, manga_aggregate},
+    utils::{
+        chapter::ChapterUtils, collection::Collection, cover::CoverUtils, manga_aggregate,
+        ExtractData,
+    },
     ManagerCoreResult,
 };
 
@@ -25,6 +24,74 @@ use super::MangaUtils;
 pub struct MangaUtilsWithMangaId {
     pub(crate) manga_utils: MangaUtils,
     pub(crate) manga_id: Uuid,
+}
+
+impl ExtractData for MangaUtilsWithMangaId {
+    type Input = MangaObject;
+    type Output = MangaObject;
+
+    fn get_file_path(&self) -> ManagerCoreResult<PathBuf> {
+        Ok(Into::<PathBuf>::into(self))
+    }
+
+    fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
+        let current_data = self.get_data()?;
+        let buf_writer = self.get_buf_writer()?;
+        let to_input_data = {
+            if input.relationships.is_empty() {
+                input.relationships = current_data.relationships;
+            } else {
+                let contains_rels = input.relationships.iter().all(|i| match i.type_ {
+                    RelationshipType::Manga => {
+                        i.related.is_some()
+                            && i.attributes
+                                .as_ref()
+                                .is_some_and(|attr| matches!(attr, RelatedAttributes::Manga(_)))
+                    }
+                    RelationshipType::User => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::User(_))),
+                    RelationshipType::Artist => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::Author(_))),
+                    RelationshipType::Author => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::Author(_))),
+                    RelationshipType::Creator => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::User(_))),
+                    RelationshipType::CoverArt => i
+                        .attributes
+                        .as_ref()
+                        .is_some_and(|attr| matches!(attr, RelatedAttributes::CoverArt(_))),
+                    _ => false,
+                });
+                if !contains_rels {
+                    input.relationships = current_data.relationships;
+                }
+            }
+            ApiData {
+                response: ResponseType::Entity,
+                result: ResultType::Ok,
+                data: input,
+            }
+        };
+        serde_json::to_writer(buf_writer, &to_input_data)?;
+        Ok(())
+    }
+
+    fn delete(&self) -> ManagerCoreResult<()> {
+        tokio::runtime::Handle::current().block_on(async {
+            self.delete_chapters().collect::<Vec<Uuid>>().await;
+            self.delete_covers().collect::<Vec<Uuid>>().await;
+        });
+        std::fs::remove_file(self.get_file_path()?)?;
+        Ok(())
+    }
 }
 
 impl MangaUtilsWithMangaId {
@@ -48,9 +115,7 @@ impl MangaUtilsWithMangaId {
         Ok(stream.map(|chapter| chapter.id))
     }
 
-    pub fn get_downloaded_covers(
-        &self,
-    ) -> impl Stream<Item = ApiObject<CoverAttributes>> + '_ {
+    pub fn get_downloaded_covers(&self) -> impl Stream<Item = ApiObject<CoverAttributes>> + '_ {
         stream! {
             let cover_utils: CoverUtils = From::from(self.manga_utils.clone());
             if let Ok(vecs) = cover_utils.get_all_cover_data(){
@@ -68,14 +133,6 @@ impl MangaUtilsWithMangaId {
         limit: usize,
     ) -> ManagerCoreResult<Collection<ApiObject<CoverAttributes>>> {
         Collection::from_async_stream(self.get_downloaded_covers(), limit, offset).await
-    }
-    pub fn is_there(&self) -> bool {
-        self.get_data().is_ok()
-    }
-    pub fn get_data(&self) -> ManagerCoreResult<ApiObject<MangaAttributes>> {
-        let data: ApiData<ApiObject<MangaAttributes>> =
-            serde_json::from_reader(BufReader::new(File::open(Into::<PathBuf>::into(self))?))?;
-        Ok(data.data)
     }
     pub fn get_all_downloaded_chapter_data(
         &self,
@@ -170,12 +227,6 @@ impl MangaUtilsWithMangaId {
             }
         })
     }
-    pub async fn delete(&self) -> ManagerCoreResult<()> {
-        self.delete_chapters().collect::<Vec<Uuid>>().await;
-        self.delete_covers().collect::<Vec<Uuid>>().await;
-        std::fs::remove_file(Into::<PathBuf>::into(self))?;
-        Ok(())
-    }
 }
 
 impl<'a> From<&'a MangaDownload> for MangaUtilsWithMangaId {
@@ -204,7 +255,8 @@ impl From<MangaUtilsWithMangaId> for PathBuf {
                 .manga_utils
                 .dirs_options
                 .mangas_add(format!("{}.json", value.manga_id).as_str()),
-        ).to_path_buf()
+        )
+        .to_path_buf()
     }
 }
 
@@ -215,6 +267,7 @@ impl From<&MangaUtilsWithMangaId> for PathBuf {
                 .manga_utils
                 .dirs_options
                 .mangas_add(format!("{}.json", value.manga_id).as_str()),
-        ).to_path_buf()
+        )
+        .to_path_buf()
     }
 }

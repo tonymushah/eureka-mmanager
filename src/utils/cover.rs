@@ -1,9 +1,14 @@
+pub mod filter;
 mod with_id;
 
 use std::{path::Path, sync::Arc};
 
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::{v5::CoverAttributes, ApiObject};
+use mangadex_api_input_types::cover::list::CoverListParam;
+use mangadex_api_schema_rust::{
+    v5::{CoverAttributes, CoverCollection},
+    ApiObject,
+};
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
@@ -11,7 +16,9 @@ use crate::{
     download::chapter::ChapterDownload, settings::files_dirs::DirsOptions, ManagerCoreResult,
 };
 
-use super::{chapter::ChapterUtils, manga::MangaUtils};
+use self::filter::{filter, includes::map_fn_via_includes};
+
+use super::{chapter::ChapterUtils, collection::Collection, manga::MangaUtils, ExtractData};
 
 pub use with_id::CoverUtilsWithId;
 
@@ -56,6 +63,17 @@ impl CoverUtils {
         &self,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<CoverAttributes>> + '_> {
         Ok(Box::pin(self.get_all_cover()?).filter_map(|id| self.with_id(id).get_data().ok()))
+    }
+    pub async fn list(&self, param: CoverListParam) -> ManagerCoreResult<CoverCollection> {
+        Ok(Collection::from_async_stream(
+            self.get_all_cover_data()?
+                .filter(|item| filter(item, &param))
+                .map(|item| map_fn_via_includes(item, &param.includes)),
+            param.limit.unwrap_or(10) as usize,
+            param.offset.unwrap_or_default() as usize,
+        )
+        .await?
+        .try_into()?)
     }
     pub fn with_id(&self, cover_id: Uuid) -> CoverUtilsWithId {
         CoverUtilsWithId {
