@@ -16,7 +16,10 @@ use crate::{
     settings::{file_history::HistoryWFile, files_dirs::DirsOptions},
 };
 
-use self::get_all_chapter::{AsyncGetAllChapter, NotIncludeFails, OnlyFails};
+use self::{
+    filter::filter,
+    get_all_chapter::{AsyncGetAllChapter, NotIncludeFails, OnlyFails},
+};
 
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
 
@@ -156,7 +159,8 @@ impl ChapterUtils {
             let stream = self
                 .get_all_chapter(Some(GetAllChapter::from(param.clone())), history)
                 .await?;
-            let stream = self.get_chapters_by_stream_id(Box::pin(stream));
+            let stream = Box::pin(self.get_chapters_by_stream_id(Box::pin(stream)));
+            let stream = stream.filter(|item| filter(item, &param.params));
             let collection: Collection<ChapterObject> = Collection::from_async_stream(
                 stream,
                 param.clone().params.limit.unwrap_or(10) as usize,
