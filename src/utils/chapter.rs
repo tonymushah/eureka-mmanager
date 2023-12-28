@@ -1,33 +1,31 @@
 use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::{v5::ChapterAttributes, ApiObject};
-use mangadex_api_types_rust::RelationshipType;
-use uuid::Uuid;
-use std::{
-    path::Path,
-    sync::Arc,
+use mangadex_api_schema_rust::{
+    v5::{ChapterAttributes, ChapterCollection, ChapterObject},
+    ApiObject,
 };
+use mangadex_api_types_rust::RelationshipType;
+use std::{path::Path, sync::Arc};
 use tokio_stream::{Stream, StreamExt};
+use uuid::Uuid;
 
 use crate::{
     core::{Error, ManagerCoreResult},
     download::chapter::ChapterDownload,
     methods::get::_find_all_downloaded_chapter::GetChapterQuery,
     server::traits::AccessHistory,
-    settings::{
-        file_history:: HistoryWFile,
-        files_dirs::DirsOptions,
-    },
+    settings::{file_history::HistoryWFile, files_dirs::DirsOptions},
 };
 
 use self::get_all_chapter::{AsyncGetAllChapter, NotIncludeFails, OnlyFails};
 
 use super::{collection::Collection, cover::CoverUtils, manga::MangaUtils};
 
+pub mod filter;
 mod get_all_chapter;
 mod with_id;
 
-pub use with_id::{ChapterUtilsWithID, AccessChapterUtisWithID};
 pub use get_all_chapter::GetAllChapter;
+pub use with_id::{AccessChapterUtisWithID, ChapterUtilsWithID};
 
 #[derive(Clone)]
 pub struct ChapterUtils {
@@ -42,21 +40,6 @@ impl ChapterUtils {
             http_client_ref,
         }
     }
-    pub fn get_chapters_by_stream_id<'a, T>(
-        &'a self,
-        chap_ids: T,
-    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + 'a
-    where
-        T: Stream<Item = Uuid> + std::marker::Unpin + 'a,
-    {
-        chap_ids.filter_map(|id| {
-            if let Ok(data_) = self.with_id(id).get_data() {
-                Some(data_)
-            } else {
-                None
-            }
-        })
-    }
     pub fn get_all_chapters_data(
         &self,
     ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
@@ -65,14 +48,29 @@ impl ChapterUtils {
     pub fn get_chapters_by_vec_id(
         &self,
         chap_ids: Vec<Uuid>,
-    ) -> ManagerCoreResult<impl Stream<Item = ApiObject<ChapterAttributes>> + '_> {
-        Ok(tokio_stream::iter(chap_ids).filter_map(move |id| {
+    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + '_ {
+        tokio_stream::iter(chap_ids).filter_map(move |id| {
             if let Ok(data_) = self.with_id(id).get_data() {
                 Some(data_)
             } else {
                 None
             }
-        }))
+        })
+    }
+    pub fn get_chapters_by_stream_id<'a, S>(
+        &'a self,
+        stream: S,
+    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + 'a
+    where
+        S: Stream<Item = Uuid> + Unpin + 'a,
+    {
+        stream.filter_map(move |id| {
+            if let Ok(data_) = self.with_id(id).get_data() {
+                Some(data_)
+            } else {
+                None
+            }
+        })
     }
     pub fn get_all_chapter_without_history(
         &self,
@@ -81,8 +79,8 @@ impl ChapterUtils {
         let path = file_dirs.chapters_add("");
         if Path::new(path.as_str()).exists() {
             let list_dir = std::fs::read_dir(path.as_str())?;
-            Ok(
-                tokio_stream::iter(list_dir.flatten()).filter_map(move |files| {
+            Ok(tokio_stream::iter(list_dir.flatten())
+                .filter_map(move |files| {
                     if let Some(data) = files.file_name().to_str() {
                         if Path::new(format!("{}/data.json", file_dirs.chapters_add(data)).as_str())
                             .exists()
@@ -94,14 +92,14 @@ impl ChapterUtils {
                     } else {
                         None
                     }
-                }).filter_map(|input| {
+                })
+                .filter_map(|input| {
                     if let Ok(id) = Uuid::parse_str(&input) {
                         Some(id)
-                    }else{
+                    } else {
                         None
                     }
-                })
-            )
+                }))
         } else {
             Err(Error::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
@@ -150,7 +148,7 @@ impl ChapterUtils {
         &'a self,
         parameters: Option<GetChapterQuery>,
         history: &'a mut H,
-    ) -> ManagerCoreResult<Collection<Uuid>>
+    ) -> ManagerCoreResult<ChapterCollection>
     where
         H: AccessHistory,
     {
@@ -158,18 +156,20 @@ impl ChapterUtils {
             let stream = self
                 .get_all_chapter(Some(GetAllChapter::from(param.clone())), history)
                 .await?;
-            let collection: Collection<Uuid> = Collection::from_async_stream(
+            let stream = self.get_chapters_by_stream_id(Box::pin(stream));
+            let collection: Collection<ChapterObject> = Collection::from_async_stream(
                 stream,
-                param.clone().limit.unwrap_or(10),
-                param.offset.unwrap_or(0),
+                param.clone().params.limit.unwrap_or(10) as usize,
+                param.params.offset.unwrap_or(0) as usize,
             )
             .await?;
-            Ok(collection)
+            Ok(collection.try_into()?)
         } else {
             let stream = self.get_all_chapter(None, history).await?;
-            let collection: Collection<Uuid> =
+            let stream = self.get_chapters_by_stream_id(Box::pin(stream));
+            let collection: Collection<ChapterObject> =
                 Collection::from_async_stream(stream, 10, 0).await?;
-            Ok(collection)
+            Ok(collection.try_into()?)
         }
     }
     pub fn with_id(&self, chapter_id: Uuid) -> ChapterUtilsWithID {
@@ -179,7 +179,6 @@ impl ChapterUtils {
         }
     }
 }
-
 
 impl From<MangaUtils> for ChapterUtils {
     fn from(value: MangaUtils) -> Self {

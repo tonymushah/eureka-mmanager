@@ -3,29 +3,17 @@ use crate::core::Error;
 #[cfg(feature = "actix_web")]
 use crate::server::AppState;
 #[cfg(feature = "actix_web")]
-use actix_web::http::header::ContentType;
-#[cfg(feature = "actix_web")]
 use actix_web::{get, web, HttpResponse, Responder};
+use mangadex_api_input_types::chapter::list::ChapterListParams;
 #[cfg(feature = "actix_web")]
 use serde_qs::actix::QsQuery;
 
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[derive(serde::Deserialize, Clone, Default)]
 pub struct GetChapterQuery {
-    pub offset: Option<usize>,
-    pub limit: Option<usize>,
+    #[serde(flatten)]
+    pub params: ChapterListParams,
     pub include_fails: Option<bool>,
     pub only_fails: Option<bool>,
-}
-
-impl Default for GetChapterQuery {
-    fn default() -> Self {
-        Self {
-            offset: Some(0),
-            limit: Some(10),
-            include_fails: None,
-            only_fails: None,
-        }
-    }
 }
 
 /// get all dowloaded chapter
@@ -41,12 +29,5 @@ pub async fn find_all_downloaded_chapter(
         .chapter_utils()
         .get_all_downloaded_chapters(Some(query.into_inner()), &mut app_state)
         .await?;
-    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
-        serde_json::json!({
-            "result" : "ok",
-            "type" : "collection",
-            "data" : getted
-        })
-        .to_string(),
-    ))
+    Ok(HttpResponse::Ok().json(getted))
 }
