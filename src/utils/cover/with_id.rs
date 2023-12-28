@@ -74,7 +74,8 @@ impl From<CoverUtilsWithId> for PathBuf {
                 .cover_utils
                 .dirs_options
                 .covers_add(format!("{}.json", value.cover_id).as_str()),
-        ).to_path_buf()
+        )
+        .to_path_buf()
     }
 }
 
@@ -85,7 +86,8 @@ impl From<&CoverUtilsWithId> for PathBuf {
                 .cover_utils
                 .dirs_options
                 .covers_add(format!("{}.json", value.cover_id).as_str()),
-        ).to_path_buf()
+        )
+        .to_path_buf()
     }
 }
 
