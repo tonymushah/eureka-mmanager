@@ -1,8 +1,9 @@
 use crate::core::ManagerCoreResult;
 use crate::server::AppState;
-use actix_web::http::header::ContentType;
+use crate::utils::ExtractData;
 use actix_web::{get, web, HttpResponse, Responder};
-use std::path::Path;
+use mangadex_api_schema_rust::ApiData;
+use mangadex_api_types_rust::{ResponseType, ResultType};
 
 /// find a cover by his id
 /// # How to use
@@ -12,22 +13,11 @@ pub async fn find_cover_by_id(
     id: web::Path<uuid::Uuid>,
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
-    let file_dirs = app_state.dir_options.clone();
-    let path = file_dirs.covers_add(format!("{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() {
-        let jsons = std::fs::read_to_string(path.as_str())?;
-        Ok(HttpResponse::Ok()
-            .content_type(ContentType::json())
-            .body(jsons))
-    } else {
-        let jsons = serde_json::json!({
-            "result" : "error",
-            "type" : "cover",
-            "id" : id.to_string(),
-            "message" : "Cannot find the manga in the api"
-        });
-        Ok(HttpResponse::NotFound()
-            .content_type(ContentType::json())
-            .body(jsons.to_string()))
-    }
+    let data = app_state.cover_utils().with_id(*id).get_data()?;
+    let value = ApiData {
+        data,
+        result: ResultType::Ok,
+        response: ResponseType::Entity,
+    };
+    Ok(HttpResponse::Ok().json(value))
 }

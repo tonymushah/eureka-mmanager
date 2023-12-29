@@ -86,6 +86,7 @@ impl<'a> MangaUtils {
         &'a self,
         params: MangaListParams,
     ) -> ManagerCoreResult<MangaCollection> {
+        log::info!("{:?}", params);
         let vecs = Box::pin(self.get_all_downloaded_manga()?);
         let manga_data = Box::pin(self.get_manga_data_by_ids(vecs));
 

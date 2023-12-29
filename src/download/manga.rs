@@ -1,17 +1,16 @@
-use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::sync::Arc;
 
-use mangadex_api::HttpClientRef;
-use mangadex_api_schema_rust::v5::MangaAttributes;
-use mangadex_api_schema_rust::{ApiData, ApiObject};
+use mangadex_api::{HttpClientRef, MangaDexClient};
+use mangadex_api_schema_rust::v5::MangaData;
+use mangadex_api_types_rust::ReferenceExpansionResource;
 use uuid::Uuid;
 
 use crate::core::ManagerCoreResult;
 use crate::server::traits::{AccessDownloadTasks, AccessHistory};
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::manga::MangaUtilsWithMangaId;
-use crate::utils::send_request;
+use crate::utils::ExtractData;
 
 use super::cover::CoverDownloadWithManga;
 
@@ -31,30 +30,37 @@ impl MangaDownload {
         }
     }
     /// download the manga with the specified id
-    pub async fn download_manga<'a, D>(&'a self, task_manager: &'a mut D) -> ManagerCoreResult<()>
+    pub async fn download_manga<'a, D>(
+        &'a self,
+        task_manager: &'a mut D,
+    ) -> ManagerCoreResult<MangaData>
     where
         D: AccessDownloadTasks,
     {
         let manga_utils: MangaUtilsWithMangaId = From::from(self);
-        let id = format!("{}", self.manga_id);
-        let http_client = self.http_client.read().await.client.clone();
-        let task : ManagerCoreResult<String> = task_manager.lock_spawn_with_data(async move {
-            let resp = send_request(http_client.get(format!("{}/manga/{}?includes%5B%5D=author&includes%5B%5D=cover_art&includes%5B%5D=manga&includes%5B%5D=artist&includes%5B%5D=scanlation_group", mangadex_api::constants::API_URL, id)), 5).await?;
-            let bytes = resp.bytes().await?;
-            let bytes_string = String::from_utf8(bytes.to_vec())?;
-            serde_json::from_str::<ApiData<ApiObject<MangaAttributes>>>(bytes_string.as_str())?;
-            {
-                let file = (File::create(
-                DirsOptions::new()?
-                        .mangas_add(format!("{}.json", id).as_str())
-                ))?;
-                let mut writer = BufWriter::new(file);
-                writer.write_all(&bytes)?;
+        let manga_utils_move = manga_utils.clone();
+        let id = self.manga_id;
+        let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
+        let task_res: MangaData = task_manager
+            .lock_spawn_with_data(async move {
+                let manga = client
+                    .manga()
+                    .id(id)
+                    .get()
+                    .include(ReferenceExpansionResource::Manga)
+                    .include(ReferenceExpansionResource::CoverArt)
+                    .include(ReferenceExpansionResource::Author)
+                    .include(ReferenceExpansionResource::Artist)
+                    .include(ReferenceExpansionResource::Tag)
+                    .include(ReferenceExpansionResource::Creator)
+                    .send()
+                    .await?;
+                let mut writer = manga_utils_move.get_buf_writer()?;
+                serde_json::to_writer(&mut writer, &manga)?;
                 writer.flush()?;
-            }
-            Ok(id)
-        }).await?;
-        task?;
+                Ok::<MangaData, crate::Error>(manga)
+            })
+            .await??;
         let cover_download: CoverDownloadWithManga = From::from(self);
         if let Ok(is_there) = manga_utils.is_cover_there() {
             if !is_there {
@@ -63,7 +69,7 @@ impl MangaDownload {
         } else {
             cover_download.download(task_manager).await?;
         }
-        Ok(())
+        Ok(task_res)
     }
 }
 
@@ -92,7 +98,7 @@ pub trait AccessMangaDownload: AccessDownloadTasks + AccessHistory + Sized + Sen
     async fn download<'a>(
         &'a mut self,
         manga_download: &'a MangaDownload,
-    ) -> ManagerCoreResult<()> {
+    ) -> ManagerCoreResult<MangaData> {
         manga_download.download_manga(self).await
     }
 }

@@ -2,9 +2,8 @@ use crate::core::ManagerCoreResult;
 use crate::server::AppState;
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpResponse, Responder};
-use mangadex_api_schema_rust::v5::CoverAttributes;
-use mangadex_api_schema_rust::{ApiData, ApiObject};
-use std::path::Path;
+use bytes::BytesMut;
+use std::io::Read;
 
 /// find a cover by his id
 #[get("/cover/{id}/image")]
@@ -12,25 +11,20 @@ pub async fn find_cover_image_by_id(
     id: web::Path<uuid::Uuid>,
     app_state: web::Data<AppState>,
 ) -> ManagerCoreResult<impl Responder> {
-    let file_dirs = app_state.dir_options.clone();
-    let path = file_dirs.covers_add(format!("{}.json", id).as_str());
-    if Path::new(path.as_str()).exists() {
-        let jsons = std::fs::read_to_string(path.as_str())?;
-        let cover_data: ApiData<ApiObject<CoverAttributes>> = serde_json::from_str(jsons.as_str())?;
-        let filename = cover_data.data.attributes.file_name;
-        let filename_path = file_dirs.covers_add(format!("images/{}", filename).as_str());
-        Ok(HttpResponse::Ok()
-            .content_type(ContentType::jpeg())
-            .body(std::fs::read(filename_path)?))
+    let utils = app_state.cover_utils().with_id(*id);
+    let image_path = utils.get_image_path()?;
+    let mut buf_read = utils.get_image_buf_reader()?;
+    let mut response = HttpResponse::Ok();
+    if let Some(image_ext) = image_path.extension() {
+        if image_ext == "png" {
+            response.content_type(ContentType::png());
+        } else {
+            response.content_type(ContentType::jpeg());
+        }
     } else {
-        let jsons = serde_json::json!({
-            "result" : "error",
-            "type" : "cover",
-            "id" : id.to_string(),
-            "message" : "Cannot find the manga in the api"
-        });
-        Ok(HttpResponse::NotFound()
-            .content_type(ContentType::json())
-            .body(jsons.to_string()))
+        response.content_type(ContentType::jpeg());
     }
+    let mut bytes = BytesMut::new();
+    buf_read.read_exact(&mut bytes)?;
+    Ok(response.body(bytes))
 }

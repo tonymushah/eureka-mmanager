@@ -1,7 +1,6 @@
 use crate::core::ManagerCoreResult;
 use crate::download::cover::{AccessCoverDownloadWithManga, CoverDownloadWithManga};
 use crate::server::AppState;
-use actix_web::http::header::ContentType;
 use actix_web::{put, web, HttpResponse, Responder};
 
 /// download the top manga cover
@@ -15,7 +14,5 @@ pub async fn download_manga_cover(
     let response =
         <AppState as AccessCoverDownloadWithManga>::download(&mut app_state, &cover_download)
             .await?;
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(response.to_string()))
+    Ok(HttpResponse::Ok().json(response))
 }

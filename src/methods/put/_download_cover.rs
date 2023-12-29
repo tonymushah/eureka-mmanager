@@ -1,7 +1,6 @@
 use crate::core::ManagerCoreResult;
 use crate::download::cover::AccessCoverDownload;
 use crate::server::AppState;
-use actix_web::http::header::ContentType;
 use actix_web::{put, web, HttpResponse, Responder};
 
 /// download cover by id
@@ -14,7 +13,5 @@ pub async fn download_cover(
     let cover_download = app_state.cover_download(*id);
     let response =
         <AppState as AccessCoverDownload>::download(&mut app_state, &cover_download).await?;
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(response.to_string()))
+    Ok(HttpResponse::Ok().json(response))
 }

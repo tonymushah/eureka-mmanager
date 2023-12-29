@@ -1,7 +1,6 @@
 use crate::core::ManagerCoreResult;
 use crate::download::cover::AccessCoverDownload;
 use crate::server::AppState;
-use actix_web::http::header::ContentType;
 use actix_web::{put, web, HttpResponse, Responder};
 use mangadex_api::utils::download::cover::CoverQuality;
 
@@ -24,7 +23,5 @@ pub async fn download_cover_quality(
         },
     )
     .await?;
-    Ok(HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(response.to_string()))
+    Ok(HttpResponse::Ok().json(response))
 }

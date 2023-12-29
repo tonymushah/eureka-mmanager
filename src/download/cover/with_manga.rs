@@ -1,11 +1,20 @@
-use std::{sync::Arc, fs::File, io::{BufWriter, Write}};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    sync::Arc,
+};
 
 use mangadex_api::{utils::download::cover::CoverQuality, HttpClientRef, MangaDexClient};
+use mangadex_api_schema_rust::v5::CoverData;
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
 
 use crate::{
-    server::traits::{AccessDownloadTasks, AccessHistory}, settings::files_dirs::DirsOptions, ManagerCoreResult, utils::manga::MangaUtilsWithMangaId, download::manga::MangaDownload,
+    download::manga::MangaDownload,
+    server::traits::{AccessDownloadTasks, AccessHistory},
+    settings::files_dirs::DirsOptions,
+    utils::manga::MangaUtilsWithMangaId,
+    ManagerCoreResult,
 };
 
 use super::CoverDownload;
@@ -25,10 +34,7 @@ impl CoverDownloadWithManga {
             manga_id,
         }
     }
-    pub async fn download<'a, D>(
-        &self,
-        task_manager: &'a mut D,
-    ) -> ManagerCoreResult<serde_json::Value>
+    pub async fn download<'a, D>(&self, task_manager: &'a mut D) -> ManagerCoreResult<CoverData>
     where
         D: AccessDownloadTasks,
     {
@@ -56,7 +62,7 @@ impl CoverDownloadWithManga {
         &self,
         quality: CoverQuality,
         task_manager: &'a mut D,
-    ) -> ManagerCoreResult<serde_json::Value>
+    ) -> ManagerCoreResult<CoverData>
     where
         D: AccessDownloadTasks,
     {
@@ -174,14 +180,14 @@ pub trait AccessCoverDownloadWithManga:
     async fn download<'a>(
         &'a mut self,
         cover_download: &'a CoverDownloadWithManga,
-    ) -> ManagerCoreResult<serde_json::Value> {
+    ) -> ManagerCoreResult<CoverData> {
         cover_download.download(self).await
     }
     async fn download_with_quality<'a>(
         &'a mut self,
         cover_download: &'a CoverDownloadWithManga,
         quality: CoverQuality,
-    ) -> ManagerCoreResult<serde_json::Value> {
+    ) -> ManagerCoreResult<CoverData> {
         cover_download.download_with_quality(quality, self).await
     }
     async fn all_cover_download<'a>(

@@ -18,7 +18,7 @@ use crate::{
     utils::{
         chapter::{filter::translated_languages::filter_fn_via_translated_languages, ChapterUtils},
         collection::Collection,
-        cover::CoverUtils,
+        cover::{CoverUtils, CoverUtilsWithId},
         manga_aggregate::{self, MangaAggregateParams},
         ExtractData,
     },
@@ -292,6 +292,52 @@ impl MangaUtilsWithMangaId {
                 None
             }
         })
+    }
+}
+
+impl<'a> TryFrom<&'a MangaUtilsWithMangaId> for CoverUtilsWithId {
+    type Error = crate::Error;
+    fn try_from(value: &'a MangaUtilsWithMangaId) -> Result<Self, Self::Error> {
+        let data = value.get_data()?;
+        let data = data
+            .find_first_relationships(RelationshipType::CoverArt)
+            .ok_or(crate::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                String::from("CoverArt Not found"),
+            )))?;
+        let cover_utils: CoverUtils = (&value.manga_utils).into();
+        let cover_utils_with_id = cover_utils.with_id(data.id);
+        if cover_utils_with_id.is_there() {
+            Ok(cover_utils_with_id)
+        } else {
+            Err(crate::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                String::from("CoverArt Not found"),
+            )))
+        }
+    }
+}
+
+impl TryFrom<MangaUtilsWithMangaId> for CoverUtilsWithId {
+    type Error = crate::Error;
+    fn try_from(value: MangaUtilsWithMangaId) -> Result<Self, Self::Error> {
+        let data = value.get_data()?;
+        let data = data
+            .find_first_relationships(RelationshipType::CoverArt)
+            .ok_or(crate::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                String::from("CoverArt Not found"),
+            )))?;
+        let cover_utils: CoverUtils = (&value.manga_utils).into();
+        let cover_utils_with_id = cover_utils.with_id(data.id);
+        if cover_utils_with_id.is_there() {
+            Ok(cover_utils_with_id)
+        } else {
+            Err(crate::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                String::from("CoverArt Not found"),
+            )))
+        }
     }
 }
 
