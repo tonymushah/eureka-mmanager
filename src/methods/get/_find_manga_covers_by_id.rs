@@ -1,8 +1,8 @@
 use super::DefaultOffsetLimit;
 use crate::core::ManagerCoreResult;
 use crate::server::AppState;
-use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpResponse, Responder};
+use mangadex_api_schema_rust::v5::CoverCollection;
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery;
 use uuid::Uuid;
@@ -49,15 +49,9 @@ pub async fn find_manga_covers_by_id(
     let offset = params.offset;
     let limit = params.limit;
     let utils = app_state.manga_utils().with_id(*id);
-    let getted = utils
+    let getted: CoverCollection = utils
         .get_downloaded_cover_of_a_manga_collection(offset, limit)
-        .await?;
-    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
-        serde_json::json!({
-            "result" : "ok",
-            "type" : "collection",
-            "data" : getted
-        })
-        .to_string(),
-    ))
+        .await?
+        .try_into()?;
+    Ok(HttpResponse::Ok().json(getted))
 }

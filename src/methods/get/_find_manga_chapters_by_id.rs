@@ -1,17 +1,19 @@
 use super::DefaultOffsetLimit;
 use crate::core::ManagerCoreResult;
 use crate::server::AppState;
-use actix_web::http::header::ContentType;
+use crate::utils::manga_aggregate::MangaAggregateParams;
 use actix_web::{get, web, HttpResponse, Responder};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_qs::actix::QsQuery;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct FindMangaChaptersByIdParams {
     #[serde(default = "<FindMangaChaptersByIdParams as DefaultOffsetLimit>::default_offset")]
     pub offset: usize,
     #[serde(default = "<FindMangaChaptersByIdParams as DefaultOffsetLimit>::default_limit")]
     pub limit: usize,
+    #[serde(flatten)]
+    pub params: MangaAggregateParams,
 }
 
 impl DefaultOffsetLimit<'_> for FindMangaChaptersByIdParams {
@@ -38,14 +40,12 @@ pub async fn find_manga_chapters_by_id(
     let to_use = app_state
         .manga_utils()
         .with_id(*id)
-        .get_downloaded_chapter(params.offset, params.limit)
+        .get_downloaded_chapter(
+            params.offset,
+            params.limit,
+            params.params.clone(),
+            app_state.get_ref(),
+        )
         .await?;
-    Ok(HttpResponse::Ok().content_type(ContentType::json()).body(
-        serde_json::json!({
-            "result" : "ok",
-            "type" : "collection",
-            "data" : to_use
-        })
-        .to_string(),
-    ))
+    Ok(HttpResponse::Ok().json(to_use))
 }

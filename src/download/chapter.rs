@@ -4,9 +4,10 @@ use log::info;
 use mangadex_api::{utils::download::chapter::DownloadMode, v5::MangaDexClient, HttpClientRef};
 use mangadex_api_schema_rust::v5::ChapterAttributes;
 use mangadex_api_schema_rust::{ApiData, ApiObject};
+use mangadex_api_types_rust::ReferenceExpansionResource;
 use serde_json::json;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
+use std::io::{BufWriter, Write};
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
@@ -17,6 +18,7 @@ use crate::settings::file_history::history_w_file::traits::{
 };
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::chapter::{ChapterUtils, ChapterUtilsWithID};
+use crate::utils::ExtractData;
 use crate::{core::ManagerCoreResult, settings::file_history::HistoryEntry};
 
 #[derive(Clone)]
@@ -45,39 +47,29 @@ impl ChapterDownload {
     where
         D: AccessDownloadTasks,
     {
+        let chapter_utils_with_id: ChapterUtilsWithID = self.into();
+        let client = MangaDexClient::new_with_http_client_ref(self.http_client.clone());
         let id = self.chapter_id;
-        let path = self
-            .dirs_options
-            .chapters_add(format!("{}/data.json", id).as_str());
-        let http_client = self.http_client.read().await.client.clone();
-        //log::info!("{path}");
-        task_manager.lock_spawn_with_data(async move {
-            let get_chapter = http_client
-                .get(
-                    format!("{}/chapter/{}?includes%5B0%5D=scanlation_group&includes%5B1%5D=manga&includes%5B2%5D=user", 
-                        mangadex_api::constants::API_URL,
-                        id
-                    )
-                )
-                .send()
-                .await?;
+        task_manager
+            .lock_spawn_with_data(async move {
+                let get_chapter = client
+                    .chapter()
+                    .id(id)
+                    .get()
+                    .include(ReferenceExpansionResource::Manga)
+                    .include(ReferenceExpansionResource::ScanlationGroup)
+                    .include(ReferenceExpansionResource::User)
+                    .send()
+                    .await?;
 
-                let bytes_ = get_chapter.bytes()
-                .await?;
-
-                let chapter_data = File::create((path).as_str())?;
-                let mut writer = BufWriter::new(chapter_data.try_clone()?);
-                writer.write_all(&bytes_)?;
-                //log::info!("writed data");
+                let mut writer = chapter_utils_with_id.get_buf_writer()?;
+                serde_json::to_writer(&mut writer, &get_chapter)?;
                 writer.flush()?;
-                let chapter_data = File::open((path).as_str())?;
-            Ok(serde_json::from_reader(BufReader::new(chapter_data))?)
-        }).await?
+                Ok(get_chapter)
+            })
+            .await?
     }
-    async fn verify_chapter_and_manga<'a, T>(
-        &'a self,
-        ctx: &'a mut T,
-    ) -> ManagerCoreResult<()>
+    async fn verify_chapter_and_manga<'a, T>(&'a self, ctx: &'a mut T) -> ManagerCoreResult<()>
     where
         T: AccessHistory + AccessDownloadTasks,
     {
@@ -353,7 +345,6 @@ impl ChapterDownload {
 }
 
 impl From<ChapterUtilsWithID> for ChapterDownload {
-
     fn from(value: ChapterUtilsWithID) -> Self {
         Self {
             dirs_options: value.chapter_utils.dirs_options,
@@ -364,7 +355,6 @@ impl From<ChapterUtilsWithID> for ChapterDownload {
 }
 
 impl From<&ChapterUtilsWithID> for ChapterDownload {
-
     fn from(value: &ChapterUtilsWithID) -> Self {
         Self {
             dirs_options: value.chapter_utils.dirs_options.clone(),
@@ -375,9 +365,7 @@ impl From<&ChapterUtilsWithID> for ChapterDownload {
 }
 
 #[async_trait::async_trait]
-pub trait AccessChapterDownload:
-    AccessDownloadTasks + AccessHistory + Sized + Send + Sync
-{
+pub trait AccessChapterDownload: AccessDownloadTasks + AccessHistory + Sized + Send + Sync {
     async fn download_json_data<'a>(
         &'a mut self,
         chapter_download: &'a ChapterDownload,
@@ -394,9 +382,7 @@ pub trait AccessChapterDownload:
         &'a mut self,
         chapter_download: &'a ChapterDownload,
     ) -> ManagerCoreResult<serde_json::Value> {
-        chapter_download
-            .download_chapter_data_saver(self)
-            .await
+        chapter_download.download_chapter_data_saver(self).await
     }
 }
 

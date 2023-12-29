@@ -47,7 +47,7 @@ pub fn filter_fn_tags<'a>(item: &'a MangaObject, params: &'a MangaListParams) ->
         }
     };
     let included_tags_filter = {
-        let included_tags = &params.excluded_tags;
+        let included_tags = &params.included_tags;
         let mode = params.included_tags_mode.unwrap_or(TagSearchMode::And);
         if !included_tags.is_empty() {
             filter_fn_via_included_tags(item, included_tags, mode)

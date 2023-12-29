@@ -5,13 +5,22 @@ pub fn map_fn_via_includes(
     mut item: CoverObject,
     includes: &[ReferenceExpansionResource],
 ) -> CoverObject {
-    item.relationships.retain(|rel| match rel.type_ {
-        RelationshipType::Manga => includes.contains(&ReferenceExpansionResource::Manga),
-        RelationshipType::User => {
-            includes.contains(&ReferenceExpansionResource::User)
-                || includes.contains(&ReferenceExpansionResource::Creator)
-        }
-        _ => false,
-    });
+    item.relationships
+        .iter_mut()
+        .for_each(|rel| match rel.type_ {
+            RelationshipType::Manga => {
+                if !includes.contains(&ReferenceExpansionResource::Manga) {
+                    rel.attributes.take();
+                }
+            }
+            RelationshipType::User => {
+                if !(includes.contains(&ReferenceExpansionResource::User)
+                    || includes.contains(&ReferenceExpansionResource::Creator))
+                {
+                    rel.attributes.take();
+                }
+            }
+            _ => {}
+        });
     item
 }

@@ -6,7 +6,7 @@ use std::{
 
 use log::info;
 use mangadex_api_schema_rust::{
-    v5::{ChapterAttributes, ChapterObject, RelatedAttributes},
+    v5::{ChapterAttributes, ChapterData, ChapterObject, RelatedAttributes},
     ApiData, ApiObject,
 };
 use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
@@ -49,6 +49,10 @@ impl ExtractData for ChapterUtilsWithID {
                 .chapters_add(format!("{}/data.json", self.chapter_id).as_str()),
         )
         .to_path_buf())
+    }
+    fn get_data(&self) -> ManagerCoreResult<Self::Output> {
+        let data: ChapterData = serde_json::from_reader(self.get_buf_reader()?)?;
+        Ok(data.data)
     }
 
     fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {

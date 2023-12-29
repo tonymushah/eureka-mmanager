@@ -6,7 +6,7 @@ use std::{
 
 use bytes::{Bytes, BytesMut};
 use mangadex_api_schema_rust::{
-    v5::{CoverObject, RelatedAttributes},
+    v5::{CoverData, CoverObject, RelatedAttributes},
     ApiData,
 };
 use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
@@ -28,6 +28,14 @@ impl ExtractData for CoverUtilsWithId {
 
     fn get_file_path(&self) -> ManagerCoreResult<PathBuf> {
         Ok(self.into())
+    }
+
+    fn get_data(&self) -> ManagerCoreResult<Self::Output> {
+        let data: CoverData = serde_json::from_reader(self.get_buf_reader()?)?;
+        Ok(data.data)
+    }
+    fn is_there(&self) -> bool {
+        self.get_data().is_ok() && self.get_image_buf_reader().is_ok()
     }
 
     fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
@@ -76,20 +84,28 @@ impl CoverUtilsWithId {
             cover_id,
         }
     }
-    pub fn is_there(&self) -> bool {
-        self.get_data().is_ok()
-    }
     pub fn is_image_there(&self) -> bool {
         self.get_image_buf_reader().is_ok()
     }
     pub fn get_image_path(&self) -> ManagerCoreResult<PathBuf> {
         let cover_data = self.get_data()?;
         let cover_file_name = cover_data.attributes.file_name;
+        self.get_image_path_(cover_file_name)
+    }
+    pub fn get_image_path_(&self, cover_file_name: String) -> ManagerCoreResult<PathBuf> {
         let cover_file_name_path = self
             .cover_utils
             .dirs_options
             .covers_add(format!("images/{}", cover_file_name).as_str());
-        Ok(Path::new(&cover_file_name_path).to_path_buf())
+        let path = Path::new(&cover_file_name_path);
+        if path.exists() {
+            Ok(path.to_path_buf())
+        } else {
+            Err(crate::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                String::from("Image not found"),
+            )))
+        }
     }
     pub fn get_image_buf_reader(&self) -> ManagerCoreResult<BufReader<File>> {
         Ok(BufReader::new(File::open(self.get_image_path()?)?))

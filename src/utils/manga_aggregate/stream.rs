@@ -7,7 +7,7 @@ use mangadex_api_schema_rust::{
     },
     ApiObject,
 };
-use tokio_stream::{StreamExt, Stream};
+use tokio_stream::{Stream, StreamExt};
 
 use crate::settings::file_history::IsIn;
 
@@ -164,13 +164,8 @@ mod tests {
                 .with_id(manga_id);
         println!(
             "{}",
-            serde_json::to_string(
-                &(manga_utils
-                    .aggregate_manga_chapters_async_friendly()
-                    .await
-                    .unwrap())
-            )
-            .unwrap()
+            serde_json::to_string(&(manga_utils.aggregate_manga_chapter_default().await.unwrap()))
+                .unwrap()
         );
     }
 }
