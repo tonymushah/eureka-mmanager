@@ -113,7 +113,7 @@ impl ChapterUtils {
     pub async fn get_all_chapter<'a, H>(
         &'a self,
         parameters: Option<GetAllChapter>,
-        history: &'a mut H,
+        history: &'a H,
     ) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a>
     where
         H: AccessHistory,
@@ -260,8 +260,8 @@ mod tests {
         let manga_utils: MangaUtils = From::from(chapter_utils.clone());
         let manga_id = Uuid::parse_str("17727b0f-c9f2-4ab5-a0b1-b7b0cf6c1fc8").unwrap();
         let this_manga_utils = manga_utils.with_id(manga_id);
-        let manga_downloads = Box::pin(this_manga_utils.find_all_downloades().unwrap());
-        let datas = chapter_utils.get_chapters_by_stream_id(manga_downloads);
+        let manga_downloads = Box::pin(this_manga_utils.get_all_downloaded_chapter_data_default());
+        let datas = manga_downloads;
         tokio::pin!(datas);
         while let Some(chap) = datas.next().await {
             println!("{}", serde_json::to_string(&chap).unwrap());

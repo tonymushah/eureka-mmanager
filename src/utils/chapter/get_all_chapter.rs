@@ -1,14 +1,16 @@
-mod only_fails;
-mod not_include_fails;
 mod async_get_all_chapter;
+mod not_include_fails;
+mod only_fails;
 
 use crate::methods::get::_find_all_downloaded_chapter::GetChapterQuery;
 
-pub use only_fails::OnlyFails;
-pub use not_include_fails::NotIncludeFails;
 pub use async_get_all_chapter::AsyncGetAllChapter;
+pub use not_include_fails::NotIncludeFails;
+pub use only_fails::OnlyFails;
+use serde::Deserialize;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
 pub struct GetAllChapter {
     pub include_fails: bool,
     pub only_fails: bool,

@@ -2,7 +2,10 @@ use std::path::{Path, PathBuf};
 
 use async_stream::stream;
 use mangadex_api_schema_rust::{
-    v5::{ChapterAttributes, CoverAttributes, MangaAggregate, MangaObject, RelatedAttributes},
+    v5::{
+        ChapterAttributes, ChapterCollection, CoverAttributes, MangaAggregate, MangaObject,
+        RelatedAttributes,
+    },
     ApiData, ApiObject,
 };
 use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
@@ -11,8 +14,12 @@ use uuid::Uuid;
 
 use crate::{
     download::manga::MangaDownload,
+    server::traits::AccessHistory,
     utils::{
-        chapter::ChapterUtils, collection::Collection, cover::CoverUtils, manga_aggregate,
+        chapter::{filter::translated_languages::filter_fn_via_translated_languages, ChapterUtils},
+        collection::Collection,
+        cover::CoverUtils,
+        manga_aggregate::{self, MangaAggregateParams},
         ExtractData,
     },
     ManagerCoreResult,
@@ -110,8 +117,11 @@ impl MangaUtilsWithMangaId {
     pub fn is_chapter_data_related(&self, chapter: &ApiObject<ChapterAttributes>) -> bool {
         MangaUtils::is_chap_data_related_to_manga(chapter, self.manga_id)
     }
-    pub fn find_all_downloades(&self) -> ManagerCoreResult<impl Stream<Item = Uuid> + '_> {
-        let stream = Box::pin(self.get_all_downloaded_chapter_data());
+    pub fn find_all_downloades<'a, H: AccessHistory>(
+        &'a self,
+        history: &'a H,
+    ) -> ManagerCoreResult<impl Stream<Item = Uuid> + 'a> {
+        let stream = Box::pin(self.get_all_downloaded_chapter_data(history, Default::default()));
         Ok(stream.map(|chapter| chapter.id))
     }
 
@@ -134,7 +144,7 @@ impl MangaUtilsWithMangaId {
     ) -> ManagerCoreResult<Collection<ApiObject<CoverAttributes>>> {
         Collection::from_async_stream(self.get_downloaded_covers(), limit, offset).await
     }
-    pub fn get_all_downloaded_chapter_data(
+    pub fn get_all_downloaded_chapter_data_default(
         &self,
     ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + '_ {
         let chapter_utils: ChapterUtils = From::from(self.manga_utils.clone());
@@ -154,16 +164,60 @@ impl MangaUtilsWithMangaId {
             }
         }
     }
-    pub async fn get_downloaded_chapter(
-        &self,
+    pub fn get_all_downloaded_chapter_data<'a, H>(
+        &'a self,
+        history: &'a H,
+        params: MangaAggregateParams,
+    ) -> impl Stream<Item = ApiObject<ChapterAttributes>> + 'a
+    where
+        H: AccessHistory,
+    {
+        let chapter_utils: ChapterUtils = From::from(self.manga_utils.clone());
+        stream! {
+            if let Ok(data) = chapter_utils.get_all_chapter(Some(params.additional_params), history).await {
+                let data = Box::pin(chapter_utils.get_chapters_by_stream_id(Box::pin(data)));
+                let mut data = data.filter_map(|next| {
+                    if self.is_chapter_data_related(&next){
+                        Some(next)
+                    }else{
+                        None
+                    }
+                }).filter(|item| {
+                    let translated_languages = &params.translated_language;
+                    if !translated_languages.is_empty() {
+                        filter_fn_via_translated_languages(item, translated_languages)
+                    }else {
+                        true
+                    }
+                }).filter(|item| {
+                    let groups = &params.groups;
+                    if !groups.is_empty() {
+                        item.relationships.iter().any(|rel| groups.contains(&rel.id))
+                    } else {
+                        true
+                    }
+                });
+                while let Some(next) = data.next().await {
+                    yield next;
+                }
+            }
+        }
+    }
+    pub async fn get_downloaded_chapter<'a, H>(
+        &'a self,
         offset: usize,
         limit: usize,
-    ) -> ManagerCoreResult<Collection<Uuid>> {
-        let all_downloaded = self.get_all_downloaded_chapter_data();
+        params: MangaAggregateParams,
+        history: &'a H,
+    ) -> ManagerCoreResult<ChapterCollection>
+    where
+        H: AccessHistory,
+    {
+        let all_downloaded = self.get_all_downloaded_chapter_data(history, params);
         let mut data = Box::pin(all_downloaded);
-        let to_use: Collection<Uuid> = Collection::from_async_stream(&mut data, limit, offset)
+        let to_use: ChapterCollection = Collection::from_async_stream(&mut data, limit, offset)
             .await?
-            .convert_to(|d| d.id)?;
+            .try_into()?;
         Ok(to_use)
     }
     pub fn is_cover_there(&self) -> ManagerCoreResult<bool> {
@@ -188,13 +242,20 @@ impl MangaUtilsWithMangaId {
             .iter()
             .any(|rel| rel.type_ == RelationshipType::Manga && rel.id == self.manga_id)
     }
-    pub async fn aggregate_manga_chapters(&self) -> ManagerCoreResult<MangaAggregate> {
-        self.aggregate_manga_chapters_async_friendly().await
-    }
-    pub async fn aggregate_manga_chapters_async_friendly(
-        &self,
+    pub async fn aggregate_manga_chapter<'a, H: AccessHistory>(
+        &'a self,
+        params: MangaAggregateParams,
+        history: &'a H,
     ) -> ManagerCoreResult<MangaAggregate> {
-        let data = Box::pin(self.get_all_downloaded_chapter_data());
+        let data = Box::pin(self.get_all_downloaded_chapter_data(history, params));
+        let volumes = manga_aggregate::stream::group_chapter_to_volume_aggregate(data).await;
+        Ok(MangaAggregate {
+            result: ResultType::Ok,
+            volumes,
+        })
+    }
+    pub async fn aggregate_manga_chapter_default(&self) -> ManagerCoreResult<MangaAggregate> {
+        let data = Box::pin(self.get_all_downloaded_chapter_data_default());
         let volumes = manga_aggregate::stream::group_chapter_to_volume_aggregate(data).await;
         Ok(MangaAggregate {
             result: ResultType::Ok,
@@ -202,7 +263,7 @@ impl MangaUtilsWithMangaId {
         })
     }
     pub fn delete_chapters(&self) -> impl Stream<Item = Uuid> + '_ {
-        let stream = Box::pin(self.get_all_downloaded_chapter_data());
+        let stream = Box::pin(self.get_all_downloaded_chapter_data_default());
         stream.filter_map(|chapter| {
             if std::fs::remove_dir_all(
                 self.manga_utils

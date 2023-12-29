@@ -1,4 +1,9 @@
 use mangadex_api_schema_rust::v5::manga_aggregate::{ChapterAggregate, VolumeAggregate};
+use mangadex_api_types_rust::Language;
+use serde::Deserialize;
+use uuid::Uuid;
+
+use super::chapter::GetAllChapter;
 
 pub mod stream;
 
@@ -15,4 +20,13 @@ pub enum FromWhere<'a> {
 pub enum IsHere {
     AlreadyHere,
     Inserted,
+}
+
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(default)]
+pub struct MangaAggregateParams {
+    pub translated_language: Vec<Language>,
+    pub groups: Vec<Uuid>,
+    #[serde(flatten)]
+    pub additional_params: GetAllChapter,
 }
