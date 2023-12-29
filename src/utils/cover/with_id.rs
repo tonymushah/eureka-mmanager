@@ -6,7 +6,7 @@ use std::{
 
 use bytes::{Bytes, BytesMut};
 use mangadex_api_schema_rust::{
-    v5::{CoverObject, RelatedAttributes},
+    v5::{CoverData, CoverObject, RelatedAttributes},
     ApiData,
 };
 use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
@@ -28,6 +28,11 @@ impl ExtractData for CoverUtilsWithId {
 
     fn get_file_path(&self) -> ManagerCoreResult<PathBuf> {
         Ok(self.into())
+    }
+
+    fn get_data(&self) -> ManagerCoreResult<Self::Output> {
+        let data: CoverData = serde_json::from_reader(self.get_buf_reader()?)?;
+        Ok(data.data)
     }
 
     fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {

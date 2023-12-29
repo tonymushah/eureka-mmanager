@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use async_stream::stream;
 use mangadex_api_schema_rust::{
     v5::{
-        ChapterAttributes, ChapterCollection, CoverAttributes, MangaAggregate, MangaObject,
-        RelatedAttributes,
+        ChapterAttributes, ChapterCollection, CoverAttributes, MangaAggregate, MangaData,
+        MangaObject, RelatedAttributes,
     },
     ApiData, ApiObject,
 };
@@ -39,6 +39,11 @@ impl ExtractData for MangaUtilsWithMangaId {
 
     fn get_file_path(&self) -> ManagerCoreResult<PathBuf> {
         Ok(Into::<PathBuf>::into(self))
+    }
+
+    fn get_data(&self) -> ManagerCoreResult<Self::Output> {
+        let data: MangaData = serde_json::from_reader(self.get_buf_reader()?)?;
+        Ok(data.data)
     }
 
     fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
