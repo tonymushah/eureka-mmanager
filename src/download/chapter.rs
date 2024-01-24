@@ -179,7 +179,9 @@ impl ChapterDownload {
                         {
                             Ok(file) => match {
                                 let mut buf_writer = BufWriter::new(file);
-                                buf_writer.write_all(&bytes)
+                                buf_writer
+                                    .write_all(&bytes)
+                                    .and_then(|_| buf_writer.flush())
                             } {
                                 Ok(_) => {
                                     info!("{index} - {len} : Downloaded {filename}");
@@ -294,7 +296,9 @@ impl ChapterDownload {
                         {
                             Ok(file) => match {
                                 let mut buf_writer = BufWriter::new(file);
-                                buf_writer.write_all(&bytes)
+                                buf_writer
+                                    .write_all(&bytes)
+                                    .and_then(|_| buf_writer.flush())
                             } {
                                 Ok(_) => {
                                     info!("{index} - {len} : Downloaded {filename}");

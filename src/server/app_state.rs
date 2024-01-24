@@ -17,6 +17,7 @@ use crate::settings::file_history::{
     NoLFAsyncIsIn, NoLFAsyncRemove,
 };
 use crate::settings::files_dirs::DirsOptions;
+#[cfg(feature = "actix_web")]
 use crate::settings::server_options::ServerOptions;
 use crate::utils::chapter::{AccessChapterUtisWithID, ChapterUtils};
 use crate::utils::cover::CoverUtils;
@@ -66,7 +67,7 @@ impl AppState {
     pub fn new(
         http_client_ref: HttpClientRef,
         dir_options: DirsOptions,
-        server_options: ServerOptions,
+        #[cfg(feature = "actix_web")] server_options: ServerOptions,
         download_tasks: DownloadTaks,
         history: HistoryMap,
     ) -> Self {

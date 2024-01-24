@@ -1,3 +1,4 @@
+#[cfg(feature = "actix_web")]
 use super::DefaultOffsetLimit;
 
 #[cfg(feature = "actix_web")]
