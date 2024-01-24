@@ -99,14 +99,7 @@ impl CoverUtilsWithId {
             .dirs_options
             .covers_add(format!("images/{}", cover_file_name).as_str());
         let path = Path::new(&cover_file_name_path);
-        if path.exists() {
-            Ok(path.to_path_buf())
-        } else {
-            Err(crate::Error::Io(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                String::from("Image not found"),
-            )))
-        }
+        Ok(path.to_path_buf())
     }
     pub fn get_image_buf_reader(&self) -> ManagerCoreResult<BufReader<File>> {
         Ok(BufReader::new(File::open(self.get_image_path()?)?))
