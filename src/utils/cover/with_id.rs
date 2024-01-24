@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{BufReader, BufWriter, Read},
+    io::{BufReader, BufWriter, Read, Write},
     path::{Path, PathBuf},
 };
 
@@ -40,7 +40,7 @@ impl ExtractData for CoverUtilsWithId {
 
     fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
         let current_data = self.get_data()?;
-        let buf_writer = self.get_buf_writer()?;
+        let mut buf_writer = self.get_buf_writer()?;
         let to_input_data = {
             if input.relationships.is_empty() {
                 input.relationships = current_data.relationships;
@@ -66,7 +66,8 @@ impl ExtractData for CoverUtilsWithId {
                 data: input,
             }
         };
-        serde_json::to_writer(buf_writer, &to_input_data)?;
+        serde_json::to_writer(&mut buf_writer, &to_input_data)?;
+        let _ = buf_writer.flush();
         Ok(())
     }
 
@@ -98,14 +99,7 @@ impl CoverUtilsWithId {
             .dirs_options
             .covers_add(format!("images/{}", cover_file_name).as_str());
         let path = Path::new(&cover_file_name_path);
-        if path.exists() {
-            Ok(path.to_path_buf())
-        } else {
-            Err(crate::Error::Io(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                String::from("Image not found"),
-            )))
-        }
+        Ok(path.to_path_buf())
     }
     pub fn get_image_buf_reader(&self) -> ManagerCoreResult<BufReader<File>> {
         Ok(BufReader::new(File::open(self.get_image_path()?)?))

@@ -1,6 +1,6 @@
 use std::{
     fs::{File, ReadDir},
-    io::{BufReader, ErrorKind},
+    io::{BufReader, ErrorKind, Write},
     path::{Path, PathBuf},
 };
 
@@ -57,7 +57,7 @@ impl ExtractData for ChapterUtilsWithID {
 
     fn update(&self, mut input: Self::Input) -> ManagerCoreResult<()> {
         let current_data = self.get_data()?;
-        let buf_writer = self.get_buf_writer()?;
+        let mut buf_writer = self.get_buf_writer()?;
         let to_input_data = {
             if input.relationships.is_empty() {
                 input.relationships = current_data.relationships;
@@ -87,7 +87,8 @@ impl ExtractData for ChapterUtilsWithID {
                 data: input,
             }
         };
-        serde_json::to_writer(buf_writer, &to_input_data)?;
+        serde_json::to_writer(&mut buf_writer, &to_input_data)?;
+        let _ = buf_writer.flush();
         Ok(())
     }
 }
