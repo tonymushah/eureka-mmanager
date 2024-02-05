@@ -4,6 +4,7 @@ version = "0.6.0-alpha.4"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
+repository = "https://github.com/tonymushah/eureka-mmanager"
 edition = "2021"
 resolver = "2"
 rust-version = "1.70"
