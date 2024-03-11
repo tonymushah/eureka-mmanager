@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use mangadex_api_schema_rust::{
     v5::{CoverData, CoverObject, RelatedAttributes},
     ApiData,
@@ -108,8 +108,8 @@ impl CoverUtilsWithId {
         Ok(BufWriter::new(File::create(self.get_image_path()?)?))
     }
     pub fn get_image_buf(&self) -> ManagerCoreResult<Bytes> {
-        let mut bytes = BytesMut::new();
-        self.get_image_buf_reader()?.read_exact(&mut bytes)?;
+        let mut bytes = Vec::<u8>::new();
+        self.get_image_buf_reader()?.read_to_end(&mut bytes)?;
         Ok(bytes.into())
     }
     pub fn delete_image(&self) -> ManagerCoreResult<()> {

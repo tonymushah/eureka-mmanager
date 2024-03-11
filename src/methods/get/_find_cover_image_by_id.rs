@@ -2,7 +2,6 @@ use crate::core::ManagerCoreResult;
 use crate::server::AppState;
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpResponse, Responder};
-use bytes::BytesMut;
 use std::io::Read;
 
 /// find a cover by his id
@@ -24,7 +23,7 @@ pub async fn find_cover_image_by_id(
     } else {
         response.content_type(ContentType::jpeg());
     }
-    let mut bytes = BytesMut::new();
-    buf_read.read_exact(&mut bytes)?;
+    let mut bytes = Vec::<u8>::new();
+    buf_read.read_to_end(&mut bytes)?;
     Ok(response.body(bytes))
 }
