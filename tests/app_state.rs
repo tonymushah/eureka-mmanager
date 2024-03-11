@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 use mangadex_desktop_api2::{AppState, ManagerCoreResult};
 use once_cell::sync::OnceCell;
 
