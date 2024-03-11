@@ -77,3 +77,4 @@ harness = false
 
 [[test]]
 name = "download_chapter"
+required-features = []

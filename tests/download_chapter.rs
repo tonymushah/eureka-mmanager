@@ -103,7 +103,7 @@ fn show_chap_id(chaps: &[ChapterObject], returns: &mut Table) -> anyhow::Result<
 
 async fn run() -> anyhow::Result<toml::Table> {
     let mut returns = Table::new();
-    let app = unsafe { app_state::get_mut()? };
+    let app = unsafe { app_state::get_mut().await? };
 
     let client = MangaDexClient::new_with_http_client_ref(app.http_client.clone());
     let chaps = chapters::get(&client).await?;
@@ -131,8 +131,8 @@ async fn main() -> anyhow::Result<()> {
             writeln!(file, "```")?;
         }
         Err(e) => {
-            writeln!(file, "[!WARNING]")?;
-            writeln!(file, "{}", e)?;
+            writeln!(file, "> [!WARNING]")?;
+            writeln!(file, "> {}", e)?;
         }
     }
 
