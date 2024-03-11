@@ -177,21 +177,24 @@ impl ChapterDownload {
                     if let Ok(bytes) = bytes_ {
                         match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone()))
                         {
-                            Ok(file) => match {
-                                let mut buf_writer = BufWriter::new(file);
-                                buf_writer
-                                    .write_all(&bytes)
-                                    .and_then(|_| buf_writer.flush())
-                            } {
-                                Ok(_) => {
-                                    info!("{index} - {len} : Downloaded {filename}");
-                                    files_.push(filename);
+                            Ok(file) => {
+                                let res = {
+                                    let mut buf_writer = BufWriter::new(file);
+                                    buf_writer
+                                        .write_all(&bytes)
+                                        .and_then(|_| buf_writer.flush())
+                                };
+                                match res {
+                                    Ok(_) => {
+                                        info!("{index} - {len} : Downloaded {filename}");
+                                        files_.push(filename);
+                                    }
+                                    Err(e) => {
+                                        log::error!("{index} - {len} : {}", e.to_string());
+                                        errors.push(filename);
+                                    }
                                 }
-                                Err(e) => {
-                                    log::error!("{index} - {len} : {}", e.to_string());
-                                    errors.push(filename);
-                                }
-                            },
+                            }
                             Err(e) => {
                                 log::error!("{index} - {len} : {}", e.to_string());
                                 errors.push(filename);
@@ -294,21 +297,24 @@ impl ChapterDownload {
                     if let Ok(bytes) = bytes_ {
                         match File::create(format!("{}/{}", chapter_dir.clone(), filename.clone()))
                         {
-                            Ok(file) => match {
-                                let mut buf_writer = BufWriter::new(file);
-                                buf_writer
-                                    .write_all(&bytes)
-                                    .and_then(|_| buf_writer.flush())
-                            } {
-                                Ok(_) => {
-                                    info!("{index} - {len} : Downloaded {filename}");
-                                    files_.push(filename);
+                            Ok(file) => {
+                                let res = {
+                                    let mut buf_writer = BufWriter::new(file);
+                                    buf_writer
+                                        .write_all(&bytes)
+                                        .and_then(|_| buf_writer.flush())
+                                };
+                                match res {
+                                    Ok(_) => {
+                                        info!("{index} - {len} : Downloaded {filename}");
+                                        files_.push(filename);
+                                    }
+                                    Err(e) => {
+                                        log::error!("{index} - {len} : {}", e.to_string());
+                                        errors.push(filename);
+                                    }
                                 }
-                                Err(e) => {
-                                    log::error!("{index} - {len} : {}", e.to_string());
-                                    errors.push(filename);
-                                }
-                            },
+                            }
                             Err(e) => {
                                 log::error!("{index} - {len} : {}", e.to_string());
                                 errors.push(filename);
