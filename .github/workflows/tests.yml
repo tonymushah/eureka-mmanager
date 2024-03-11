@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4 # v4
+        with: 
+          clean: false
       - name: Build
         run: cargo build --test download_chapter
       - name: Run download_chapter
