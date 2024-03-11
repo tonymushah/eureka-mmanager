@@ -26,7 +26,7 @@ jobs:
       - name: Build
         run: cargo build --test download_chapter
       - name: Run download_chapter
-        run: cargo test --test download_chapter -- ${{ env.RES }}
+        run: cargo test --package mangadex-desktop-api2 --test download_chapter -- ${{ env.RES }}
       - name: Do result exists 
         run: if test -f "${{ env.RES }}"; then echo "The result file exist"; else exit "the result file doesn't exist"; fi;
       - name: Create report 
