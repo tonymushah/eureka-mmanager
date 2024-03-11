@@ -1,7 +1,11 @@
 mod app_state;
 mod chapters;
 
-use std::time::{Duration, Instant};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    time::{Duration, Instant},
+};
 
 use mangadex_api::MangaDexClient;
 use mangadex_api_schema_rust::v5::ChapterObject;
@@ -117,17 +121,18 @@ async fn run() -> anyhow::Result<toml::Table> {
 
 #[test]
 async fn main() -> anyhow::Result<()> {
-    println!("## `download_chapter.rs` test results");
+    let mut file = BufWriter::new(File::create("./result.md")?);
+    writeln!(file, "## `download_chapter.rs` test results")?;
 
     match run().await {
         Ok(res) => {
-            println!("```toml");
-            println!("{}", toml::to_string_pretty(&res)?);
-            println!("```");
+            writeln!(file, "```toml")?;
+            writeln!(file, "{}", toml::to_string_pretty(&res)?)?;
+            writeln!(file, "```")?;
         }
         Err(e) => {
-            println!("[!WARNING]");
-            println!("{}", e);
+            writeln!(file, "[!WARNING]")?;
+            writeln!(file, "{}", e)?;
         }
     }
 
