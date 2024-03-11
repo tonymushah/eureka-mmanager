@@ -27,4 +27,4 @@ jobs:
       - name: Create report 
         uses: mshick/add-pr-comment@v2
         with:
-          message-path: result.md
+          message-path: ./result.md
