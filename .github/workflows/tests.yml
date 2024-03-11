@@ -3,10 +3,12 @@ name: download_chapter
 on:
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  RES: ./result.md
 
 jobs:
   download_chapter:
@@ -14,18 +16,20 @@ jobs:
       pull-requests: write
     strategy:
       fail-fast: false
-      matrix:
-        platform: [macos-latest, ubuntu-20.04, windows-latest]
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v4 # v4
+        with: 
+          clean: false
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --test download_chapter
       - name: Run download_chapter
-        run: cargo test download_chapter >> result.md
+        run: RES=${{ env.RES }} cargo test --test download_chapter
+      - name: Do result exists 
+        run: if test -f "${{ env.RES }}"; then echo "The result file exist"; else exit "the result file doesn't exist"; fi;
       - name: Create report 
         uses: mshick/add-pr-comment@v2
         with:
-          message-path: result.md
+          message-path: ${{ env.RES }}

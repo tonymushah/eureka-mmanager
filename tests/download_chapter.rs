@@ -1,16 +1,21 @@
 mod app_state;
 mod chapters;
 
-use std::time::{Duration, Instant};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    time::{Duration, Instant},
+};
 
 use mangadex_api::MangaDexClient;
 use mangadex_api_schema_rust::v5::ChapterObject;
+use mangadex_api_types_rust::IncludeExternalUrl;
 use mangadex_desktop_api2::{
     download::chapter::{AccessChapterDownload, DownloadChapterResult},
     AppState, ManagerCoreResult,
 };
 use serde::{Deserialize, Serialize};
-use tokio::main;
+use tokio::test;
 use toml::{Table, Value};
 use uuid::Uuid;
 
@@ -99,7 +104,7 @@ fn show_chap_id(chaps: &[ChapterObject], returns: &mut Table) -> anyhow::Result<
 
 async fn run() -> anyhow::Result<toml::Table> {
     let mut returns = Table::new();
-    let app = unsafe { app_state::get_mut()? };
+    let app = unsafe { app_state::get_mut().await? };
 
     let client = MangaDexClient::new_with_http_client_ref(app.http_client.clone());
     let chaps = chapters::get(&client).await?;
@@ -115,19 +120,24 @@ async fn run() -> anyhow::Result<toml::Table> {
     Ok(returns)
 }
 
-#[main]
+#[test]
 async fn main() -> anyhow::Result<()> {
-    println!("## `download_chapter.rs` test results");
-
+    let mut file = BufWriter::new(File::create(std::env::var("RES")?)?);
+    writeln!(file, "## `download_chapter.rs` test results")?;
+    writeln!(
+        file,
+        "{}",
+        serde_qs::to_string(&("srt", IncludeExternalUrl::Exclude))?
+    )?;
     match run().await {
         Ok(res) => {
-            println!("```toml");
-            println!("{}", toml::to_string_pretty(&res)?);
-            println!("```");
+            writeln!(file, "```toml")?;
+            writeln!(file, "{}", toml::to_string_pretty(&res)?)?;
+            writeln!(file, "```")?;
         }
         Err(e) => {
-            println!("[!WARNING]");
-            println!("{}", e);
+            writeln!(file, "> [!WARNING]")?;
+            writeln!(file, "> {}", e)?;
         }
     }
 
