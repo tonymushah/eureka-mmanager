@@ -12,10 +12,6 @@ unsafe fn set() -> ManagerCoreResult<()> {
     Ok(())
 }
 
-pub unsafe fn get() -> ManagerCoreResult<&'static AppState> {
-    APP_STATE.get_or_try_init(|| init())
-}
-
 pub unsafe fn get_mut() -> ManagerCoreResult<&'static mut AppState> {
     if let Some(app) = APP_STATE.get_mut() {
         Ok(app)
