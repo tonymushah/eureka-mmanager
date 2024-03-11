@@ -55,7 +55,7 @@ regex = "1"
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
 once_cell = "1.19"
-moka = { version = "0.12", features = ["future"]}
+# moka = { version = "0.12", features = ["future"]}
 
 [features]
 default = ["actix_web"]
