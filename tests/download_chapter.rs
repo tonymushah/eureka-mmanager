@@ -10,7 +10,7 @@ use mangadex_desktop_api2::{
     AppState, ManagerCoreResult,
 };
 use serde::{Deserialize, Serialize};
-use tokio::main;
+use tokio::test;
 use toml::{Table, Value};
 use uuid::Uuid;
 
@@ -115,7 +115,7 @@ async fn run() -> anyhow::Result<toml::Table> {
     Ok(returns)
 }
 
-#[main]
+#[test]
 async fn main() -> anyhow::Result<()> {
     println!("## `download_chapter.rs` test results");
 

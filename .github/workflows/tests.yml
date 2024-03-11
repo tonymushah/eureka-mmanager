@@ -21,9 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # v4
       - name: Build
-        run: cargo build --verbose
+        run: cargo build -r --test download_chapter
       - name: Run download_chapter
-        run: cargo test download_chapter >> ./result.md
+        run: cargo test -rq --package mangadex-desktop-api2 --test download_chapter  >> ./result.md
       - name: Create report 
         uses: mshick/add-pr-comment@v2
         with:
