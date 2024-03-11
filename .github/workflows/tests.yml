@@ -23,7 +23,7 @@ jobs:
       - name: Build
         run: cargo build --test download_chapter
       - name: Run download_chapter
-        run: cargo test -q --package mangadex-desktop-api2 --test download_chapter  >> ./result.md
+        run: cargo test download_chapter  >> ./result.md
       - name: Create report 
         uses: mshick/add-pr-comment@v2
         with:
