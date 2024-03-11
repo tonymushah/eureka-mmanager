@@ -84,7 +84,7 @@ impl AppState {
         let mut headers = HeaderMap::new();
         headers.insert(
             "User-Agent",
-            HeaderValue::from_static("special-eureka-manager/0.4.0"),
+            HeaderValue::from_static("special-eureka-manager/0.6.0"),
         );
         let client = Client::builder().default_headers(headers).build()?;
         Ok(HttpClientRef::new(RwLock::new(HttpClient::new(client))))

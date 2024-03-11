@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.6.0-alpha.4"
+version = "0.6.0-alpha.5"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
@@ -16,23 +16,34 @@ reqwest = { version = "0.11", features = [
     "cookies",
     "json",
     "multipart",
-    "rustls-tls"
+    "rustls-tls",
 ] }
 serde = { version = "1.0.197", features = ["derive"] }
 thiserror = "1.0.57"
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
 url = { version = "2.5.0", features = ["serde"] }
-mangadex-api = { version = "3.1", default-features = false, features = ["rw-multi-thread", "utils", "serialize"] }
+mangadex-api = { version = "3.1", default-features = false, features = [
+    "rw-multi-thread",
+    "utils",
+    "serialize",
+] }
 anyhow = "1.0"
 serde_json = "1.0"
 actix-web = { version = "4", optional = true }
-mangadex-api-schema-rust = { version = "0.7", default-features = false, features = ["serialize"] }
+mangadex-api-schema-rust = { version = "0.7", default-features = false, features = [
+    "serialize",
+] }
 mangadex-api-types-rust = { version = "0.7", default-features = false }
-tokio = { version = "1.36.0", features = ["sync", "rt", "macros", "rt-multi-thread"] }
+tokio = { version = "1.36.0", features = [
+    "sync",
+    "rt",
+    "macros",
+    "rt-multi-thread",
+] }
 log = "^0.4.21"
 tokio-stream = { version = "0.1" }
 async-stream = { version = "0.3" }
-bytes = { version = "1.5"}
+bytes = { version = "1.5" }
 itertools = "0.12.1"
 serde_qs = { version = "0", features = ["actix4"], optional = true }
 async-trait = "0.1"
@@ -42,7 +53,10 @@ mangadex-api-input-types = { version = "0.3", default-features = false }
 regex = "1"
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["async_tokio", "html_reports"]}
+criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
+once_cell = "1.19"
+# moka = { version = "0.12", features = ["future"]}
+toml = "0.8"
 
 [features]
 default = ["actix_web"]
@@ -60,3 +74,6 @@ harness = false
 [[bench]]
 name = "chapter_listing"
 harness = false
+
+[[test]]
+name = "download_chapter"

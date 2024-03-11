@@ -23,11 +23,7 @@ where
     T: Serialize,
     T: Clone,
 {
-    pub fn new(
-        to_use: &mut Vec<T>,
-        limit: usize,
-        offset: usize,
-    ) -> ManagerCoreResult<Collection<T>> {
+    pub fn new(to_use: &mut [T], limit: usize, offset: usize) -> ManagerCoreResult<Collection<T>> {
         if offset > to_use.len() {
             ManagerCoreResult::Err(crate::core::Error::Io(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,

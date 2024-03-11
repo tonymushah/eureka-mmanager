@@ -2,7 +2,6 @@ use crate::core::ManagerCoreResult;
 use crate::server::AppState;
 use actix_web::http::header::ContentType;
 use actix_web::{get, web, HttpResponse, Responder};
-use bytes::BytesMut;
 use std::io::Read;
 use uuid::Uuid;
 
@@ -24,8 +23,8 @@ pub async fn find_chapters_data_img_by_id(
         .chapter_utils()
         .with_id(data.id)
         .get_data_image(&data.filename)?;
-    let mut buf: BytesMut = BytesMut::new();
-    buf_reader.read_exact(&mut buf)?;
+    let mut buf = Vec::<u8>::new();
+    buf_reader.read_to_end(&mut buf)?;
     Ok(HttpResponse::Ok()
         .content_type(ContentType::jpeg())
         .body(buf))
