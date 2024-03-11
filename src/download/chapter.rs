@@ -2,6 +2,7 @@
 // They are not used because we're just printing the raw bytes.
 
 mod download_json_data;
+mod verify_chapter_and_manga;
 
 use log::info;
 use mangadex_api::{utils::download::chapter::DownloadMode, v5::MangaDexClient, HttpClientRef};
@@ -19,7 +20,7 @@ use crate::settings::file_history::history_w_file::traits::{
     NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
 };
 use crate::settings::files_dirs::DirsOptions;
-use crate::utils::chapter::{ChapterUtils, ChapterUtilsWithID};
+use crate::utils::chapter::ChapterUtilsWithID;
 use crate::{core::ManagerCoreResult, settings::file_history::HistoryEntry};
 
 #[derive(Clone)]
@@ -41,21 +42,7 @@ impl ChapterDownload {
             chapter_id,
         }
     }
-    async fn verify_chapter_and_manga<'a, T>(&'a self, ctx: &'a mut T) -> ManagerCoreResult<()>
-    where
-        T: AccessHistory + AccessDownloadTasks,
-    {
-        let chapter_utils = <ChapterUtils as From<&'a Self>>::from(self).with_id(self.chapter_id);
-        self.download_json_data(ctx).await?;
-        if let Ok(data) = chapter_utils.is_manga_there() {
-            if !data {
-                (chapter_utils).patch_manga(ctx).await?;
-            }
-        } else {
-            (chapter_utils).patch_manga(ctx).await?;
-        }
-        Ok(())
-    }
+
     pub async fn start_transation<'a, H>(
         &self,
         history: &'a mut H,
