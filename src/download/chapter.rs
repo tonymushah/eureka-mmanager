@@ -2,6 +2,7 @@
 // They are not used because we're just printing the raw bytes.
 
 mod download_json_data;
+mod end_transation;
 mod start_transation;
 mod verify_chapter_and_manga;
 
@@ -16,11 +17,10 @@ use std::sync::Arc;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
+use crate::core::ManagerCoreResult;
 use crate::server::traits::{AccessDownloadTasks, AccessHistory};
-use crate::settings::file_history::history_w_file::traits::NoLFAsyncAutoCommitRollbackRemove;
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::chapter::ChapterUtilsWithID;
-use crate::{core::ManagerCoreResult, settings::file_history::HistoryEntry};
 
 #[derive(Clone)]
 pub struct ChapterDownload {
@@ -41,20 +41,7 @@ impl ChapterDownload {
             chapter_id,
         }
     }
-    pub async fn end_transation<'a, H>(
-        &'a self,
-        entry: HistoryEntry,
-        history: &'a mut H,
-    ) -> ManagerCoreResult<()>
-    where
-        H: AccessHistory,
-    {
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackRemove<HistoryEntry>>::remove(
-            history, entry,
-        )
-        .await?;
-        Ok(())
-    }
+
     pub async fn download_chapter<'a, T>(
         &'a self,
         ctx: &'a mut T,
