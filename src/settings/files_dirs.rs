@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader};
+use std::{fs::File, io::BufReader, path::Path};
 
 use serde::{Deserialize, Serialize};
 
@@ -6,10 +6,10 @@ use crate::core::ManagerCoreResult;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct DirsOptions {
-    data_dir: String,
-    chapters: String,
-    mangas: String,
-    covers: String,
+    pub data_dir: String,
+    pub chapters: String,
+    pub mangas: String,
+    pub covers: String,
 }
 
 impl DirsOptions {
@@ -26,21 +26,30 @@ impl DirsOptions {
     }
     pub fn chapters_add(&self, path: &str) -> String {
         let chapters_path = self.chapters.as_str();
+        if Path::new(chapters_path).is_absolute() {
+            return format!("{chapters_path}/{path}");
+        }
         let chapters_path_defpath = self.data_dir_add(chapters_path);
         format!("{}/{}", chapters_path_defpath, path)
     }
     pub fn mangas_add(&self, path: &str) -> String {
         let mangas_path = self.mangas.as_str();
+        if Path::new(mangas_path).is_absolute() {
+            return format!("{mangas_path}/{path}");
+        }
         let mangas_path_defpath = self.data_dir_add(mangas_path);
         format!("{}/{}", mangas_path_defpath, path)
     }
     pub fn covers_add(&self, path: &str) -> String {
         let covers_path = self.covers.as_str();
+        if Path::new(covers_path).is_absolute() {
+            return format!("{covers_path}/{path}");
+        }
         let covers_path_defpath = self.data_dir_add(covers_path);
         format!("{}/{}", covers_path_defpath, path)
     }
-    
-    /* 
+
+    /*
     pub fn _data_dir_add<'a>(&'a self, path: &'a str) -> &'a str {
         (&self.data_dir).join("/").join(path)
         //&format!("{}/{}", self.data_dir, path)
