@@ -2,6 +2,7 @@
 // They are not used because we're just printing the raw bytes.
 
 mod download_json_data;
+mod start_transation;
 mod verify_chapter_and_manga;
 
 use log::info;
@@ -16,9 +17,7 @@ use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use crate::server::traits::{AccessDownloadTasks, AccessHistory};
-use crate::settings::file_history::history_w_file::traits::{
-    NoLFAsyncAutoCommitRollbackInsert, NoLFAsyncAutoCommitRollbackRemove,
-};
+use crate::settings::file_history::history_w_file::traits::NoLFAsyncAutoCommitRollbackRemove;
 use crate::settings::files_dirs::DirsOptions;
 use crate::utils::chapter::ChapterUtilsWithID;
 use crate::{core::ManagerCoreResult, settings::file_history::HistoryEntry};
@@ -41,26 +40,6 @@ impl ChapterDownload {
             http_client,
             chapter_id,
         }
-    }
-
-    pub async fn start_transation<'a, H>(
-        &self,
-        history: &'a mut H,
-    ) -> ManagerCoreResult<HistoryEntry>
-    where
-        H: AccessHistory,
-    {
-        let chapter_id = Uuid::parse_str(self.chapter_id.to_string().as_str())?;
-        let history_entry = HistoryEntry::new(
-            chapter_id,
-            mangadex_api_types_rust::RelationshipType::Chapter,
-        );
-        <dyn AccessHistory as NoLFAsyncAutoCommitRollbackInsert<HistoryEntry>>::insert(
-            history,
-            history_entry,
-        )
-        .await?;
-        Ok(history_entry)
     }
     pub async fn end_transation<'a, H>(
         &'a self,
