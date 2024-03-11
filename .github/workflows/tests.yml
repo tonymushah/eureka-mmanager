@@ -8,6 +8,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  RES: ./result.md
 
 jobs:
   download_chapter:
@@ -25,8 +26,10 @@ jobs:
       - name: Build
         run: cargo build --test download_chapter
       - name: Run download_chapter
-        run: cargo test download_chapter
+        run: cargo test --test download_chapter -- ${{ env.RES }}
+      - name: Do result exists 
+        run: if test -f "${{ env.RES }}"; then echo "The result file exist"; else exit "the result file doesn't exist"; fi;
       - name: Create report 
         uses: mshick/add-pr-comment@v2
         with:
-          message-path: ./result.md
+          message-path: ${{ env.RES }}

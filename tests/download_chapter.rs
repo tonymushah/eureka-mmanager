@@ -121,7 +121,7 @@ async fn run() -> anyhow::Result<toml::Table> {
 
 #[test]
 async fn main() -> anyhow::Result<()> {
-    let mut file = BufWriter::new(File::create("./result.md")?);
+    let mut file = BufWriter::new(File::create(std::env::args().next().unwrap())?);
     writeln!(file, "## `download_chapter.rs` test results")?;
 
     match run().await {
