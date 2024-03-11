@@ -9,6 +9,7 @@ use std::{
 
 use mangadex_api::MangaDexClient;
 use mangadex_api_schema_rust::v5::ChapterObject;
+use mangadex_api_types_rust::IncludeExternalUrl;
 use mangadex_desktop_api2::{
     download::chapter::{AccessChapterDownload, DownloadChapterResult},
     AppState, ManagerCoreResult,
@@ -123,7 +124,11 @@ async fn run() -> anyhow::Result<toml::Table> {
 async fn main() -> anyhow::Result<()> {
     let mut file = BufWriter::new(File::create(std::env::var("RES")?)?);
     writeln!(file, "## `download_chapter.rs` test results")?;
-
+    writeln!(
+        file,
+        "{}",
+        serde_qs::to_string(&("srt", IncludeExternalUrl::Exclude))?
+    )?;
     match run().await {
         Ok(res) => {
             writeln!(file, "```toml")?;
