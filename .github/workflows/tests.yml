@@ -1,0 +1,28 @@
+name: download_chapter
+
+on:
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  download_chapter:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4 # v4
+      - name: Build
+        run: cargo build --verbose
+      - name: Run download_chapter
+        run: cargo test download_chapter >> result.md
+      - name: Create report 
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-path: result.md
