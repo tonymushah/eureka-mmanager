@@ -43,7 +43,7 @@ tokio = { version = "1.36", features = [
 log = "^0.4.21"
 tokio-stream = { version = "0.1" }
 async-stream = { version = "0.3" }
-bytes = { version = "1.5" }
+bytes = { version = "1.6" }
 itertools = "0.12.1"
 serde_qs = { version = "0", features = ["actix4"], optional = true }
 async-trait = "0.1"
