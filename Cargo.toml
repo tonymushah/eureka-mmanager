@@ -34,7 +34,7 @@ mangadex-api-schema-rust = { version = "0.8", default-features = false, features
     "serialize",
 ] }
 mangadex-api-types-rust = { version = "0.8", default-features = false }
-tokio = { version = "1.36", features = [
+tokio = { version = "1.37", features = [
     "sync",
     "rt",
     "macros",
