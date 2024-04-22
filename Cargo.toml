@@ -33,7 +33,7 @@ actix-web = { version = "4", optional = true }
 mangadex-api-schema-rust = { version = "0.8", default-features = false, features = [
     "serialize",
 ] }
-mangadex-api-types-rust = { version = "0.8", default-features = false }
+mangadex-api-types-rust = { version = "0.9", default-features = false }
 tokio = { version = "1.37", features = [
     "sync",
     "rt",
