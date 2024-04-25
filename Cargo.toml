@@ -1,6 +1,6 @@
 [package]
 name = "mangadex-desktop-api2"
-version = "0.6.0-alpha.5"
+version = "0.6.0-alpha.6"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "A Actix server for downloading manga, chapters, covers from Mangadex"
@@ -12,7 +12,7 @@ rust-version = "1.70"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11", features = [
+reqwest = { version = "0.12", features = [
     "cookies",
     "json",
     "multipart",
@@ -22,7 +22,7 @@ serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 uuid = { version = "1.8", features = ["serde", "v4"] }
 url = { version = "2.5", features = ["serde"] }
-mangadex-api = { version = "3.2", default-features = false, features = [
+mangadex-api = { version = "3.3", default-features = false, features = [
     "rw-multi-thread",
     "utils",
     "serialize",
@@ -30,10 +30,10 @@ mangadex-api = { version = "3.2", default-features = false, features = [
 anyhow = "1.0"
 serde_json = "1.0"
 actix-web = { version = "4", optional = true }
-mangadex-api-schema-rust = { version = "0.8", default-features = false, features = [
+mangadex-api-schema-rust = { version = "0.9", default-features = false, features = [
     "serialize",
 ] }
-mangadex-api-types-rust = { version = "0.8", default-features = false }
+mangadex-api-types-rust = { version = "0.9", default-features = false }
 tokio = { version = "1.37", features = [
     "sync",
     "rt",
@@ -49,7 +49,7 @@ serde_qs = { version = "0", features = ["actix4"], optional = true }
 async-trait = "0.1"
 actix-cors = { version = "0.7", optional = true }
 fern = { version = "0.6", optional = true }
-mangadex-api-input-types = { version = "0.4", default-features = false }
+mangadex-api-input-types = { version = "0.5", default-features = false }
 regex = "1"
 
 [dev-dependencies]
