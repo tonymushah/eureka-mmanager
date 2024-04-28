@@ -58,15 +58,3 @@ toml = "0.8"
 
 [features]
 use_fern = ["dep:fern"]
-
-[[bench]]
-name = "aggregate"
-harness = false
-
-[[bench]]
-name = "chapter_listing"
-harness = false
-
-[[test]]
-name = "download_chapter"
-required-features = []

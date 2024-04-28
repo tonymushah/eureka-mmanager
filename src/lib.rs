@@ -1,69 +1,17 @@
 pub use crate::r#core::ManagerCoreResult;
 
+pub mod settings;
+
 use crate::settings::verifications::{
     data::{initialise_data_dir, verify_data_dir},
     settings::{initialise_settings_dir, verify_settings_dir},
 };
-#[cfg(feature = "actix_web")]
-use actix_web::dev::Server;
 use log::{info, warn};
-pub use server::AppState;
 mod r#core;
 
 pub use crate::r#core::{Error, ErrorType};
 
-pub mod download;
-
-mod methods;
-pub mod server;
-pub mod settings;
 pub mod r#static;
-
-pub mod utils;
-/// url not found handler
-///
-#[cfg(feature = "actix_web")]
-pub use crate::server::launch_async_server;
-
-#[cfg(feature = "actix_web")]
-/// it's launch the server in the given adrress and the given port
-/// a call like this
-///
-/// # Example
-/// ```
-/// fn main() -> std::io:Result<()> {
-///     let address = "127.0.0.1";
-///     let port : u16 = 8090;
-///     launch_server(address, port)
-///     // it launch the server at 127.0.0.1:8090
-/// }
-/// ```
-pub async fn launch_server(
-    app_state: AppState,
-    (address, port): (String, u16),
-) -> std::io::Result<()> {
-    info!(
-        "launching mangadex-desktop-api on {}:{}",
-        address.clone(),
-        port
-    );
-    let habdle = launch_async_server(app_state, (address.clone(), port))?.await;
-    info!("closing mangadex-desktop-api on {}:{}", address, port);
-    habdle
-}
-
-#[cfg(feature = "actix_web")]
-pub async fn launch_server_w_app_state(app_state: AppState) -> ManagerCoreResult<Server> {
-    let hostname_port = app_state.get_hostname_port();
-    Ok(launch_async_server(app_state, hostname_port)?)
-}
-
-#[cfg(feature = "actix_web")]
-pub async fn launch_async_server_default() -> ManagerCoreResult<Server> {
-    info!("launching server");
-    let app_state = AppState::init().await?;
-    launch_server_w_app_state(app_state).await
-}
 
 /// Verify if the data dir and the settings are all there
 /// if on of them are not defined or not found , it automatically create the dir corresponding to the error
@@ -108,29 +56,4 @@ pub fn verify_all_fs() -> std::io::Result<()> {
         }
     }
     Ok(())
-}
-
-#[cfg(feature = "actix_web")]
-/// It's launch the server with the given data in the settings/server_option.json
-///
-/// # Example
-/// if we have a settings/server_option.json like this :
-/// ``` json
-/// {
-///   "hostname" : "127.0.0.1",
-///    "port" : 8090
-/// }
-/// ```
-///
-/// and we launch the function :
-/// ```
-/// #[tokio::main]
-/// async fn main() -> anyhow::Result<()> {
-///     launch_server_default()
-///     // it will launch the server at 127.0.0.1:8090
-/// }
-/// ```
-pub async fn launch_server_default() -> ManagerCoreResult<()> {
-    info!("launching server");
-    Ok(launch_async_server_default().await?.await?)
 }
