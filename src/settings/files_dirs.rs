@@ -1,73 +1,132 @@
-use std::{fs::File, io::BufReader, path::Path};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
+};
 
+use actix::{Actor, SyncContext};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::core::ManagerCoreResult;
+use crate::{core::ManagerCoreResult, DirsOptionsVerificationError};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct DirsOptions {
-    pub data_dir: String,
-    pub chapters: String,
-    pub mangas: String,
-    pub covers: String,
+    pub data_dir: PathBuf,
+    pub chapters: PathBuf,
+    pub mangas: PathBuf,
+    pub covers: PathBuf,
+    #[serde(default)]
+    pub init_dirs_if_not_exists: Option<bool>,
 }
 
 impl DirsOptions {
-    pub fn new_(path: &str) -> ManagerCoreResult<DirsOptions> {
+    pub fn load_from_path(path: &Path) -> ManagerCoreResult<DirsOptions> {
         let file = File::open(path)?;
         let instance: DirsOptions = serde_json::from_reader(BufReader::new(file))?;
         Ok(instance)
     }
-    pub fn new() -> ManagerCoreResult<DirsOptions> {
-        DirsOptions::new_("./settings/files-dirs.json")
-    }
-    pub fn data_dir_add(&self, path: &str) -> String {
-        format!("{}/{}", self.data_dir, path)
-    }
-    pub fn chapters_add(&self, path: &str) -> String {
-        let chapters_path = self.chapters.as_str();
-        if Path::new(chapters_path).is_absolute() {
-            return format!("{chapters_path}/{path}");
+    pub fn new_from_data_dir<P: AsRef<Path>>(data_dir: P) -> DirsOptions {
+        let data_dir = data_dir.as_ref().to_path_buf();
+        DirsOptions {
+            chapters: data_dir.join("chapters"),
+            mangas: data_dir.join("mangas"),
+            covers: data_dir.join("covers"),
+            init_dirs_if_not_exists: Some(true),
+            data_dir,
         }
-        let chapters_path_defpath = self.data_dir_add(chapters_path);
-        format!("{}/{}", chapters_path_defpath, path)
     }
-    pub fn mangas_add(&self, path: &str) -> String {
-        let mangas_path = self.mangas.as_str();
-        if Path::new(mangas_path).is_absolute() {
-            return format!("{mangas_path}/{path}");
+    pub fn data_dir_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        self.data_dir.join(path)
+    }
+    pub fn chapters_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        if self.chapters.is_absolute() || self.chapters.starts_with(&self.data_dir) {
+            self.chapters.join(path)
+        } else {
+            self.data_dir_add(&self.chapters).join(path)
         }
-        let mangas_path_defpath = self.data_dir_add(mangas_path);
-        format!("{}/{}", mangas_path_defpath, path)
     }
-    pub fn covers_add(&self, path: &str) -> String {
-        let covers_path = self.covers.as_str();
-        if Path::new(covers_path).is_absolute() {
-            return format!("{covers_path}/{path}");
+    pub fn mangas_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        if self.mangas.is_absolute() || self.mangas.starts_with(&self.data_dir) {
+            self.mangas.join(path)
+        } else {
+            self.data_dir_add(&self.mangas).join(path)
         }
-        let covers_path_defpath = self.data_dir_add(covers_path);
-        format!("{}/{}", covers_path_defpath, path)
     }
+    pub fn covers_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        if self.covers.is_absolute() || self.covers.starts_with(&self.data_dir) {
+            self.covers.join(path)
+        } else {
+            self.data_dir_add(&self.covers).join(path)
+        }
+    }
+    pub fn cover_images_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        self.covers_add("images").join(path)
+    }
+    pub fn chapters_id_add(&self, id: Uuid) -> PathBuf {
+        let res = self.chapters_add(id.to_string());
+        if self.init_dirs_if_not_exists.unwrap_or(true) {
+            let _ = std::fs::create_dir_all(&res);
+        }
+        res
+    }
+    pub fn chapters_id_data_add(&self, id: Uuid) -> PathBuf {
+        let res = self.chapters_id_add(id).join("data");
+        if self.init_dirs_if_not_exists.unwrap_or(true) {
+            let _ = std::fs::create_dir_all(&res);
+        }
+        res
+    }
+    pub fn chapters_id_data_saver_add(&self, id: Uuid) -> PathBuf {
+        let res = self.chapters_id_add(id).join("data-saver");
+        if self.init_dirs_if_not_exists.unwrap_or(true) {
+            let _ = std::fs::create_dir_all(&res);
+        }
+        res
+    }
+    pub fn history_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        self.data_dir_add("history").join(path)
+    }
+    pub fn init_dirs(&self) -> ManagerCoreResult<()> {
+        std::fs::create_dir_all(self.data_dir_add(""))?;
+        std::fs::create_dir_all(self.history_add(""))?;
+        std::fs::create_dir_all(self.chapters_add(""))?;
+        std::fs::create_dir_all(self.covers_add(""))?;
+        std::fs::create_dir_all(self.mangas_add(""))?;
+        std::fs::create_dir_all(self.cover_images_add(""))?;
+        Ok(())
+    }
+    pub fn verify(&self) -> Result<(), DirsOptionsVerificationError> {
+        if !self.data_dir.exists() {
+            return Err(DirsOptionsVerificationError::DataRoot);
+        }
+        if !self.history_add("").exists() {
+            return Err(DirsOptionsVerificationError::History);
+        }
+        if !self.chapters.exists() {
+            return Err(DirsOptionsVerificationError::Chapters);
+        }
+        if !self.covers.exists() {
+            return Err(DirsOptionsVerificationError::Covers);
+        }
+        if !self.cover_images_add("").exists() {
+            return Err(DirsOptionsVerificationError::CoverImages);
+        }
+        if !self.mangas.exists() {
+            return Err(DirsOptionsVerificationError::Mangas);
+        }
+        Ok(())
+    }
+    pub fn verify_and_init(&self) -> ManagerCoreResult<()> {
+        if let Ok(()) = self.verify() {
+            Ok(())
+        } else {
+            self.init_dirs()?;
+            Ok(())
+        }
+    }
+}
 
-    /*
-    pub fn _data_dir_add<'a>(&'a self, path: &'a str) -> &'a str {
-        (&self.data_dir).join("/").join(path)
-        //&format!("{}/{}", self.data_dir, path)
-    }
-    pub fn _chapters_add<'a>(&'a self, path: &'a str) -> &'a str {
-        let chapters_path = self.chapters.as_str();
-        let chapters_path_defpath = self._data_dir_add(chapters_path);
-        &format!("{}/{}", chapters_path_defpath, path)
-    }
-    pub fn _mangas_add<'a>(&'a self, path: &'a str) -> &'a str {
-        let mangas_path = self.mangas.as_str();
-        let mangas_path_defpath = self._data_dir_add(mangas_path);
-        &format!("{}/{}", mangas_path_defpath, path)
-    }
-    pub fn _covers_add<'a>(&'a self, path: &'a str) -> &'a str {
-        let covers_path = self.covers.as_str();
-        let covers_path_defpath = self._data_dir_add(covers_path);
-        &format!("{}/{}", covers_path_defpath, path)
-    }
-    */
+impl Actor for DirsOptions {
+    type Context = SyncContext<Self>;
 }

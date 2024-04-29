@@ -8,20 +8,20 @@ use serde::{Deserialize, Serialize};
 use super::{HistoryEntry, Insert, IsIn, Remove};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct History {
+pub struct HistoryBase {
     history_list: Vec<uuid::Uuid>,
     data_type: RelationshipType,
 }
 
-impl From<History> for Arc<RwLock<History>> {
-    fn from(val: History) -> Self {
+impl From<HistoryBase> for Arc<RwLock<HistoryBase>> {
+    fn from(val: HistoryBase) -> Self {
         Arc::new(RwLock::new(val))
     }
 }
 
-impl History {
-    pub fn new(data_type: RelationshipType) -> History {
-        History {
+impl HistoryBase {
+    pub fn new(data_type: RelationshipType) -> HistoryBase {
+        HistoryBase {
             history_list: Vec::new(),
             data_type,
         }
@@ -43,7 +43,7 @@ impl History {
     }
 }
 
-impl IsIn<uuid::Uuid> for History {
+impl IsIn<uuid::Uuid> for HistoryBase {
     type Output = Option<usize>;
 
     fn is_in(&self, to_use: uuid::Uuid) -> Self::Output {
@@ -53,7 +53,7 @@ impl IsIn<uuid::Uuid> for History {
     }
 }
 
-impl IsIn<HistoryEntry> for History {
+impl IsIn<HistoryEntry> for HistoryBase {
     type Output = Result<bool, std::io::Error>;
 
     fn is_in(&self, to_use: HistoryEntry) -> Self::Output {
@@ -68,7 +68,7 @@ impl IsIn<HistoryEntry> for History {
     }
 }
 
-impl Insert<uuid::Uuid> for History {
+impl Insert<uuid::Uuid> for HistoryBase {
     type Output = Result<(), std::io::Error>;
     fn insert(&mut self, input: uuid::Uuid) -> Self::Output {
         let result = <Self as IsIn<uuid::Uuid>>::is_in(self, input);
@@ -84,7 +84,7 @@ impl Insert<uuid::Uuid> for History {
     }
 }
 
-impl Insert<HistoryEntry> for History {
+impl Insert<HistoryEntry> for HistoryBase {
     type Output = Result<(), std::io::Error>;
 
     fn insert(&mut self, input: HistoryEntry) -> Self::Output {
@@ -101,7 +101,7 @@ impl Insert<HistoryEntry> for History {
     }
 }
 
-impl Remove<uuid::Uuid> for History {
+impl Remove<uuid::Uuid> for HistoryBase {
     type Output = Result<(), std::io::Error>;
 
     fn remove(&mut self, input: uuid::Uuid) -> Self::Output {
@@ -115,7 +115,7 @@ impl Remove<uuid::Uuid> for History {
     }
 }
 
-impl Remove<HistoryEntry> for History {
+impl Remove<HistoryEntry> for HistoryBase {
     type Output = Result<(), std::io::Error>;
     fn remove(&mut self, input: HistoryEntry) -> Self::Output {
         let result = self.is_this_type(input.data_type);
@@ -130,7 +130,7 @@ impl Remove<HistoryEntry> for History {
     }
 }
 
-impl IntoIterator for History {
+impl IntoIterator for HistoryBase {
     type Item = uuid::Uuid;
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
