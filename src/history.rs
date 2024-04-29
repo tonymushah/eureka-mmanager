@@ -1,8 +1,8 @@
 mod entry;
 pub use entry::HistoryEntry;
 
-mod history;
-pub use history::History;
+mod base;
+pub use base::HistoryBase;
 
 pub mod history_w_file;
 pub use history_w_file::HistoryWFile;

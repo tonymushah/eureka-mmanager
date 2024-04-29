@@ -1,5 +1,6 @@
 pub use crate::r#core::ManagerCoreResult;
 
+pub mod history;
 pub mod settings;
 
 mod r#core;
