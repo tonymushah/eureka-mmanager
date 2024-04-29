@@ -1,6 +1,7 @@
 use std::{
     fs::File,
     io::{BufReader, BufWriter, ErrorKind},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -22,14 +23,14 @@ pub mod traits;
 #[derive(Clone, Debug)]
 pub struct HistoryWFile {
     history: Arc<RwLock<History>>,
-    file: String,
+    file: PathBuf,
 }
 
 impl HistoryWFile {
-    pub fn new(data_type: RelationshipType, file: String) -> HistoryWFile {
+    pub fn new<P: Into<PathBuf>>(data_type: RelationshipType, file: P) -> HistoryWFile {
         HistoryWFile {
             history: Arc::new(RwLock::new(History::new(data_type))),
-            file,
+            file: file.into(),
         }
     }
     pub fn read_history(&self) -> Result<RwLockReadGuard<'_, History>, std::io::Error> {
@@ -56,32 +57,29 @@ impl HistoryWFile {
             .try_write_owned()
             .map_err(|e| std::io::Error::new(ErrorKind::PermissionDenied, e.to_string()))
     }
-    pub fn get_file(self) -> String {
+    pub fn get_file(self) -> PathBuf {
         self.file
     }
-    pub fn from_file(file: String) -> Result<Self, std::io::Error> {
-        let file_data = File::open(file.clone())?;
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Self, std::io::Error> {
+        let file_data = File::open(file.as_ref())?;
         let history: History = serde_json::from_reader(BufReader::new(file_data))?;
         Ok(Self {
             history: history.into(),
-            file,
+            file: file.as_ref().to_path_buf(),
         })
     }
     pub fn init(
         relationship_type: RelationshipType,
         dir_options: &DirsOptions,
     ) -> Result<Self, std::io::Error> {
-        let path: String = dir_options.data_dir_add(
-            format!(
-                "history/{}.json",
-                serde_json::to_string(&relationship_type)?
-            )
-            .replace('\"', "")
-            .as_str(),
+        let path = dir_options.history_add(
+            format!("{}.json", serde_json::to_string(&relationship_type)?)
+                .replace('\"', "")
+                .as_str(),
         );
         let history = match Self::from_file(path.clone()) {
             Ok(data) => data,
-            Err(_) => HistoryWFile::new(relationship_type, path.clone()),
+            Err(_) => HistoryWFile::new(relationship_type, path),
         };
         Ok(history)
     }

@@ -88,7 +88,7 @@ impl HistoryMap {
         .await
     }
     pub fn init_history_dir(dir_options: &DirsOptions) -> Result<(), std::io::Error> {
-        let path: String = dir_options.data_dir_add("history".to_string().as_str());
+        let path = dir_options.history_add("");
         std::fs::create_dir_all(path)?;
         Ok(())
     }

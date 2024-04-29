@@ -1,7 +1,7 @@
-use std::num::TryFromIntError;
 #[cfg(feature = "actix_web")]
 use actix_web::ResponseError;
 use serde::Serialize;
+use std::num::TryFromIntError;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,6 +47,24 @@ pub enum Error {
     RollBacked(String),
     #[error("An RwLock occured \n Details : {0}")]
     RwLockError(#[from] std::sync::PoisonError<String>),
+    #[error("The {0} doesn't exist")]
+    DirsOptionsVerification(#[from] DirsOptionsVerificationError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DirsOptionsVerificationError {
+    #[error("The data dir doesn:t exist")]
+    DataRoot,
+    #[error("The history dir doesn:t exist")]
+    History,
+    #[error("The chapters dir doesn:t exist")]
+    Chapters,
+    #[error("The covers dir doesn:t exist")]
+    Covers,
+    #[error("The covers images dir doesn:t exist")]
+    CoverImages,
+    #[error("The mangas dir doesn't exist")]
+    Mangas,
 }
 
 #[derive(serde::Serialize, Debug, serde::Deserialize)]
@@ -68,126 +86,6 @@ pub enum ErrorType {
     AcquireError,
     RollBacked,
     RwLockError,
-}
-
-#[cfg(feature = "actix_web")]
-impl ResponseError for Error {
-    fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
-        match self {
-            Error::Io(e) => actix_web::HttpResponse::InternalServerError().json(WhenError {
-                type_: ErrorType::Io,
-                message: e.to_string(),
-                result: "error".to_string(),
-            }),
-            Error::ReqwestError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::ReqwestError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::MangadexAPIError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::MangadexAPIError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::TokioJoinError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::TokioJoinError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::SerdeJsonError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::SerdeJsonError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::UuidError(e) => actix_web::HttpResponse::InternalServerError().json(WhenError {
-                type_: ErrorType::UuidError,
-                message: e.to_string(),
-                result: "error".to_string(),
-            }),
-            Error::StringUtf8Error(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::StringUtf8Error,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::StringUTF16Error(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::StringUTF16Error,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::StringParseError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::StringParseError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::Other(e) => actix_web::HttpResponse::InternalServerError().json(WhenError {
-                type_: ErrorType::Other,
-                message: e.to_string(),
-                result: "error".to_string(),
-            }),
-            Error::MangadexBuilderError(e) => actix_web::HttpResponse::InternalServerError()
-                .json(WhenError {
-                    type_: ErrorType::MangadexBuilderError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                }),
-            Error::DownloadTaskLimitExceded { current, limit } => {
-                actix_web::HttpResponse::TooManyRequests().json(WhenError {
-                    type_: ErrorType::DownloadTaskLimitExceded,
-                    message: format!("Download task limit exceded {current}/{limit}"),
-                    result: "error".to_string(),
-                })
-            }
-            Error::TryIntError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::TryIntError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::OneshotRecvError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::OneshotRecvError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::AcquireError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::AcquireError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::RollBacked(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::RollBacked,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-            Error::RwLockError(e) => {
-                actix_web::HttpResponse::InternalServerError().json(WhenError {
-                    type_: ErrorType::RwLockError,
-                    message: e.to_string(),
-                    result: "error".to_string(),
-                })
-            }
-        }
-    }
 }
 
 impl Serialize for Error {
