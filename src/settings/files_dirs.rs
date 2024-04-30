@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use actix::{Actor, SyncContext};
+use actix::{Actor, Context};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -130,5 +130,5 @@ impl DirsOptions {
 }
 
 impl Actor for DirsOptions {
-    type Context = SyncContext<Self>;
+    type Context = Context<Self>;
 }
