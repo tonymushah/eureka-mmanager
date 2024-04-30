@@ -1,11 +1,11 @@
 chapters
 covers
 mangas
-target
+/target
 data
 result.json
 mangadex
 socket
 test_history
-settings
+/settings
 result.md

@@ -12,7 +12,7 @@ use tokio::sync::{
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
 
-use crate::{core::ManagerCoreResult, settings::files_dirs::DirsOptions, Error};
+use crate::{core::ManagerCoreResult, files_dirs::DirsOptions, Error};
 
 use self::traits::{AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable};
 
