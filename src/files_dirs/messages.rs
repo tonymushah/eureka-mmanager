@@ -5,6 +5,7 @@ pub mod join_data;
 pub mod join_history;
 pub mod modify_chapters_path;
 pub mod modify_covers_path;
+pub mod modify_data_path;
 
 use super::DirsOptions;
 use actix::dev::{MessageResponse, OneshotSender};
