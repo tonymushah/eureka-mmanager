@@ -3,6 +3,7 @@ pub mod join_covers;
 pub mod join_covers_images;
 pub mod join_data;
 pub mod join_history;
+pub mod modify_chapters_path;
 
 use super::DirsOptions;
 use actix::dev::{MessageResponse, OneshotSender};
