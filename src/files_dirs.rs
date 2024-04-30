@@ -6,8 +6,8 @@ use std::{
 
 use actix::{Actor, Context};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
+mod chapters;
 mod mangas;
 pub mod messages;
 
@@ -42,13 +42,6 @@ impl DirsOptions {
     pub fn data_dir_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         self.data_dir.join(path)
     }
-    pub fn chapters_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        if self.chapters.is_absolute() || self.chapters.starts_with(&self.data_dir) {
-            self.chapters.join(path)
-        } else {
-            self.data_dir_add(&self.chapters).join(path)
-        }
-    }
 
     pub fn covers_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         if self.covers.is_absolute() || self.covers.starts_with(&self.data_dir) {
@@ -60,27 +53,7 @@ impl DirsOptions {
     pub fn cover_images_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         self.covers_add("images").join(path)
     }
-    pub fn chapters_id_add(&self, id: Uuid) -> PathBuf {
-        let res = self.chapters_add(id.to_string());
-        if self.init_dirs_if_not_exists.unwrap_or(true) {
-            let _ = std::fs::create_dir_all(&res);
-        }
-        res
-    }
-    pub fn chapters_id_data_add(&self, id: Uuid) -> PathBuf {
-        let res = self.chapters_id_add(id).join("data");
-        if self.init_dirs_if_not_exists.unwrap_or(true) {
-            let _ = std::fs::create_dir_all(&res);
-        }
-        res
-    }
-    pub fn chapters_id_data_saver_add(&self, id: Uuid) -> PathBuf {
-        let res = self.chapters_id_add(id).join("data-saver");
-        if self.init_dirs_if_not_exists.unwrap_or(true) {
-            let _ = std::fs::create_dir_all(&res);
-        }
-        res
-    }
+
     pub fn history_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         self.data_dir_add("history").join(path)
     }
