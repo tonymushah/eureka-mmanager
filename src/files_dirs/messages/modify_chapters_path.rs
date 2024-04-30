@@ -4,7 +4,7 @@ use std::{fmt::Debug, path::Path};
 
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
-pub struct ModifyChaptersDirMessage<T>(T)
+pub struct ModifyChaptersDirMessage<T>(pub T)
 where
     T: AsRef<Path> + Debug;
 

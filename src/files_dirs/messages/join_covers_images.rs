@@ -7,7 +7,7 @@ use std::{
 
 #[derive(Debug, Message)]
 #[rtype(result = "std::path::PathBuf")]
-pub struct JoinCoversImagesMessage<T>(T)
+pub struct JoinCoversImagesMessage<T>(pub T)
 where
     T: AsRef<Path> + Debug;
 
