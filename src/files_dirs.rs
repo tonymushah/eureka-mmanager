@@ -8,6 +8,7 @@ use actix::{Actor, Context};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+mod mangas;
 pub mod messages;
 
 use crate::{core::ManagerCoreResult, DirsOptionsVerificationError};
@@ -48,13 +49,7 @@ impl DirsOptions {
             self.data_dir_add(&self.chapters).join(path)
         }
     }
-    pub fn mangas_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        if self.mangas.is_absolute() || self.mangas.starts_with(&self.data_dir) {
-            self.mangas.join(path)
-        } else {
-            self.data_dir_add(&self.mangas).join(path)
-        }
-    }
+
     pub fn covers_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         if self.covers.is_absolute() || self.covers.starts_with(&self.data_dir) {
             self.covers.join(path)
