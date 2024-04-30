@@ -8,6 +8,8 @@ use actix::{Actor, SyncContext};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod messages;
+
 use crate::{core::ManagerCoreResult, DirsOptionsVerificationError};
 
 #[derive(Deserialize, Serialize, Clone)]
