@@ -44,6 +44,6 @@ where
 {
     type Result = PathBuf;
     fn handle(&mut self, msg: JoinCoversMessage<T>, _ctx: &mut Self::Context) -> Self::Result {
-        self.data_dir_add(msg)
+        self.covers_add(msg)
     }
 }

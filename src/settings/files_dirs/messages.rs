@@ -1,6 +1,7 @@
 pub mod join_chapters;
 pub mod join_covers;
 pub mod join_data;
+pub mod join_history;
 
 use crate::settings::files_dirs::DirsOptions;
 use actix::dev::{MessageResponse, OneshotSender};
