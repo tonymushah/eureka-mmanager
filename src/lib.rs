@@ -6,5 +6,3 @@ pub mod history;
 mod r#core;
 
 pub use crate::r#core::{DirsOptionsVerificationError, Error, ErrorType};
-
-pub mod r#static;

@@ -8,6 +8,7 @@ use actix::{Actor, Context};
 use serde::{Deserialize, Serialize};
 
 mod chapters;
+mod covers;
 mod mangas;
 pub mod messages;
 
@@ -42,18 +43,6 @@ impl DirsOptions {
     pub fn data_dir_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         self.data_dir.join(path)
     }
-
-    pub fn covers_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        if self.covers.is_absolute() || self.covers.starts_with(&self.data_dir) {
-            self.covers.join(path)
-        } else {
-            self.data_dir_add(&self.covers).join(path)
-        }
-    }
-    pub fn cover_images_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        self.covers_add("images").join(path)
-    }
-
     pub fn history_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
         self.data_dir_add("history").join(path)
     }
