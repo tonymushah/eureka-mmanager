@@ -4,7 +4,7 @@ pub mod join_covers_images;
 pub mod join_data;
 pub mod join_history;
 
-use crate::settings::files_dirs::DirsOptions;
+use super::DirsOptions;
 use actix::dev::{MessageResponse, OneshotSender};
 use actix::prelude::*;
 use std::path::PathBuf;
@@ -15,7 +15,7 @@ where
 {
     fn handle(
         self,
-        _ctx: &mut <crate::settings::files_dirs::DirsOptions as actix::Actor>::Context,
+        _ctx: &mut <super::DirsOptions as actix::Actor>::Context,
         tx: Option<OneshotSender<M::Result>>,
     ) {
         if let Some(tx) = tx {

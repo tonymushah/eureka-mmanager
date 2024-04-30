@@ -1,4 +1,4 @@
-use crate::settings::files_dirs::DirsOptions;
+use crate::files_dirs::DirsOptions;
 use actix::prelude::*;
 use std::{
     fmt::Debug,
@@ -7,11 +7,11 @@ use std::{
 
 #[derive(Debug, Message)]
 #[rtype(result = "std::path::PathBuf")]
-pub struct JoinHistoryMessage<T>(T)
+pub struct JoinCoversImagesMessage<T>(T)
 where
     T: AsRef<Path> + Debug;
 
-impl<T> Clone for JoinHistoryMessage<T>
+impl<T> Clone for JoinCoversImagesMessage<T>
 where
     T: Clone + Debug + AsRef<Path>,
 {
@@ -20,7 +20,7 @@ where
     }
 }
 
-impl<T> AsRef<Path> for JoinHistoryMessage<T>
+impl<T> AsRef<Path> for JoinCoversImagesMessage<T>
 where
     T: AsRef<Path> + Debug,
 {
@@ -29,7 +29,7 @@ where
     }
 }
 
-impl<T> From<T> for JoinHistoryMessage<T>
+impl<T> From<T> for JoinCoversImagesMessage<T>
 where
     T: AsRef<Path> + Debug,
 {
@@ -38,12 +38,16 @@ where
     }
 }
 
-impl<T> Handler<JoinHistoryMessage<T>> for DirsOptions
+impl<T> Handler<JoinCoversImagesMessage<T>> for DirsOptions
 where
     T: AsRef<Path> + Debug,
 {
     type Result = PathBuf;
-    fn handle(&mut self, msg: JoinHistoryMessage<T>, _ctx: &mut Self::Context) -> Self::Result {
-        self.history_add(msg)
+    fn handle(
+        &mut self,
+        msg: JoinCoversImagesMessage<T>,
+        _ctx: &mut Self::Context,
+    ) -> Self::Result {
+        self.cover_images_add(msg)
     }
 }
