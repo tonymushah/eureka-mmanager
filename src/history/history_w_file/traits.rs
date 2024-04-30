@@ -2,7 +2,7 @@ use crate::history::{Insert, Remove};
 
 pub trait Commitable {
     type Output;
-    fn commit(&mut self) -> Self::Output;
+    fn commit(&self) -> Self::Output;
 }
 
 pub trait RollBackable {
@@ -23,7 +23,7 @@ pub trait AutoCommitRollbackRemove<T>: Commitable + RollBackable + Remove<T> {
 #[async_trait::async_trait]
 pub trait AsyncCommitable {
     type Output;
-    async fn commit(&mut self) -> Self::Output;
+    async fn commit(&self) -> Self::Output;
 }
 
 #[async_trait::async_trait]
