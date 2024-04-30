@@ -1,4 +1,5 @@
 pub mod join_chapters;
+pub mod join_covers;
 pub mod join_data;
 
 use crate::settings::files_dirs::DirsOptions;
