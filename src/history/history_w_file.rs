@@ -1,17 +1,19 @@
 use std::{
     fs::File,
-    io::{BufReader, BufWriter, ErrorKind},
+    io::{BufReader, BufWriter},
     path::{Path, PathBuf},
 };
 
+use actix::Addr;
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
+use tokio::runtime::Handle;
 
-use crate::{core::ManagerCoreResult, files_dirs::DirsOptions, Error};
+use crate::{core::ManagerCoreResult, files_dirs::DirsOptions, Error, JoinHistoryMessage};
 
 use self::traits::{AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable};
 
-use super::{HistoryBase, HistoryEntry, Insert, IsIn, Remove};
+use super::{base::HBResult, HistoryBase, HistoryBaseError, HistoryEntry, Insert, IsIn, Remove};
 
 pub mod traits;
 
@@ -28,6 +30,12 @@ impl HistoryWFile {
             file: file.into(),
         }
     }
+    pub fn get_history(&self) -> &HistoryBase {
+        &self.history
+    }
+    pub(crate) fn get_history_mut(&mut self) -> &mut HistoryBase {
+        &mut self.history
+    }
     pub fn get_file(self) -> PathBuf {
         self.file
     }
@@ -41,13 +49,22 @@ impl HistoryWFile {
     }
     pub fn init(
         relationship_type: RelationshipType,
-        dir_options: &DirsOptions,
-    ) -> Result<Self, std::io::Error> {
-        let path = dir_options.history_add(
-            format!("{}.json", serde_json::to_string(&relationship_type)?)
-                .replace('\"', "")
-                .as_str(),
-        );
+        dir_options: Addr<DirsOptions>,
+    ) -> ManagerCoreResult<Self> {
+        let handle = Handle::current();
+        let path = std::thread::spawn(move || {
+            handle.block_on(async move {
+                let p = dir_options
+                    .send(JoinHistoryMessage(
+                        format!("{}.json", serde_json::to_string(&relationship_type)?)
+                            .replace('\"', ""),
+                    ))
+                    .await?;
+                Ok::<PathBuf, crate::Error>(p)
+            })
+        })
+        .join()
+        .map_err(|er| crate::Error::StdThreadJoin(format!("{:?}", er)))??;
         let history = match Self::from_file(path.clone()) {
             Ok(data) => data,
             Err(_) => HistoryWFile::new(relationship_type, path),
@@ -57,35 +74,35 @@ impl HistoryWFile {
 }
 
 impl Insert<uuid::Uuid> for HistoryWFile {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
     fn insert(&mut self, input: uuid::Uuid) -> Self::Output {
         self.history.insert(input)
     }
 }
 
 impl Insert<HistoryEntry> for HistoryWFile {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
     fn insert(&mut self, input: HistoryEntry) -> Self::Output {
         self.history.insert(input)
     }
 }
 
 impl Remove<uuid::Uuid> for HistoryWFile {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
     fn remove(&mut self, input: uuid::Uuid) -> Self::Output {
         self.history.remove(input)
     }
 }
 
 impl Remove<HistoryEntry> for HistoryWFile {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
     fn remove(&mut self, input: HistoryEntry) -> Self::Output {
         self.history.remove(input)
     }
 }
 
 impl Commitable for HistoryWFile {
-    type Output = Result<(), std::io::Error>;
+    type Output = ManagerCoreResult<()>;
 
     fn commit(&self) -> Self::Output {
         let to_use_file = std::fs::File::options()
@@ -100,7 +117,7 @@ impl Commitable for HistoryWFile {
 }
 
 impl RollBackable for HistoryWFile {
-    type Output = Result<(), std::io::Error>;
+    type Output = ManagerCoreResult<()>;
     fn rollback(&mut self) -> Self::Output {
         let history_string_value = std::fs::read_to_string(&(self.file))?;
         self.history = serde_json::from_str::<HistoryBase>(&history_string_value)?;
@@ -116,7 +133,7 @@ impl AutoCommitRollbackInsert<uuid::Uuid> for HistoryWFile {
         input: uuid::Uuid,
     ) -> <Self as traits::AutoCommitRollbackInsert<uuid::Uuid>>::Output {
         if let Err(error) = <Self as Insert<uuid::Uuid>>::insert(self, input) {
-            if error.kind() == ErrorKind::AlreadyExists {
+            if error == HistoryBaseError::AlreadyExists(input) {
                 if let Err(error) = self.commit() {
                     self.rollback()?;
                     Err(Error::RollBacked(error.to_string()))
@@ -124,7 +141,7 @@ impl AutoCommitRollbackInsert<uuid::Uuid> for HistoryWFile {
                     Ok(())
                 }
             } else {
-                Err(Error::Io(error))
+                Err(Error::HistoryBase(error))
             }
         } else if let Err(error) = self.commit() {
             self.rollback()?;
@@ -143,7 +160,7 @@ impl AutoCommitRollbackRemove<uuid::Uuid> for HistoryWFile {
         input: uuid::Uuid,
     ) -> <Self as traits::AutoCommitRollbackRemove<uuid::Uuid>>::Output {
         if let Err(error) = <Self as Remove<uuid::Uuid>>::remove(self, input) {
-            if error.kind() == ErrorKind::NotFound {
+            if error == HistoryBaseError::NotFound(input) {
                 if let Err(error) = self.commit() {
                     self.rollback()?;
                     Err(Error::RollBacked(error.to_string()))
@@ -151,7 +168,7 @@ impl AutoCommitRollbackRemove<uuid::Uuid> for HistoryWFile {
                     Ok(())
                 }
             } else {
-                Err(Error::Io(error))
+                Err(Error::HistoryBase(error))
             }
         } else if let Err(error) = self.commit() {
             self.rollback()?;
@@ -170,7 +187,7 @@ impl AutoCommitRollbackInsert<HistoryEntry> for HistoryWFile {
         input: HistoryEntry,
     ) -> <Self as traits::AutoCommitRollbackInsert<HistoryEntry>>::Output {
         if let Err(error) = <Self as Insert<HistoryEntry>>::insert(self, input) {
-            if error.kind() == ErrorKind::AlreadyExists {
+            if error == HistoryBaseError::AlreadyExists(input.id) {
                 if let Err(error) = self.commit() {
                     self.rollback()?;
                     Err(Error::RollBacked(error.to_string()))
@@ -178,7 +195,7 @@ impl AutoCommitRollbackInsert<HistoryEntry> for HistoryWFile {
                     Ok(())
                 }
             } else {
-                Err(Error::Io(error))
+                Err(Error::HistoryBase(error))
             }
         } else if let Err(error) = self.commit() {
             self.rollback()?;
@@ -197,7 +214,7 @@ impl AutoCommitRollbackRemove<HistoryEntry> for HistoryWFile {
         input: HistoryEntry,
     ) -> <Self as traits::AutoCommitRollbackRemove<uuid::Uuid>>::Output {
         if let Err(error) = <Self as Remove<HistoryEntry>>::remove(self, input) {
-            if error.kind() == ErrorKind::NotFound {
+            if error == HistoryBaseError::NotFound(input.id) {
                 if let Err(error) = self.commit() {
                     self.rollback()?;
                     Err(Error::RollBacked(error.to_string()))
@@ -205,7 +222,7 @@ impl AutoCommitRollbackRemove<HistoryEntry> for HistoryWFile {
                     Ok(())
                 }
             } else {
-                Err(Error::Io(error))
+                Err(Error::HistoryBase(error))
             }
         } else if let Err(error) = self.commit() {
             self.rollback()?;

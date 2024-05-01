@@ -5,7 +5,11 @@ use tokio::sync::RwLock;
 use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-use super::{HistoryEntry, Insert, IsIn, Remove};
+use super::{HistoryBaseError, HistoryEntry, Insert, IsIn, Remove};
+
+pub mod error;
+
+pub(crate) type HBResult<T> = Result<T, HistoryBaseError>;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HistoryBase {
@@ -35,7 +39,7 @@ impl HistoryBase {
     pub fn get_data_type_mut(&mut self) -> &mut RelationshipType {
         &mut (self.data_type)
     }
-    pub fn get_data_type(&mut self) -> &RelationshipType {
+    pub fn get_data_type(&self) -> &RelationshipType {
         &(self.data_type)
     }
     pub fn is_this_type(&self, to_use_rel: RelationshipType) -> bool {
@@ -54,78 +58,63 @@ impl IsIn<uuid::Uuid> for HistoryBase {
 }
 
 impl IsIn<HistoryEntry> for HistoryBase {
-    type Output = Result<bool, std::io::Error>;
+    type Output = HBResult<bool>;
 
     fn is_in(&self, to_use: HistoryEntry) -> Self::Output {
         if self.is_this_type(to_use.data_type) {
             Ok(self.is_in(to_use.id).is_some())
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "the relationship doesn't match",
-            ))
+            Err(HistoryBaseError::InvalidRelationship(to_use.data_type))
         }
     }
 }
 
 impl Insert<uuid::Uuid> for HistoryBase {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
     fn insert(&mut self, input: uuid::Uuid) -> Self::Output {
         let result = <Self as IsIn<uuid::Uuid>>::is_in(self, input);
         if result.is_none() {
             self.get_history_list_mut().push(input);
             Ok(())
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                format!("the uuid {} is already there", input),
-            ))
+            Err(HistoryBaseError::AlreadyExists(input))
         }
     }
 }
 
 impl Insert<HistoryEntry> for HistoryBase {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
 
     fn insert(&mut self, input: HistoryEntry) -> Self::Output {
         let result = <Self as IsIn<HistoryEntry>>::is_in(self, input)?;
         if !result {
             self.get_history_list_mut().push(input.id);
         } else {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                format!("the uuid {} is already there", input.id),
-            ));
+            return Err(HistoryBaseError::AlreadyExists(input.id));
         }
         Ok(())
     }
 }
 
 impl Remove<uuid::Uuid> for HistoryBase {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
 
     fn remove(&mut self, input: uuid::Uuid) -> Self::Output {
-        let position =
-            <Self as IsIn<uuid::Uuid>>::is_in(self, input).ok_or(std::io::Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("the uuid {} is not found", input),
-            ))?;
+        let position = <Self as IsIn<uuid::Uuid>>::is_in(self, input)
+            .ok_or(HistoryBaseError::NotFound(input))?;
         self.get_history_list_mut().remove(position);
         Ok(())
     }
 }
 
 impl Remove<HistoryEntry> for HistoryBase {
-    type Output = Result<(), std::io::Error>;
+    type Output = HBResult<()>;
     fn remove(&mut self, input: HistoryEntry) -> Self::Output {
         let result = self.is_this_type(input.data_type);
         if result {
             <Self as Remove<uuid::Uuid>>::remove(self, input.id)
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "the relationship doesn't match",
-            ))
+            Err(HistoryBaseError::InvalidRelationship(input.data_type))
         }
     }
 }
