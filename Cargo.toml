@@ -47,7 +47,7 @@ itertools = "0.12.1"
 async-trait = "0.1"
 fern = { version = "0.6", optional = true }
 mangadex-api-input-types = { version = "0.5" }
-regex = "1"
+regex = "1.10.4"
 actix = "0.13.3"
 
 [dev-dependencies]
