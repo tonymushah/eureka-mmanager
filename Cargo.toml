@@ -27,7 +27,7 @@ mangadex-api = { version = "3.3", default-features = false, features = [
     "utils",
     "serialize",
 ] }
-anyhow = "1.0"
+anyhow = "1.0.82"
 serde_json = "1.0"
 mangadex-api-schema-rust = { version = "0.9", default-features = false, features = [
     "serialize",
