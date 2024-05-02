@@ -2,7 +2,7 @@ name: download_chapter
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["v0.x"]
   workflow_dispatch:
 
 env:
