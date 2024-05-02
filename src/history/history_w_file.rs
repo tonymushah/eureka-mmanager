@@ -33,9 +33,6 @@ impl HistoryWFile {
     pub fn get_history(&self) -> &HistoryBase {
         &self.history
     }
-    pub(crate) fn get_history_mut(&mut self) -> &mut HistoryBase {
-        &mut self.history
-    }
     pub fn get_file(self) -> PathBuf {
         self.file
     }
