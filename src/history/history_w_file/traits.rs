@@ -43,27 +43,3 @@ pub trait AsyncAutoCommitRollbackRemove<'a, T> {
     type Output;
     async fn remove(&'a mut self, input: T) -> <Self as AsyncAutoCommitRollbackRemove<T>>::Output;
 }
-
-#[async_trait::async_trait]
-pub trait AsyncCommitableWInput<'a, T> {
-    type Output;
-    async fn commit(&'a mut self, input: T) -> Self::Output;
-}
-
-#[async_trait::async_trait]
-pub trait AsyncRollBackableWInput<'a, T> {
-    type Output;
-    async fn rollback(&'a mut self, input: T) -> Self::Output;
-}
-
-#[async_trait::async_trait]
-pub trait NoLFAsyncAutoCommitRollbackInsert<T> {
-    type Output;
-    async fn insert(&mut self, input: T) -> Self::Output;
-}
-
-#[async_trait::async_trait]
-pub trait NoLFAsyncAutoCommitRollbackRemove<T> {
-    type Output;
-    async fn remove(&mut self, input: T) -> Self::Output;
-}
