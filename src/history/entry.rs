@@ -1,7 +1,7 @@
 use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct HistoryEntry {
     pub(crate) id: uuid::Uuid,
     pub(crate) data_type: RelationshipType,
