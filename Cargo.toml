@@ -19,7 +19,7 @@ reqwest = { version = "0.12", features = [
     "rustls-tls",
 ] }
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
+thiserror = "1.0.59"
 uuid = { version = "1.8", features = ["serde", "v4"] }
 url = { version = "2.5", features = ["serde"] }
 mangadex-api = { version = "3.3", default-features = false, features = [
