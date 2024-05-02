@@ -7,6 +7,8 @@ use crate::{DirsOptions, JoinHistoryMessage, ManagerCoreResult};
 
 use super::{HistoryEntry, HistoryWFile, Remove};
 
+pub mod messages;
+
 use crate::history::{
     history_w_file::traits::{
         AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable,
