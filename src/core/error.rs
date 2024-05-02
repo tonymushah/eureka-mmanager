@@ -1,7 +1,10 @@
 #[cfg(feature = "actix_web")]
 use actix_web::ResponseError;
+use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
 use std::num::TryFromIntError;
+
+use crate::history::HistoryBaseError;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,6 +52,14 @@ pub enum Error {
     RwLockError(#[from] std::sync::PoisonError<String>),
     #[error("The {0} doesn't exist")]
     DirsOptionsVerification(#[from] DirsOptionsVerificationError),
+    #[error("We got a {0} mailbox error")]
+    MailBox(#[from] actix::MailboxError),
+    #[error("the history file for {0} is not found")]
+    HistoryFileNotFound(RelationshipType),
+    #[error("We got an std thread join error {0}")]
+    StdThreadJoin(String),
+    #[error("We got an error when manipulation an HistoryEntry: {0}")]
+    HistoryBase(#[from] HistoryBaseError),
 }
 
 #[derive(Debug, thiserror::Error)]

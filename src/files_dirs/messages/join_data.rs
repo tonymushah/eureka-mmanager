@@ -7,7 +7,7 @@ use std::{
 
 #[derive(Debug, Message)]
 #[rtype(result = "std::path::PathBuf")]
-pub struct JoinDataMessage<T>(T)
+pub struct JoinDataMessage<T>(pub T)
 where
     T: AsRef<Path> + Debug;
 
