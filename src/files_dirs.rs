@@ -5,6 +5,7 @@ use std::{
 };
 
 use actix::{Actor, Context};
+use log::error;
 use serde::{Deserialize, Serialize};
 
 mod chapters;
@@ -88,4 +89,9 @@ impl DirsOptions {
 
 impl Actor for DirsOptions {
     type Context = Context<Self>;
+    fn started(&mut self, _ctx: &mut Self::Context) {
+        if let Err(e) = self.verify_and_init() {
+            error!("{:#?}", e);
+        }
+    }
 }
