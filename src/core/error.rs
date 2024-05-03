@@ -2,7 +2,7 @@
 use actix_web::ResponseError;
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
-use std::num::TryFromIntError;
+use std::{num::TryFromIntError, path::PathBuf};
 
 use crate::history::HistoryBaseError;
 
@@ -60,6 +60,8 @@ pub enum Error {
     StdThreadJoin(String),
     #[error("We got an error when manipulation an HistoryEntry: {0}")]
     HistoryBase(#[from] HistoryBaseError),
+    #[error("Invalid file entry {0}")]
+    InvalidFileName(PathBuf),
 }
 
 #[derive(Debug, thiserror::Error)]
