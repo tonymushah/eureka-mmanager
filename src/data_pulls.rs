@@ -13,3 +13,7 @@ pub trait AsyncRelated<T> {
     type Error;
     async fn is_async_related(&self, data: &T) -> Result<bool, <Self as AsyncRelated<T>>::Error>;
 }
+
+pub trait Validate<T> {
+    fn is_valid(&self, input: &T) -> bool;
+}

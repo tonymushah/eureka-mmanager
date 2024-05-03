@@ -1,3 +1,5 @@
+pub mod filter;
+
 use std::{
     fs::{read_dir, DirEntry, File, ReadDir},
     io::BufReader,
@@ -10,6 +12,8 @@ use mangadex_api_schema_rust::v5::{MangaData, MangaObject};
 use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
+
+use self::filter::{MangaListDataPullFilter, MangaListDataPullFilterParams};
 
 #[derive(Debug)]
 pub struct MangaListDataPull {
@@ -28,6 +32,12 @@ impl MangaListDataPull {
         let file = BufReader::new(File::open(entry.path())?);
         let o: MangaData = serde_json::from_reader(file)?;
         Ok(o.data)
+    }
+    pub fn filter<P: Into<MangaListDataPullFilterParams>>(
+        self,
+        params: P,
+    ) -> MangaListDataPullFilter<Self> {
+        MangaListDataPullFilter::new(self, params.into())
     }
 }
 
