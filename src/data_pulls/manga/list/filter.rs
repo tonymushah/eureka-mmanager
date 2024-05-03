@@ -230,7 +230,7 @@ impl<S> MangaListDataPullFilter<S>
 where
     S: Stream<Item = MangaObject>,
 {
-    pub(crate) fn new(stream: S, params: MangaListDataPullFilterParams) -> Self {
+    pub(self) fn new(stream: S, params: MangaListDataPullFilterParams) -> Self {
         Self {
             stream: Box::pin(stream),
             params,
@@ -257,5 +257,14 @@ where
                 None => return Poll::Ready(None),
             }
         }
+    }
+}
+
+pub trait IntoMangaListDataPullFilter: Stream<Item = MangaObject> + Sized {
+    fn to_filtered<P: Into<MangaListDataPullFilterParams>>(
+        self,
+        params: P,
+    ) -> MangaListDataPullFilter<Self> {
+        MangaListDataPullFilter::new(self, params.into())
     }
 }

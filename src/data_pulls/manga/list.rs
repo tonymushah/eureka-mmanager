@@ -13,7 +13,7 @@ use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
 
-use self::filter::{MangaListDataPullFilter, MangaListDataPullFilterParams};
+use self::filter::IntoMangaListDataPullFilter;
 
 #[derive(Debug)]
 pub struct MangaListDataPull {
@@ -33,13 +33,9 @@ impl MangaListDataPull {
         let o: MangaData = serde_json::from_reader(file)?;
         Ok(o.data)
     }
-    pub fn filter<P: Into<MangaListDataPullFilterParams>>(
-        self,
-        params: P,
-    ) -> MangaListDataPullFilter<Self> {
-        MangaListDataPullFilter::new(self, params.into())
-    }
 }
+
+impl IntoMangaListDataPullFilter for MangaListDataPull {}
 
 impl Stream for MangaListDataPull {
     type Item = MangaObject;
