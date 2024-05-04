@@ -19,7 +19,6 @@ impl Handler<CommitMessage> for HistoryActorService {
     }
 }
 
-#[async_trait::async_trait]
 impl AsyncCommitable for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
     async fn commit(&self) -> <Self as AsyncCommitable>::Output {

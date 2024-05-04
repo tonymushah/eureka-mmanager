@@ -78,7 +78,6 @@ impl Handler<RemoveMessage> for HistoryActorService {
     }
 }
 
-#[async_trait::async_trait]
 impl<'a> AsyncAutoCommitRollbackRemove<'a, HistoryEntry> for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
     async fn remove(
@@ -89,7 +88,6 @@ impl<'a> AsyncAutoCommitRollbackRemove<'a, HistoryEntry> for Addr<HistoryActorSe
     }
 }
 
-#[async_trait::async_trait]
 impl<'a> AsyncRemove<'a, HistoryEntry> for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
     async fn remove(

@@ -78,7 +78,6 @@ impl Handler<InsertMessage> for HistoryActorService {
     }
 }
 
-#[async_trait::async_trait]
 impl<'a> AsyncAutoCommitRollbackInsert<'a, HistoryEntry> for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
     async fn insert(
@@ -89,7 +88,6 @@ impl<'a> AsyncAutoCommitRollbackInsert<'a, HistoryEntry> for Addr<HistoryActorSe
     }
 }
 
-#[async_trait::async_trait]
 impl<'a> AsyncInsert<'a, HistoryEntry> for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
     async fn insert(
