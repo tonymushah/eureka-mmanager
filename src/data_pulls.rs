@@ -1,6 +1,8 @@
 pub mod manga;
+pub mod results;
 pub mod sort;
 
+pub use results::{AsyncPaginate, Paginate};
 pub use sort::{AsyncIntoSorted, IntoSorted};
 
 pub trait Related<T> {
