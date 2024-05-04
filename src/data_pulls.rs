@@ -1,7 +1,9 @@
 pub mod manga;
+pub mod random;
 pub mod results;
 pub mod sort;
 
+pub use random::{AsyncRand, Rand};
 pub use results::{AsyncPaginate, Paginate};
 pub use sort::{AsyncIntoSorted, IntoSorted};
 
