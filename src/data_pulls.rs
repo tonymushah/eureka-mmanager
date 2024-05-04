@@ -1,7 +1,7 @@
 pub mod manga;
 pub mod sort;
 
-pub use sort::IntoSorted;
+pub use sort::AsyncIntoSorted;
 
 pub trait Related<T> {
     fn is_related(&self, data: &T) -> bool;

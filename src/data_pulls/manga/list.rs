@@ -1,7 +1,6 @@
 use std::{
-    fs::{read_dir, DirEntry, File, ReadDir},
+    fs::{read_dir, DirEntry, File},
     io::BufReader,
-    iter::Flatten,
     path::PathBuf,
     task::Poll,
 };
@@ -13,14 +12,19 @@ use crate::ManagerCoreResult;
 
 use super::filter::IntoMangaListDataPullFilter;
 
+use std::vec::IntoIter;
+
 #[derive(Debug)]
 pub struct MangaListDataPull {
-    read_dir: Flatten<ReadDir>,
+    read_dir: IntoIter<DirEntry>,
 }
 
 impl MangaListDataPull {
     pub(crate) fn new(manga_path: PathBuf) -> ManagerCoreResult<Self> {
-        let read_dir = read_dir(manga_path)?.flatten();
+        let read_dir = read_dir(manga_path)?
+            .flatten()
+            .collect::<Vec<DirEntry>>()
+            .into_iter();
         Ok(Self { read_dir })
     }
     fn dir_entry_to_manga(entry: DirEntry) -> ManagerCoreResult<MangaObject> {
