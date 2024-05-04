@@ -1,7 +1,7 @@
 use actix::prelude::*;
 use uuid::Uuid;
 
-use crate::{data_pulls::manga::list::ids::MangaIdsListDataPull, DirsOptions};
+use crate::{data_pulls::manga::ids::MangaIdsListDataPull, DirsOptions};
 
 #[derive(Debug, Clone, Hash, Default)]
 pub struct MangaIdsListDataPullMessage(pub Vec<Uuid>);

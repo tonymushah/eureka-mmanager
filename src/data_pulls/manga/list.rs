@@ -1,6 +1,3 @@
-pub mod filter;
-pub mod ids;
-
 use std::{
     fs::{read_dir, DirEntry, File, ReadDir},
     io::BufReader,
@@ -14,7 +11,7 @@ use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
 
-use self::filter::IntoMangaListDataPullFilter;
+use super::filter::IntoMangaListDataPullFilter;
 
 #[derive(Debug)]
 pub struct MangaListDataPull {
