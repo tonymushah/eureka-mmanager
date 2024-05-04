@@ -48,6 +48,7 @@ fern = { version = "0.6", optional = true }
 mangadex-api-input-types = { version = "0.5" }
 regex = "1"
 actix = "0.13"
+rand = "0"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
