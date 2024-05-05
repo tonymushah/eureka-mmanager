@@ -1,3 +1,4 @@
+pub mod chapter;
 pub mod manga;
 pub mod random;
 pub mod results;
