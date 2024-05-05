@@ -1,3 +1,5 @@
+pub mod list;
+
 use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::{ChapterSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};

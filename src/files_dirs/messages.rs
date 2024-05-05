@@ -1,3 +1,4 @@
+pub mod chapter_list_data_pull;
 pub mod join_chapters;
 pub mod join_covers;
 pub mod join_covers_images;
