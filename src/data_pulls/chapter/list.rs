@@ -53,7 +53,4 @@ impl Stream for ChapterListDataPull {
             Poll::Ready(None)
         }
     }
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.read_dir.size_hint()
-    }
 }
