@@ -25,7 +25,7 @@ impl MangaIdsListDataPull {
     }
     fn id_to_manga(&self, entry: Uuid) -> ManagerCoreResult<MangaObject> {
         let entry = self.manga_path.join(format!("{entry}.json"));
-        if entry.exists() && entry.is_file() {
+        if !entry.exists() || !entry.is_file() {
             return Err(crate::Error::InvalidFileName(entry));
         }
         let file = BufReader::new(File::open(entry)?);
@@ -43,14 +43,14 @@ impl Stream for MangaIdsListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(entry) = self.iter.next() {
-            if let Ok(res) = self.id_to_manga(entry) {
-                Poll::Ready(Some(res))
+        loop {
+            if let Some(entry) = self.iter.next() {
+                if let Ok(res) = self.id_to_manga(entry) {
+                    return Poll::Ready(Some(res));
+                }
             } else {
-                Poll::Pending
+                return Poll::Ready(None);
             }
-        } else {
-            Poll::Ready(None)
         }
     }
 }

@@ -1,6 +1,7 @@
 use std::{
-    fs::{read_dir, DirEntry, File},
+    fs::{read_dir, DirEntry, File, ReadDir},
     io::BufReader,
+    iter::Flatten,
     path::PathBuf,
     task::Poll,
 };
@@ -10,23 +11,19 @@ use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
 
-use std::vec::IntoIter;
-
 #[derive(Debug)]
 pub struct ChapterListDataPull {
-    read_dir: IntoIter<DirEntry>,
+    read_dir: Flatten<ReadDir>,
 }
 
 impl ChapterListDataPull {
     pub(crate) fn new(chapter_path: PathBuf) -> ManagerCoreResult<Self> {
-        let read_dir = read_dir(chapter_path)?
-            .flatten()
-            .collect::<Vec<DirEntry>>()
-            .into_iter();
+        let read_dir = read_dir(chapter_path)?.flatten();
         Ok(Self { read_dir })
     }
     fn dir_entry_to_chapter(entry: DirEntry) -> ManagerCoreResult<ChapterObject> {
-        if entry.path().exists() && entry.path().is_dir() && entry.path().join("data.json").exists()
+        if !entry.path().exists()
+            || !entry.path().is_dir() && !entry.path().join("data.json").exists()
         {
             return Err(crate::Error::InvalidFileName(entry.path()));
         }
@@ -43,14 +40,14 @@ impl Stream for ChapterListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(entry) = self.read_dir.next() {
-            if let Ok(res) = Self::dir_entry_to_chapter(entry) {
-                Poll::Ready(Some(res))
+        loop {
+            if let Some(entry) = self.read_dir.next() {
+                if let Ok(res) = Self::dir_entry_to_chapter(entry) {
+                    return Poll::Ready(Some(res));
+                }
             } else {
-                Poll::Pending
+                return Poll::Ready(None);
             }
-        } else {
-            Poll::Ready(None)
         }
     }
 }
