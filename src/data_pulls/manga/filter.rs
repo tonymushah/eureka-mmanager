@@ -4,11 +4,12 @@ use mangadex_api_types_rust::{
     ContentRating, Demographic, Language, MangaDexDateTime, MangaStatus, RelationshipType,
     TagSearchMode,
 };
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::data_pulls::Validate;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct MangaListDataPullFilterParams {
     pub author_or_artist: Option<Uuid>,
     pub authors: Vec<Uuid>,
