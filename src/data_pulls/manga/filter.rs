@@ -210,9 +210,9 @@ impl Validate<MangaObject> for MangaListDataPullFilterParams {
         .into_iter()
         .flatten()
         .collect::<Vec<bool>>();
-        let mut is_valid = false;
+        let mut is_valid = true;
         for validation in validations {
-            is_valid = is_valid || validation
+            is_valid = is_valid && validation
         }
         is_valid
     }
