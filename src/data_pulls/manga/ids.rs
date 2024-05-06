@@ -8,8 +8,6 @@ use actix::MessageResponse;
 
 use crate::ManagerCoreResult;
 
-use super::filter::IntoMangaListDataPullFilter;
-
 #[derive(Debug, MessageResponse)]
 pub struct MangaIdsListDataPull {
     manga_path: PathBuf,
@@ -49,8 +47,6 @@ impl MangaIdsListDataPull {
         }
     }
 }
-
-impl IntoMangaListDataPullFilter for MangaIdsListDataPull {}
 
 impl Stream for MangaIdsListDataPull {
     type Item = MangaObject;

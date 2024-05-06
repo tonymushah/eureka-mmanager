@@ -2,16 +2,14 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
-pub use filter::{
-    IntoMangaListDataPullFilter, MangaListDataPullFilter, MangaListDataPullFilterParams,
-};
+pub use filter::MangaListDataPullFilterParams;
 pub use ids::MangaIdsListDataPull;
 pub use list::MangaListDataPull;
 use mangadex_api_schema_rust::v5::MangaObject;
 use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 
-use super::{sort::IntoSorted, AsyncIntoSorted};
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoParamedFilteredStream};
 
 impl<S> AsyncIntoSorted<MangaSortOrder> for S
 where
@@ -105,4 +103,11 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
         };
         self
     }
+}
+
+impl<S> IntoParamedFilteredStream for S
+where
+    S: Stream<Item = MangaObject>,
+{
+    type Params = MangaListDataPullFilterParams;
 }

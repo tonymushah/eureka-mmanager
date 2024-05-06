@@ -1,8 +1,3 @@
-use std::{
-    pin::Pin,
-    task::{ready, Poll},
-};
-
 use mangadex_api_input_types::manga::list::MangaListParams;
 use mangadex_api_schema_rust::v5::MangaObject;
 use mangadex_api_types_rust::{
@@ -10,8 +5,6 @@ use mangadex_api_types_rust::{
     TagSearchMode,
 };
 use uuid::Uuid;
-
-use tokio_stream::Stream;
 
 use crate::data_pulls::Validate;
 
@@ -215,56 +208,5 @@ impl Validate<MangaObject> for MangaListDataPullFilterParams {
             is_valid = is_valid && validation
         }
         is_valid
-    }
-}
-
-pub struct MangaListDataPullFilter<S>
-where
-    S: Stream<Item = MangaObject>,
-{
-    stream: Pin<Box<S>>,
-    params: MangaListDataPullFilterParams,
-}
-
-impl<S> MangaListDataPullFilter<S>
-where
-    S: Stream<Item = MangaObject>,
-{
-    pub(self) fn new(stream: S, params: MangaListDataPullFilterParams) -> Self {
-        Self {
-            stream: Box::pin(stream),
-            params,
-        }
-    }
-}
-
-impl<S> Stream for MangaListDataPullFilter<S>
-where
-    S: Stream<Item = MangaObject>,
-{
-    type Item = MangaObject;
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        loop {
-            match ready!(self.as_mut().stream.as_mut().poll_next(cx)) {
-                Some(m) => {
-                    if self.params.is_valid(&m) {
-                        return Poll::Ready(Some(m));
-                    }
-                }
-                None => return Poll::Ready(None),
-            }
-        }
-    }
-}
-
-pub trait IntoMangaListDataPullFilter: Stream<Item = MangaObject> + Sized {
-    fn to_filtered<P: Into<MangaListDataPullFilterParams>>(
-        self,
-        params: P,
-    ) -> MangaListDataPullFilter<Self> {
-        MangaListDataPullFilter::new(self, params.into())
     }
 }

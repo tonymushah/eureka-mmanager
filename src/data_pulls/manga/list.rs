@@ -11,8 +11,6 @@ use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
 
-use super::filter::IntoMangaListDataPullFilter;
-
 #[derive(Debug)]
 pub struct MangaListDataPull {
     read_dir: Flatten<ReadDir>,
@@ -46,8 +44,6 @@ impl MangaListDataPull {
         }
     }
 }
-
-impl IntoMangaListDataPullFilter for MangaListDataPull {}
 
 impl Stream for MangaListDataPull {
     type Item = MangaObject;
