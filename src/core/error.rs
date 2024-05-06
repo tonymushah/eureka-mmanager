@@ -62,6 +62,10 @@ pub enum Error {
     HistoryBase(#[from] HistoryBaseError),
     #[error("Invalid file entry {0}")]
     InvalidFileName(PathBuf),
+    #[error("Error when deserializing a .cbor file {0}")]
+    CiboriumDeIo(#[from] ciborium::de::Error<std::io::Error>),
+    #[error("Error when serializing a .cbor file {0}")]
+    CiboriumSerIo(#[from] ciborium::ser::Error<std::io::Error>),
 }
 
 #[derive(Debug, thiserror::Error)]

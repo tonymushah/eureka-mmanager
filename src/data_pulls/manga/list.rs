@@ -24,12 +24,26 @@ impl MangaListDataPull {
         Ok(Self { read_dir })
     }
     fn dir_entry_to_manga(entry: DirEntry) -> ManagerCoreResult<MangaObject> {
-        if !entry.path().exists() || !entry.path().is_file() || !entry.path().ends_with(".json") {
-            return Err(crate::Error::InvalidFileName(entry.path()));
+        let path = entry.path();
+        if path.exists() && path.is_file() {
+            let ext = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .ok_or(crate::Error::InvalidFileName(path.clone()))?;
+            if ext == "json" {
+                let file = BufReader::new(File::open(&path)?);
+                let o: MangaData = serde_json::from_reader(file)?;
+                Ok(o.data)
+            } else if ext == "cbor" {
+                let file = BufReader::new(File::open(&path)?);
+                let o: MangaObject = ciborium::from_reader(file)?;
+                Ok(o)
+            } else {
+                Err(crate::Error::InvalidFileName(path.clone()))
+            }
+        } else {
+            Err(crate::Error::InvalidFileName(path))
         }
-        let file = BufReader::new(File::open(entry.path())?);
-        let o: MangaData = serde_json::from_reader(file)?;
-        Ok(o.data)
     }
 }
 
@@ -44,8 +58,9 @@ impl Stream for MangaListDataPull {
     ) -> Poll<Option<Self::Item>> {
         loop {
             if let Some(entry) = self.read_dir.next() {
-                if let Ok(res) = Self::dir_entry_to_manga(entry) {
-                    return Poll::Ready(Some(res));
+                match Self::dir_entry_to_manga(entry) {
+                    Ok(o) => return Poll::Ready(Some(o)),
+                    Err(e) => log::error!("{}", e),
                 }
             } else {
                 return Poll::Ready(None);

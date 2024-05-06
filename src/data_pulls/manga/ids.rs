@@ -23,7 +23,7 @@ impl MangaIdsListDataPull {
             iter: ids.into_iter(),
         }
     }
-    fn id_to_manga(&self, entry: Uuid) -> ManagerCoreResult<MangaObject> {
+    fn id_to_manga_json(&self, entry: &Uuid) -> ManagerCoreResult<MangaObject> {
         let entry = self.manga_path.join(format!("{entry}.json"));
         if !entry.exists() || !entry.is_file() {
             return Err(crate::Error::InvalidFileName(entry));
@@ -31,6 +31,22 @@ impl MangaIdsListDataPull {
         let file = BufReader::new(File::open(entry)?);
         let o: MangaData = serde_json::from_reader(file)?;
         Ok(o.data)
+    }
+    fn id_to_manga_cbor(&self, entry: &Uuid) -> ManagerCoreResult<MangaObject> {
+        let entry = self.manga_path.join(format!("{entry}.cbor"));
+        if !entry.exists() || !entry.is_file() {
+            return Err(crate::Error::InvalidFileName(entry));
+        }
+        let file = BufReader::new(File::open(entry)?);
+        let o: MangaObject = ciborium::from_reader(file)?;
+        Ok(o)
+    }
+    fn id_to_manga(&self, entry: Uuid) -> ManagerCoreResult<MangaObject> {
+        if let Ok(o) = self.id_to_manga_cbor(&entry) {
+            Ok(o)
+        } else {
+            self.id_to_manga_json(&entry)
+        }
     }
 }
 
