@@ -1,7 +1,10 @@
 use mangadex_api_input_types::chapter::list::ChapterListParams;
+use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::{ContentRating, Language, MangaDexDateTime};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::data_pulls::Validate;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChapterListDataPullFilterParams {
@@ -44,5 +47,11 @@ impl From<ChapterListParams> for ChapterListDataPullFilterParams {
             updated_at_since: value.updated_at_since,
             publish_at_since: value.publish_at_since,
         }
+    }
+}
+
+impl Validate<ChapterObject> for ChapterListDataPullFilterParams {
+    fn is_valid(&self, input: &ChapterObject) -> bool {
+        todo!()
     }
 }

@@ -2,11 +2,13 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
+pub use filter::ChapterListDataPullFilterParams;
+
 use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::{ChapterSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 
-use super::{sort::IntoSorted, AsyncIntoSorted};
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoParamedFilteredStream};
 
 impl<S> AsyncIntoSorted<ChapterSortOrder> for S
 where
@@ -132,4 +134,9 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
         };
         self
     }
+}
+
+impl<S> IntoParamedFilteredStream<ChapterListDataPullFilterParams> for S where
+    S: Stream<Item = ChapterObject>
+{
 }

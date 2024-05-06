@@ -105,9 +105,7 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
     }
 }
 
-impl<S> IntoParamedFilteredStream for S
-where
-    S: Stream<Item = MangaObject>,
+impl<S> IntoParamedFilteredStream<MangaListDataPullFilterParams> for S where
+    S: Stream<Item = MangaObject>
 {
-    type Params = MangaListDataPullFilterParams;
 }

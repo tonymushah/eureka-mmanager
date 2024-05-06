@@ -59,9 +59,14 @@ where
     }
 }
 
-pub trait IntoParamedFilteredStream: Stream + Sized {
-    type Params: Validate<Self::Item>;
-    fn to_filtered(self, params: Self::Params) -> ParamedFilteredStream<Self, Self::Params> {
+pub trait IntoParamedFilteredStream<P>: Stream + Sized
+where
+    P: Validate<Self::Item>,
+{
+    fn to_filtered(self, params: P) -> ParamedFilteredStream<Self, P> {
         ParamedFilteredStream::new(self, params)
+    }
+    fn to_filtered_into<I: Into<P>>(self, params: I) -> ParamedFilteredStream<Self, P> {
+        Self::to_filtered(self, params.into())
     }
 }
