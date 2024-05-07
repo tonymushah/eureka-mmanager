@@ -27,6 +27,7 @@ impl Message for MangaDataPullMessage {
 
 impl Handler<MangaDataPullMessage> for DirsOptions {
     type Result = <MangaDataPullMessage as Message>::Result;
+    // TODO add cbor support
     fn handle(&mut self, msg: MangaDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
         let manga_id_path = self.mangas_add(format!("{}.json", msg.0));
         let file = BufReader::new(File::open(manga_id_path)?);

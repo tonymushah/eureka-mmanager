@@ -27,6 +27,7 @@ impl Message for ChapterDataPullMessage {
 
 impl Handler<ChapterDataPullMessage> for DirsOptions {
     type Result = <ChapterDataPullMessage as Message>::Result;
+    // TODO add cbor support
     fn handle(&mut self, msg: ChapterDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
         let manga_id_path = self.chapters_add(format!("{}", msg.0)).join("data.json");
         let file = BufReader::new(File::open(manga_id_path)?);

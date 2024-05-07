@@ -21,6 +21,7 @@ impl ChapterIdsListDataPull {
             iter: ids.into_iter(),
         }
     }
+    // TODO add cbor support
     fn id_to_chapter(&self, entry: Uuid) -> ManagerCoreResult<ChapterObject> {
         let entry = self.chapter_path.join(format!("{entry}"));
         if !entry.exists() || !entry.is_dir() || !entry.join("data.json").exists() {

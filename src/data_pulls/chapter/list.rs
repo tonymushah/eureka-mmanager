@@ -21,6 +21,7 @@ impl ChapterListDataPull {
         let read_dir = read_dir(chapter_path)?.flatten();
         Ok(Self { read_dir })
     }
+    // TODO add cbor support
     fn dir_entry_to_chapter(entry: DirEntry) -> ManagerCoreResult<ChapterObject> {
         if !entry.path().exists()
             || !entry.path().is_dir() && !entry.path().join("data.json").exists()
