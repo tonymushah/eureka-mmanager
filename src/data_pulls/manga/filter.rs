@@ -7,7 +7,7 @@ use mangadex_api_types_rust::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::data_pulls::Validate;
+use crate::{data_pulls::Validate, option_bool_match};
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct MangaListDataPullFilterParams {
@@ -81,6 +81,8 @@ impl MangaListDataPullFilterParams {
             .collect::<Vec<_>>();
         if !self.authors.is_empty() && !authors_ids.is_empty() {
             Some(self.authors.iter().all(|a| authors_ids.contains(a)))
+        } else if authors_ids.is_empty() {
+            Some(false)
         } else {
             None
         }
@@ -93,12 +95,14 @@ impl MangaListDataPullFilterParams {
             .collect::<Vec<_>>();
         if !self.artists.is_empty() && !artists_ids.is_empty() {
             Some(self.artists.iter().all(|a| artists_ids.contains(a)))
+        } else if artists_ids.is_empty() {
+            Some(false)
         } else {
             None
         }
     }
     fn validate_year(&self, input: &MangaObject) -> Option<bool> {
-        let input_year = input.attributes.year?;
+        let input_year = option_bool_match!(input.attributes.year);
         Some(self.year? == input_year)
     }
     fn validate_included_tags(&self, input: &MangaObject) -> Option<bool> {
@@ -158,10 +162,9 @@ impl MangaListDataPullFilterParams {
     }
     fn validate_publication_demographic(&self, input: &MangaObject) -> Option<bool> {
         if !self.publication_demographic.is_empty() {
-            Some(
-                self.publication_demographic
-                    .contains(&input.attributes.publication_demographic?),
-            )
+            Some(self.publication_demographic.contains(option_bool_match!(
+                input.attributes.publication_demographic.as_ref()
+            )))
         } else {
             None
         }
@@ -170,7 +173,7 @@ impl MangaListDataPullFilterParams {
         if !self.content_rating.is_empty() {
             Some(
                 self.content_rating
-                    .contains(&input.attributes.content_rating?),
+                    .contains(option_bool_match!(input.attributes.content_rating.as_ref())),
             )
         } else {
             None
@@ -180,7 +183,10 @@ impl MangaListDataPullFilterParams {
         Some(self.created_at_since?.as_ref() < input.attributes.created_at.as_ref())
     }
     fn validate_updated_at_since(&self, input: &MangaObject) -> Option<bool> {
-        Some(self.updated_at_since?.as_ref() < input.attributes.updated_at?.as_ref())
+        Some(
+            self.updated_at_since?.as_ref()
+                < option_bool_match!(input.attributes.updated_at.as_ref().map(|d| d.as_ref())),
+        )
     }
 }
 
