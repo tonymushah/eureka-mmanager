@@ -1,5 +1,9 @@
 use actix::prelude::*;
+use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 use mangadex_desktop_api2::{
+    data_pulls::{
+        manga::MangaListDataPullFilterParams, AsyncIntoSorted, IntoParamedFilteredStream,
+    },
     files_dirs::messages::pull::manga::MangaListDataPullMessage,
     history::{
         service::{messages::is_in::IsInMessage, HistoryActorService},
@@ -8,6 +12,7 @@ use mangadex_desktop_api2::{
     DirsOptions,
 };
 use tokio_stream::StreamExt;
+use uuid::Uuid;
 
 fn main() -> anyhow::Result<()> {
     let run = System::new();
@@ -18,12 +23,24 @@ fn main() -> anyhow::Result<()> {
         let history = HistoryActorService::new(options_actor.clone())
             .await
             .start();
-        let mut data_pull = options_actor.send(MangaListDataPullMessage).await??;
-        while let Some(manga) = data_pull.next().await {
+        let params = MangaListDataPullFilterParams {
+            ..Default::default()
+        };
+        println!("{:#?}", params);
+        let data_pull = options_actor
+            .send(MangaListDataPullMessage)
+            .await??
+            .to_filtered(params)
+            .to_sorted(MangaSortOrder::Year(OrderDirection::Ascending))
+            .await;
+        for manga in data_pull.iter() {
             let has_failed = history
                 .send(IsInMessage(HistoryEntry::new(manga.id, manga.type_)))
                 .await?;
             println!("{:#?} - {has_failed}", manga.id);
+            if let Some(year) = manga.attributes.year {
+                println!("year {year}",)
+            }
         }
         Ok::<(), anyhow::Error>(())
     })?;
