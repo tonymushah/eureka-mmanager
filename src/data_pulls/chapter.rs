@@ -2,6 +2,8 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
+use std::cmp::Ordering;
+
 pub use filter::ChapterListDataPullFilterParams;
 
 use mangadex_api_schema_rust::v5::ChapterObject;
@@ -53,16 +55,32 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
             ChapterSortOrder::Chapter(o) => match o {
                 OrderDirection::Ascending => {
                     self.sort_by(|a, b| {
-                        let a = a.attributes.chapter.as_ref();
-                        let b = b.attributes.chapter.as_ref();
-                        a.cmp(&b)
+                        let a = a
+                            .attributes
+                            .chapter
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        let b = b
+                            .attributes
+                            .chapter
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        a.partial_cmp(&b).unwrap_or(Ordering::Equal)
                     });
                 }
                 OrderDirection::Descending => {
                     self.sort_by(|a, b| {
-                        let a = a.attributes.chapter.as_ref();
-                        let b = b.attributes.chapter.as_ref();
-                        b.cmp(&a)
+                        let a = a
+                            .attributes
+                            .chapter
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        let b = b
+                            .attributes
+                            .chapter
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        b.partial_cmp(&a).unwrap_or(Ordering::Equal)
                     });
                 }
             },
@@ -117,16 +135,32 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
             ChapterSortOrder::Volume(o) => match o {
                 OrderDirection::Ascending => {
                     self.sort_by(|a, b| {
-                        let a = a.attributes.volume.as_ref();
-                        let b = b.attributes.volume.as_ref();
-                        a.cmp(&b)
+                        let a = a
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        let b = b
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        a.partial_cmp(&b).unwrap_or(Ordering::Equal)
                     });
                 }
                 OrderDirection::Descending => {
                     self.sort_by(|a, b| {
-                        let a = a.attributes.volume.as_ref();
-                        let b = b.attributes.volume.as_ref();
-                        b.cmp(&a)
+                        let a = a
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        let b = b
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        b.partial_cmp(&a).unwrap_or(Ordering::Equal)
                     });
                 }
             },
