@@ -1,4 +1,5 @@
 pub mod chapter;
+pub mod cover;
 pub mod filter;
 pub mod manga;
 pub mod random;
