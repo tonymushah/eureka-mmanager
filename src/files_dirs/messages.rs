@@ -1,20 +1,6 @@
-pub mod chapter_data_pull;
-pub mod chapter_ids_list_data_pull;
-pub mod chapter_list_data_pull;
-pub mod cover_data_pull;
-pub mod cover_ids_list_data_pull;
-pub mod cover_list_data_pull;
-pub mod join_chapters;
-pub mod join_covers;
-pub mod join_covers_images;
-pub mod join_data;
-pub mod join_history;
-pub mod manga_data_pull;
-pub mod manga_ids_list_data_pull;
-pub mod manga_list_data_pull;
-pub mod modify_chapters_path;
-pub mod modify_covers_path;
-pub mod modify_data_path;
+pub mod join;
+pub mod modify;
+pub mod pull;
 
 use super::DirsOptions;
 use actix::dev::{MessageResponse, OneshotSender};
