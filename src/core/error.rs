@@ -2,7 +2,7 @@
 use actix_web::ResponseError;
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
-use std::num::TryFromIntError;
+use std::{num::TryFromIntError, path::PathBuf};
 
 use crate::history::HistoryBaseError;
 
@@ -60,6 +60,14 @@ pub enum Error {
     StdThreadJoin(String),
     #[error("We got an error when manipulation an HistoryEntry: {0}")]
     HistoryBase(#[from] HistoryBaseError),
+    #[error("Invalid file entry {0}")]
+    InvalidFileName(PathBuf),
+    #[error("Error when deserializing a .cbor file {0}")]
+    CiboriumDeIo(#[from] ciborium::de::Error<std::io::Error>),
+    #[error("Error when serializing a .cbor file {0}")]
+    CiboriumSerIo(#[from] ciborium::ser::Error<std::io::Error>),
+    #[error("Regex error {0}")]
+    Regex(#[from] regex::Error),
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -19,7 +19,6 @@ impl Handler<RollbackMessage> for HistoryActorService {
     }
 }
 
-#[async_trait::async_trait]
 impl AsyncRollBackable for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
     async fn rollback(&mut self) -> <Self as AsyncRollBackable>::Output {

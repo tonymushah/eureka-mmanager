@@ -42,5 +42,8 @@ where
     type Result = ();
     fn handle(&mut self, msg: ModifyDataDirMessage<T>, _ctx: &mut Self::Context) -> Self::Result {
         self.data_dir = msg.as_ref().to_path_buf();
+        if let Err(e) = self.verify_and_init() {
+            log::error!("{e}");
+        }
     }
 }

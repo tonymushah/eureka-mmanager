@@ -4,11 +4,11 @@ use std::{fmt::Debug, path::Path};
 
 #[derive(Debug, Message)]
 #[rtype(result = "()")]
-pub struct ModifyCoversDirMessage<T>(pub T)
+pub struct ModifyChaptersDirMessage<T>(pub T)
 where
     T: AsRef<Path> + Debug;
 
-impl<T> Clone for ModifyCoversDirMessage<T>
+impl<T> Clone for ModifyChaptersDirMessage<T>
 where
     T: Clone + Debug + AsRef<Path>,
 {
@@ -17,7 +17,7 @@ where
     }
 }
 
-impl<T> AsRef<Path> for ModifyCoversDirMessage<T>
+impl<T> AsRef<Path> for ModifyChaptersDirMessage<T>
 where
     T: AsRef<Path> + Debug,
 {
@@ -26,7 +26,7 @@ where
     }
 }
 
-impl<T> From<T> for ModifyCoversDirMessage<T>
+impl<T> From<T> for ModifyChaptersDirMessage<T>
 where
     T: AsRef<Path> + Debug,
 {
@@ -35,12 +35,19 @@ where
     }
 }
 
-impl<T> Handler<ModifyCoversDirMessage<T>> for DirsOptions
+impl<T> Handler<ModifyChaptersDirMessage<T>> for DirsOptions
 where
     T: AsRef<Path> + Debug,
 {
     type Result = ();
-    fn handle(&mut self, msg: ModifyCoversDirMessage<T>, _ctx: &mut Self::Context) -> Self::Result {
-        self.covers = msg.as_ref().to_path_buf();
+    fn handle(
+        &mut self,
+        msg: ModifyChaptersDirMessage<T>,
+        _ctx: &mut Self::Context,
+    ) -> Self::Result {
+        self.chapters = msg.as_ref().to_path_buf();
+        if let Err(e) = self.verify_and_init() {
+            log::error!("{e}");
+        }
     }
 }
