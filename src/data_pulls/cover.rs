@@ -1,4 +1,5 @@
 pub mod filter;
+pub mod ids;
 pub mod list;
 
 use mangadex_api_schema_rust::v5::CoverObject;
