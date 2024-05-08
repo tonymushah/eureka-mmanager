@@ -11,8 +11,6 @@ use mangadex_desktop_api2::{
     },
     DirsOptions,
 };
-use tokio_stream::StreamExt;
-use uuid::Uuid;
 
 fn main() -> anyhow::Result<()> {
     let run = System::new();

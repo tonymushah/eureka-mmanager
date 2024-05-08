@@ -2,8 +2,8 @@ use actix::prelude::*;
 use mangadex_api_types_rust::{ChapterSortOrder, Language, OrderDirection};
 use mangadex_desktop_api2::{
     data_pulls::{
-        chapter::ChapterListDataPullFilterParams, AsyncIntoSorted, AsyncPaginate,
-        IntoParamedFilteredStream, Paginate,
+        chapter::ChapterListDataPullFilterParams, AsyncIntoSorted, IntoParamedFilteredStream,
+        Paginate,
     },
     files_dirs::messages::pull::chapter::ChapterListDataPullMessage,
     history::service::HistoryActorService,
