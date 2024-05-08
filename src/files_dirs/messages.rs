@@ -1,6 +1,7 @@
 pub mod chapter_data_pull;
 pub mod chapter_ids_list_data_pull;
 pub mod chapter_list_data_pull;
+pub mod cover_data_pull;
 pub mod cover_ids_list_data_pull;
 pub mod cover_list_data_pull;
 pub mod join_chapters;
