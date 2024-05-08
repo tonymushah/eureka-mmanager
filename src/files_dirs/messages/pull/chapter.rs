@@ -6,5 +6,6 @@ pub mod chapter_list_data_pull;
 pub use self::{
     chapter_data_pull::ChapterDataPullMessage,
     chapter_ids_list_data_pull::ChapterIdsListDataPullMessage,
+    chapter_image_data_pull::ChapterImageDataPullMessage,
     chapter_list_data_pull::ChapterListDataPullMessage,
 };
