@@ -1,6 +1,6 @@
 use actix::prelude::*;
 use mangadex_desktop_api2::{
-    files_dirs::messages::manga_list_data_pull::MangaListDataPullMessage,
+    files_dirs::messages::pull::manga::MangaListDataPullMessage,
     history::{
         service::{messages::is_in::IsInMessage, HistoryActorService},
         HistoryEntry,

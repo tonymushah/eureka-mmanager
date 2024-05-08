@@ -1,7 +1,6 @@
 use actix::prelude::*;
 use mangadex_desktop_api2::{
-    data_pulls::AsyncPaginate,
-    files_dirs::messages::chapter_list_data_pull::ChapterListDataPullMessage,
+    data_pulls::AsyncPaginate, files_dirs::messages::pull::chapter::ChapterListDataPullMessage,
     history::service::HistoryActorService, DirsOptions,
 };
 

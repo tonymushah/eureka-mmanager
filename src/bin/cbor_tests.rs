@@ -5,7 +5,7 @@ use std::{
 
 use actix::prelude::*;
 use mangadex_desktop_api2::{
-    files_dirs::messages::manga_list_data_pull::MangaListDataPullMessage, DirsOptions,
+    files_dirs::messages::pull::manga::MangaListDataPullMessage, DirsOptions,
 };
 use tokio_stream::StreamExt;
 
