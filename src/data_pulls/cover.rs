@@ -1,3 +1,4 @@
+pub mod filter;
 pub mod list;
 
 use mangadex_api_schema_rust::v5::CoverObject;
@@ -5,6 +6,7 @@ use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 
 use super::{sort::IntoSorted, AsyncIntoSorted, IntoParamedFilteredStream};
+use filter::CoverListDataPullFilterParams;
 
 impl<S> AsyncIntoSorted<CoverSortOrder> for S
 where
@@ -79,4 +81,9 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
         }
         self
     }
+}
+
+impl<S> IntoParamedFilteredStream<CoverListDataPullFilterParams> for S where
+    S: Stream<Item = CoverObject>
+{
 }

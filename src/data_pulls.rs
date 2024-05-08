@@ -30,3 +30,13 @@ pub trait AsyncRelated<T> {
 pub trait Validate<T> {
     fn is_valid(&self, input: &T) -> bool;
 }
+
+#[macro_export]
+macro_rules! option_bool_match {
+    ($t:expr) => {
+        match $t {
+            Some(o) => o,
+            None => return Some(false),
+        }
+    };
+}
