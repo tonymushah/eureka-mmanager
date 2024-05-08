@@ -2,6 +2,8 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
+use std::cmp::Ordering;
+
 use mangadex_api_schema_rust::v5::CoverObject;
 use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
@@ -65,16 +67,32 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
             CoverSortOrder::Volume(o) => match o {
                 OrderDirection::Ascending => {
                     self.sort_by(|a, b| {
-                        let a = a.attributes.volume.as_ref();
-                        let b = b.attributes.volume.as_ref();
-                        a.cmp(&b)
+                        let a = a
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        let b = b
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        a.partial_cmp(&b).unwrap_or(Ordering::Equal)
                     });
                 }
                 OrderDirection::Descending => {
                     self.sort_by(|a, b| {
-                        let a = a.attributes.volume.as_ref();
-                        let b = b.attributes.volume.as_ref();
-                        b.cmp(&a)
+                        let a = a
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        let b = b
+                            .attributes
+                            .volume
+                            .as_ref()
+                            .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
+                        b.partial_cmp(&a).unwrap_or(Ordering::Equal)
                     });
                 }
             },
