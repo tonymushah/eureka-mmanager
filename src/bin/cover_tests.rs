@@ -1,9 +1,9 @@
 use actix::prelude::*;
-use mangadex_api_types_rust::{CoverSortOrder, Language, OrderDirection};
+use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use mangadex_desktop_api2::{
     data_pulls::{
-        cover::filter::CoverListDataPullFilterParams, AsyncIntoSorted, AsyncPaginate,
-        IntoParamedFilteredStream, Paginate,
+        cover::filter::CoverListDataPullFilterParams, AsyncIntoSorted, IntoParamedFilteredStream,
+        Paginate,
     },
     files_dirs::messages::pull::cover::CoverListDataPullMessage,
     history::service::HistoryActorService,
