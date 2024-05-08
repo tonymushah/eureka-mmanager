@@ -102,36 +102,45 @@ impl MangaListDataPullFilterParams {
         }
     }
     fn validate_year(&self, input: &MangaObject) -> Option<bool> {
+        let year = self.year?;
         let input_year = option_bool_match!(input.attributes.year);
-        Some(self.year? == input_year)
+        Some(year == input_year)
     }
     fn validate_included_tags(&self, input: &MangaObject) -> Option<bool> {
         let mode = self.included_tags_mode.unwrap_or(TagSearchMode::And);
-        let input_tags = input
-            .attributes
-            .tags
-            .iter()
-            .map(|t| t.id)
-            .collect::<Vec<_>>();
-        let res = match mode {
-            TagSearchMode::And => self.included_tags.iter().all(|t| input_tags.contains(t)),
-            TagSearchMode::Or => self.included_tags.iter().any(|t| input_tags.contains(t)),
-        };
-        Some(res)
+        if !self.included_tags.is_empty() {
+            let input_tags = input
+                .attributes
+                .tags
+                .iter()
+                .map(|t| t.id)
+                .collect::<Vec<_>>();
+            let res = match mode {
+                TagSearchMode::And => self.included_tags.iter().all(|t| input_tags.contains(t)),
+                TagSearchMode::Or => self.included_tags.iter().any(|t| input_tags.contains(t)),
+            };
+            Some(res)
+        } else {
+            None
+        }
     }
     fn validate_excluded_tags(&self, input: &MangaObject) -> Option<bool> {
         let mode = self.excluded_tags_mode.unwrap_or(TagSearchMode::Or);
-        let input_tags = input
-            .attributes
-            .tags
-            .iter()
-            .map(|t| t.id)
-            .collect::<Vec<_>>();
-        let res = match mode {
-            TagSearchMode::And => self.excluded_tags.iter().all(|t| input_tags.contains(t)),
-            TagSearchMode::Or => self.excluded_tags.iter().any(|t| input_tags.contains(t)),
-        };
-        Some(res)
+        if !self.excluded_tags.is_empty() {
+            let input_tags = input
+                .attributes
+                .tags
+                .iter()
+                .map(|t| t.id)
+                .collect::<Vec<_>>();
+            let res = match mode {
+                TagSearchMode::And => self.excluded_tags.iter().all(|t| input_tags.contains(t)),
+                TagSearchMode::Or => self.excluded_tags.iter().any(|t| input_tags.contains(t)),
+            };
+            Some(res)
+        } else {
+            None
+        }
     }
     fn validate_status(&self, input: &MangaObject) -> Option<bool> {
         if !self.status.is_empty() {
