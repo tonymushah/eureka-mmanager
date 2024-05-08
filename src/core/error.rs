@@ -66,6 +66,8 @@ pub enum Error {
     CiboriumDeIo(#[from] ciborium::de::Error<std::io::Error>),
     #[error("Error when serializing a .cbor file {0}")]
     CiboriumSerIo(#[from] ciborium::ser::Error<std::io::Error>),
+    #[error("Regex error {0}")]
+    Regex(#[from] regex::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
