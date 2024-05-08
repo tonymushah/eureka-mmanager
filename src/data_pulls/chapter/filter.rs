@@ -7,7 +7,7 @@ use mangadex_api_types_rust::{ContentRating, Language, MangaDexDateTime, Relatio
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::data_pulls::Validate;
+use crate::{data_pulls::Validate, option_bool_match};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct ChapterListDataPullFilterParams {
@@ -58,7 +58,7 @@ impl From<ChapterListParams> for ChapterListDataPullFilterParams {
 impl ChapterListDataPullFilterParams {
     fn validate_title(&self, input: &ChapterObject) -> Option<bool> {
         let title = self.title.as_ref()?;
-        let input_title = input.attributes.title.as_ref()?;
+        let input_title = option_bool_match!(input.attributes.title.as_ref());
         Some(title == input_title)
     }
     fn validate_groups(&self, input: &ChapterObject) -> Option<bool> {
@@ -70,6 +70,8 @@ impl ChapterListDataPullFilterParams {
             .collect::<Vec<_>>();
         if !groups.is_empty() && !input_groups.is_empty() {
             Some(groups.iter().all(|g| input_groups.contains(g)))
+        } else if input_groups.is_empty() {
+            Some(false)
         } else {
             None
         }
@@ -89,13 +91,15 @@ impl ChapterListDataPullFilterParams {
         };
         if !uploaders.is_empty() && !input_uploaders.is_empty() {
             Some(uploaders.iter().all(|g| input_uploaders.contains(g)))
+        } else if input_uploaders.is_empty() {
+            Some(false)
         } else {
             None
         }
     }
     fn validate_volumes(&self, input: &ChapterObject) -> Option<bool> {
         let volumes = &self.volumes;
-        let input_volumes = input.attributes.volume.as_ref()?;
+        let input_volumes = option_bool_match!(input.attributes.volume.as_ref());
         if !volumes.is_empty() {
             Some(volumes.contains(input_volumes))
         } else {
@@ -104,7 +108,7 @@ impl ChapterListDataPullFilterParams {
     }
     fn validate_chapters(&self, input: &ChapterObject) -> Option<bool> {
         let chapters = &self.chapters;
-        let input_chapter = input.attributes.chapter.as_ref()?;
+        let input_chapter = option_bool_match!(input.attributes.chapter.as_ref());
         if !chapters.is_empty() {
             Some(chapters.contains(input_chapter))
         } else {
@@ -123,11 +127,11 @@ impl ChapterListDataPullFilterParams {
     fn validate_original_language(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.original_languages;
         let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = input
+            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
                 .find_first_relationships(RelationshipType::Manga)?
                 .clone()
                 .try_into()
-                .ok()?;
+                .ok());
             manga.attributes.original_language
         };
         if !tl.is_empty() {
@@ -139,11 +143,11 @@ impl ChapterListDataPullFilterParams {
     fn validate_excluded_original_language(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.excluded_original_languages;
         let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = input
+            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
                 .find_first_relationships(RelationshipType::Manga)?
                 .clone()
                 .try_into()
-                .ok()?;
+                .ok());
             manga.attributes.original_language
         };
         if !tl.is_empty() {
@@ -155,12 +159,12 @@ impl ChapterListDataPullFilterParams {
     fn validate_content_rating(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.content_rating;
         let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = input
+            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
                 .find_first_relationships(RelationshipType::Manga)?
                 .clone()
                 .try_into()
-                .ok()?;
-            manga.attributes.content_rating?
+                .ok());
+            option_bool_match!(manga.attributes.content_rating)
         };
         if !tl.is_empty() {
             Some(tl.contains(&input_tl))
@@ -177,6 +181,8 @@ impl ChapterListDataPullFilterParams {
             .collect::<Vec<_>>();
         if !groups.is_empty() && !input_groups.is_empty() {
             Some(!groups.iter().all(|g| input_groups.contains(g)))
+        } else if input_groups.is_empty() {
+            Some(false)
         } else {
             None
         }
@@ -196,6 +202,8 @@ impl ChapterListDataPullFilterParams {
         };
         if !uploaders.is_empty() && !input_uploaders.is_empty() {
             Some(!uploaders.iter().all(|g| input_uploaders.contains(g)))
+        } else if input_uploaders.is_empty() {
+            Some(false)
         } else {
             None
         }
@@ -207,16 +215,19 @@ impl ChapterListDataPullFilterParams {
         Some(self.updated_at_since?.as_ref() < input.attributes.updated_at?.as_ref())
     }
     fn validate_publish_at_since(&self, input: &ChapterObject) -> Option<bool> {
-        Some(self.publish_at_since?.as_ref() < input.attributes.publish_at?.as_ref())
+        Some(
+            self.publish_at_since?.as_ref()
+                < option_bool_match!(input.attributes.publish_at).as_ref(),
+        )
     }
     fn validate_manga_id(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.manga_id?;
         let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = input
+            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
                 .find_first_relationships(RelationshipType::Manga)?
                 .clone()
                 .try_into()
-                .ok()?;
+                .ok());
             manga.id
         };
         Some(input_tl.cmp(tl).is_eq())
