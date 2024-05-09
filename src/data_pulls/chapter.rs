@@ -10,7 +10,7 @@ use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::{ChapterSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoParamedFilteredStream};
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream};
 
 impl<S> AsyncIntoSorted<ChapterSortOrder> for S
 where
@@ -174,3 +174,5 @@ impl<S> IntoParamedFilteredStream<ChapterListDataPullFilterParams> for S where
     S: Stream<Item = ChapterObject>
 {
 }
+
+impl<I> IntoFiltered<ChapterListDataPullFilterParams> for I where I: Iterator<Item = ChapterObject> {}
