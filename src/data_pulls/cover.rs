@@ -8,7 +8,7 @@ use mangadex_api_schema_rust::v5::CoverObject;
 use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoParamedFilteredStream};
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream};
 use filter::CoverListDataPullFilterParams;
 
 impl<S> AsyncIntoSorted<CoverSortOrder> for S
@@ -106,3 +106,5 @@ impl<S> IntoParamedFilteredStream<CoverListDataPullFilterParams> for S where
     S: Stream<Item = CoverObject>
 {
 }
+
+impl<I> IntoFiltered<CoverListDataPullFilterParams> for I where I: Iterator<Item = CoverObject> {}
