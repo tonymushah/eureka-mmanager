@@ -1,4 +1,5 @@
 use std::{
+    iter::Filter,
     pin::Pin,
     task::{ready, Poll},
 };
@@ -68,5 +69,21 @@ where
     }
     fn to_filtered_into<I: Into<P>>(self, params: I) -> ParamedFilteredStream<Self, P> {
         Self::to_filtered(self, params.into())
+    }
+}
+
+pub trait IntoFiltered<P>: Iterator + Sized
+where
+    P: Validate<Self::Item>,
+{
+    fn to_filtered(self, param: P) -> Filter<Self, impl FnMut(&Self::Item) -> bool> {
+        self.filter(move |input| param.is_valid(input))
+    }
+    fn to_filtered_into<I: Into<P>>(
+        self,
+        params: I,
+    ) -> Filter<Self, impl FnMut(&Self::Item) -> bool> {
+        let param: P = params.into();
+        self.to_filtered(param)
     }
 }
