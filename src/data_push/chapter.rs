@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
 
-use super::Push;
+use super::{seed_rel, Push};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChapterRequiredRelationship {
@@ -48,47 +48,7 @@ impl ChapterRequiredRelationship {
     fn seed(mut input: ChapterObject, seed: ChapterObject) -> ChapterObject {
         let required = Self::validate(&input);
         for req in required {
-            match req {
-                ChapterRequiredRelationship::Manga => {
-                    input
-                        .relationships
-                        .retain(|x| x.type_ != RelationshipType::Manga);
-                    input.relationships.append(
-                        &mut seed
-                            .relationships
-                            .iter()
-                            .filter(|r| r.type_ == RelationshipType::Manga)
-                            .cloned()
-                            .collect_vec(),
-                    );
-                }
-                ChapterRequiredRelationship::ScanlationGroup => {
-                    input
-                        .relationships
-                        .retain(|x| x.type_ != RelationshipType::ScanlationGroup);
-                    input.relationships.append(
-                        &mut seed
-                            .relationships
-                            .iter()
-                            .filter(|r| r.type_ == RelationshipType::ScanlationGroup)
-                            .cloned()
-                            .collect_vec(),
-                    );
-                }
-                ChapterRequiredRelationship::Uploader => {
-                    input
-                        .relationships
-                        .retain(|x| x.type_ != RelationshipType::User);
-                    input.relationships.append(
-                        &mut seed
-                            .relationships
-                            .iter()
-                            .filter(|r| r.type_ == RelationshipType::User)
-                            .cloned()
-                            .collect_vec(),
-                    );
-                }
-            }
+            seed_rel(&mut input, &seed, req.into());
         }
         input
     }
