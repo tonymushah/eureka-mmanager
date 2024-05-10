@@ -1,3 +1,4 @@
+pub mod aggregate;
 pub mod filter;
 pub mod ids;
 pub mod list;
@@ -9,7 +10,7 @@ use mangadex_api_schema_rust::v5::MangaObject;
 use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoParamedFilteredStream};
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream};
 
 impl<S> AsyncIntoSorted<MangaSortOrder> for S
 where
@@ -109,3 +110,5 @@ impl<S> IntoParamedFilteredStream<MangaListDataPullFilterParams> for S where
     S: Stream<Item = MangaObject>
 {
 }
+
+impl<I> IntoFiltered<MangaListDataPullFilterParams> for I where I: Iterator<Item = MangaObject> {}
