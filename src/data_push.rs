@@ -1,3 +1,5 @@
+pub mod chapter;
+
 use std::ops::{Deref, DerefMut};
 
 use crate::{DirsOptions, ManagerCoreResult};
@@ -18,19 +20,12 @@ impl<'a> DerefMut for DataPush<'a> {
     }
 }
 
-pub trait Push<T> {
-    fn push(&mut self, data: T) -> ManagerCoreResult<()>;
+impl DirsOptions {
+    pub fn data_push(&mut self) -> DataPush<'_> {
+        DataPush(self)
+    }
 }
 
-impl<I, D, T> Push<I> for T
-where
-    T: Push<D>,
-    I: Iterator<Item = D>,
-{
-    fn push(&mut self, data: I) -> ManagerCoreResult<()> {
-        for item in data {
-            self.push(item)?;
-        }
-        Ok(())
-    }
+pub trait Push<T> {
+    fn push(&mut self, data: T) -> ManagerCoreResult<()>;
 }
