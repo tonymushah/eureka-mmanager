@@ -66,7 +66,7 @@ impl Ord for AggregateNumber {
     fn cmp(&self, other: &Self) -> Ordering {
         let a: Option<f32> = self.try_into().ok();
         let b: Option<f32> = other.try_into().ok();
-        a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+        a.partial_cmp(&b).unwrap_or(self.0.cmp(other))
     }
 }
 
