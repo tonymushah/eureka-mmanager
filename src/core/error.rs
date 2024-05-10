@@ -68,8 +68,8 @@ pub enum Error {
     CiboriumSerIo(#[from] ciborium::ser::Error<std::io::Error>),
     #[error("Regex error {0}")]
     Regex(#[from] regex::Error),
-    #[error("Missing Relationship {0}")]
-    MissingRelationship(RelationshipType),
+    #[error("Missing Relationship {:?}", 0)]
+    MissingRelationships(Vec<RelationshipType>),
 }
 
 #[derive(Debug, thiserror::Error)]
