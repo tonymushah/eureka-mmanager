@@ -5,7 +5,9 @@ use std::{
 
 use itertools::Itertools;
 use mangadex_api_schema_rust::{v5::ChapterObject, ApiData};
-use mangadex_api_types_rust::{RelationshipType, ResponseType, ResultType};
+use mangadex_api_types_rust::{
+    ReferenceExpansionResource, RelationshipType, ResponseType, ResultType,
+};
 use uuid::Uuid;
 
 use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
@@ -13,13 +15,20 @@ use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
 use super::Push;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ChapterRequiredRelationship {
+pub enum ChapterRequiredRelationship {
     Manga,
     ScanlationGroup,
     Uploader,
 }
 
 impl ChapterRequiredRelationship {
+    pub fn get_includes() -> Vec<ReferenceExpansionResource> {
+        vec![
+            ReferenceExpansionResource::Manga,
+            ReferenceExpansionResource::ScanlationGroup,
+            ReferenceExpansionResource::User,
+        ]
+    }
     fn validate(data: &ChapterObject) -> Vec<Self> {
         let mut required = Vec::<Self>::new();
         if data.find_relationships(RelationshipType::Manga).is_empty() {
