@@ -6,10 +6,40 @@ pub mod random;
 pub mod results;
 pub mod sort;
 
+use std::ops::{Deref, DerefMut};
+
 pub use filter::{IntoFiltered, IntoParamedFilteredStream};
 pub use random::{AsyncRand, Rand};
 pub use results::{AsyncPaginate, Paginate};
 pub use sort::{AsyncIntoSorted, IntoSorted};
+
+use crate::{DirsOptions, ManagerCoreResult};
+
+#[derive(Debug)]
+pub struct DataPull<'a>(&'a mut DirsOptions);
+
+impl<'a> Deref for DataPull<'a> {
+    type Target = DirsOptions;
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+impl DirsOptions {
+    pub fn data_pull(&mut self) -> DataPull<'_> {
+        DataPull(self)
+    }
+}
+
+impl<'a> DerefMut for DataPull<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0
+    }
+}
+
+pub trait Pull<T, I> {
+    fn pull(&self, id: I) -> ManagerCoreResult<T>;
+}
 
 pub trait Related<T> {
     fn is_related(&self, data: &T) -> bool;

@@ -2,15 +2,18 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fs::File, io::BufReader};
 
 pub use filter::ChapterListDataPullFilterParams;
 
-use mangadex_api_schema_rust::v5::ChapterObject;
+use mangadex_api_schema_rust::v5::{ChapterData, ChapterObject};
 use mangadex_api_types_rust::{ChapterSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
+use uuid::Uuid;
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream};
+use super::{
+    sort::IntoSorted, AsyncIntoSorted, DataPull, IntoFiltered, IntoParamedFilteredStream, Pull,
+};
 
 impl<S> AsyncIntoSorted<ChapterSortOrder> for S
 where
@@ -176,3 +179,12 @@ impl<S> IntoParamedFilteredStream<ChapterListDataPullFilterParams> for S where
 }
 
 impl<I> IntoFiltered<ChapterListDataPullFilterParams> for I where I: Iterator<Item = ChapterObject> {}
+
+impl<'a> Pull<ChapterObject, Uuid> for DataPull<'a> {
+    fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<ChapterObject> {
+        let manga_id_path = self.chapters_add(format!("{}", id)).join("data.json");
+        let file = BufReader::new(File::open(manga_id_path)?);
+        let manga: ChapterData = serde_json::from_reader(file)?;
+        Ok(manga.data)
+    }
+}
