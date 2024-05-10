@@ -26,6 +26,6 @@ impl Message for CoverDataPullMessage {
 impl Handler<CoverDataPullMessage> for DirsOptions {
     type Result = <CoverDataPullMessage as Message>::Result;
     fn handle(&mut self, msg: CoverDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.data_pull().pull(msg.into())
+        self.pull(msg.into())
     }
 }

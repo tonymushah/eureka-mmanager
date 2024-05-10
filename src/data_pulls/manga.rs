@@ -13,9 +13,9 @@ use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
-use super::{
-    sort::IntoSorted, AsyncIntoSorted, DataPull, IntoFiltered, IntoParamedFilteredStream, Pull,
-};
+use crate::DirsOptions;
+
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
 
 impl<S> AsyncIntoSorted<MangaSortOrder> for S
 where
@@ -118,7 +118,7 @@ impl<S> IntoParamedFilteredStream<MangaListDataPullFilterParams> for S where
 
 impl<I> IntoFiltered<MangaListDataPullFilterParams> for I where I: Iterator<Item = MangaObject> {}
 
-impl<'a> Pull<MangaObject, Uuid> for DataPull<'a> {
+impl Pull<MangaObject, Uuid> for DirsOptions {
     // TODO add cbor support
     fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<MangaObject> {
         let manga_id_path = self.mangas_add(format!("{}.json", id));

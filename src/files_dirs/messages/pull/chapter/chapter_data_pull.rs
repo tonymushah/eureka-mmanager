@@ -27,6 +27,6 @@ impl Handler<ChapterDataPullMessage> for DirsOptions {
     type Result = <ChapterDataPullMessage as Message>::Result;
     // TODO add cbor support
     fn handle(&mut self, msg: ChapterDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.data_pull().pull(msg.into())
+        self.pull(msg.into())
     }
 }

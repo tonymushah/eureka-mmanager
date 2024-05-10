@@ -11,9 +11,9 @@ use mangadex_api_types_rust::{ChapterSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
-use super::{
-    sort::IntoSorted, AsyncIntoSorted, DataPull, IntoFiltered, IntoParamedFilteredStream, Pull,
-};
+use crate::DirsOptions;
+
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
 
 impl<S> AsyncIntoSorted<ChapterSortOrder> for S
 where
@@ -180,7 +180,7 @@ impl<S> IntoParamedFilteredStream<ChapterListDataPullFilterParams> for S where
 
 impl<I> IntoFiltered<ChapterListDataPullFilterParams> for I where I: Iterator<Item = ChapterObject> {}
 
-impl<'a> Pull<ChapterObject, Uuid> for DataPull<'a> {
+impl Pull<ChapterObject, Uuid> for DirsOptions {
     fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<ChapterObject> {
         let manga_id_path = self.chapters_add(format!("{}", id)).join("data.json");
         let file = BufReader::new(File::open(manga_id_path)?);

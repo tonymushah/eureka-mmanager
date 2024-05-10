@@ -9,9 +9,9 @@ use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
-use super::{
-    sort::IntoSorted, AsyncIntoSorted, DataPull, IntoFiltered, IntoParamedFilteredStream, Pull,
-};
+use crate::DirsOptions;
+
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
 use filter::CoverListDataPullFilterParams;
 
 impl<S> AsyncIntoSorted<CoverSortOrder> for S
@@ -112,7 +112,7 @@ impl<S> IntoParamedFilteredStream<CoverListDataPullFilterParams> for S where
 
 impl<I> IntoFiltered<CoverListDataPullFilterParams> for I where I: Iterator<Item = CoverObject> {}
 
-impl<'a> Pull<CoverObject, Uuid> for DataPull<'a> {
+impl Pull<CoverObject, Uuid> for DirsOptions {
     fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<CoverObject> {
         let manga_id_path = self.covers_add(format!("{}.json", id));
         let file = BufReader::new(File::open(manga_id_path)?);

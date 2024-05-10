@@ -6,30 +6,12 @@ pub mod random;
 pub mod results;
 pub mod sort;
 
-use std::ops::Deref;
-
 pub use filter::{IntoFiltered, IntoParamedFilteredStream};
 pub use random::{AsyncRand, Rand};
 pub use results::{AsyncPaginate, Paginate};
 pub use sort::{AsyncIntoSorted, IntoSorted};
 
-use crate::{DirsOptions, ManagerCoreResult};
-
-#[derive(Debug)]
-pub struct DataPull<'a>(&'a DirsOptions);
-
-impl<'a> Deref for DataPull<'a> {
-    type Target = DirsOptions;
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
-}
-
-impl DirsOptions {
-    pub fn data_pull(&self) -> DataPull<'_> {
-        DataPull(self)
-    }
-}
+use crate::ManagerCoreResult;
 
 pub trait Pull<T, I> {
     fn pull(&self, id: I) -> ManagerCoreResult<T>;

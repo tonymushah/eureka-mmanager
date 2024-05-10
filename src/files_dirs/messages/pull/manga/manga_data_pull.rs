@@ -27,6 +27,6 @@ impl Handler<MangaDataPullMessage> for DirsOptions {
     type Result = <MangaDataPullMessage as Message>::Result;
 
     fn handle(&mut self, msg: MangaDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.data_pull().pull(msg.into())
+        self.pull(msg.into())
     }
 }
