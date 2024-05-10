@@ -1,4 +1,6 @@
-use mangadex_api_input_types::chapter::list::ChapterListParams;
+use mangadex_api_input_types::{
+    chapter::list::ChapterListParams, manga::aggregate::MangaAggregateParam,
+};
 use mangadex_api_schema_rust::{
     v5::{ChapterObject, MangaAttributes},
     ApiObjectNoRelationships,
@@ -51,6 +53,17 @@ impl From<ChapterListParams> for ChapterListDataPullFilterParams {
             updated_at_since: value.updated_at_since,
             publish_at_since: value.publish_at_since,
             manga_id: value.manga_id,
+        }
+    }
+}
+
+impl From<MangaAggregateParam> for ChapterListDataPullFilterParams {
+    fn from(value: MangaAggregateParam) -> Self {
+        Self {
+            manga_id: Some(value.manga_id),
+            translated_languages: value.translated_language,
+            groups: value.groups,
+            ..Default::default()
         }
     }
 }
