@@ -6,7 +6,7 @@ pub mod random;
 pub mod results;
 pub mod sort;
 
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 pub use filter::{IntoFiltered, IntoParamedFilteredStream};
 pub use random::{AsyncRand, Rand};
@@ -16,7 +16,7 @@ pub use sort::{AsyncIntoSorted, IntoSorted};
 use crate::{DirsOptions, ManagerCoreResult};
 
 #[derive(Debug)]
-pub struct DataPull<'a>(&'a mut DirsOptions);
+pub struct DataPull<'a>(&'a DirsOptions);
 
 impl<'a> Deref for DataPull<'a> {
     type Target = DirsOptions;
@@ -26,14 +26,8 @@ impl<'a> Deref for DataPull<'a> {
 }
 
 impl DirsOptions {
-    pub fn data_pull(&mut self) -> DataPull<'_> {
+    pub fn data_pull(&self) -> DataPull<'_> {
         DataPull(self)
-    }
-}
-
-impl<'a> DerefMut for DataPull<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0
     }
 }
 
