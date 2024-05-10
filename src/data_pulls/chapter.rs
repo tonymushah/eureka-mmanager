@@ -1,5 +1,6 @@
 pub mod filter;
 pub mod ids;
+pub mod images;
 pub mod list;
 
 use std::{cmp::Ordering, fs::File, io::BufReader};
