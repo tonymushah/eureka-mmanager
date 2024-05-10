@@ -85,30 +85,22 @@ type VolumeAggregateCollector = BTreeMap<AggregateNumber, ChapterAggregate>;
 
 type AggregateCollector = BTreeMap<AggregateNumber, VolumeAggregateCollector>;
 
+fn none() -> String {
+    String::from("none")
+}
+
 fn insert_in_collector(collector: &mut AggregateCollector, chapter: ChapterObject) {
     match collector
         .entry(AggregateNumber(
-            chapter
-                .attributes
-                .volume
-                .clone()
-                .unwrap_or(String::from("none")),
+            chapter.attributes.volume.clone().unwrap_or_else(none),
         ))
         .or_default()
         .entry(AggregateNumber(
-            chapter
-                .attributes
-                .chapter
-                .clone()
-                .unwrap_or(String::from("none")),
+            chapter.attributes.chapter.clone().unwrap_or_else(none),
         )) {
         std::collections::btree_map::Entry::Vacant(e) => {
             e.insert(ChapterAggregate {
-                chapter: chapter
-                    .attributes
-                    .chapter
-                    .clone()
-                    .unwrap_or(String::from("none")),
+                chapter: chapter.attributes.chapter.clone().unwrap_or_else(none),
                 id: chapter.id,
                 others: Default::default(),
                 count: 1,
@@ -126,7 +118,10 @@ fn collector_to_aggregate(collector: AggregateCollector) -> MangaAggregate {
     let volumes = collector
         .into_iter()
         .filter_map(|(volume, chapters)| -> Option<VolumeAggregate> {
-            let v_count: u32 = chapters.len().try_into().ok()?;
+            let v_count = chapters
+                .values()
+                .map(|c| c.count)
+                .reduce(|acc, e| acc + e)?;
             Some(VolumeAggregate {
                 volume: volume.0,
                 count: v_count,
