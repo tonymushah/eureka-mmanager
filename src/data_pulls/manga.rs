@@ -3,14 +3,19 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
+use std::{fs::File, io::BufReader};
+
 pub use filter::MangaListDataPullFilterParams;
 pub use ids::MangaIdsListDataPull;
 pub use list::MangaListDataPull;
-use mangadex_api_schema_rust::v5::MangaObject;
+use mangadex_api_schema_rust::v5::{MangaData, MangaObject};
 use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
+use uuid::Uuid;
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream};
+use super::{
+    sort::IntoSorted, AsyncIntoSorted, DataPull, IntoFiltered, IntoParamedFilteredStream, Pull,
+};
 
 impl<S> AsyncIntoSorted<MangaSortOrder> for S
 where
@@ -112,3 +117,13 @@ impl<S> IntoParamedFilteredStream<MangaListDataPullFilterParams> for S where
 }
 
 impl<I> IntoFiltered<MangaListDataPullFilterParams> for I where I: Iterator<Item = MangaObject> {}
+
+impl<'a> Pull<MangaObject, Uuid> for DataPull<'a> {
+    // TODO add cbor support
+    fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<MangaObject> {
+        let manga_id_path = self.mangas_add(format!("{}.json", id));
+        let file = BufReader::new(File::open(manga_id_path)?);
+        let manga: MangaData = serde_json::from_reader(file)?;
+        Ok(manga.data)
+    }
+}
