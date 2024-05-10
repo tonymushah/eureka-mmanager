@@ -5,11 +5,11 @@ use std::{
 
 use mangadex_api_schema_rust::v5::ChapterObject;
 
-use crate::ManagerCoreResult;
+use crate::{DirsOptions, ManagerCoreResult};
 
-use super::{DataPush, Push};
+use super::Push;
 
-impl<'a> Push<ChapterObject> for DataPush<'a> {
+impl Push<ChapterObject> for DirsOptions {
     fn push(&mut self, data: ChapterObject) -> crate::ManagerCoreResult<()> {
         let chapter_path = self.chapters_id_add(data.id);
         create_dir_all(&chapter_path)?;
@@ -19,7 +19,7 @@ impl<'a> Push<ChapterObject> for DataPush<'a> {
     }
 }
 
-impl<'a> Push<Vec<ChapterObject>> for DataPush<'a> {
+impl Push<Vec<ChapterObject>> for DirsOptions {
     fn push(&mut self, data: Vec<ChapterObject>) -> ManagerCoreResult<()> {
         for item in data {
             self.push(item)?;
