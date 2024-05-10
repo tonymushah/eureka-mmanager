@@ -19,5 +19,18 @@ impl<'a> DerefMut for DataPush<'a> {
 }
 
 pub trait Push<T> {
-    fn push(&mut self, data: &T) -> ManagerCoreResult<()>;
+    fn push(&mut self, data: T) -> ManagerCoreResult<()>;
+}
+
+impl<I, D, T> Push<I> for T
+where
+    T: Push<D>,
+    I: Iterator<Item = D>,
+{
+    fn push(&mut self, data: I) -> ManagerCoreResult<()> {
+        for item in data {
+            self.push(item)?;
+        }
+        Ok(())
+    }
 }
