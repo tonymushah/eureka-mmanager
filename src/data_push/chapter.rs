@@ -1,9 +1,10 @@
 use std::{
     fs::{create_dir_all, File},
-    io::BufWriter,
+    io::{BufWriter, Write},
 };
 
-use mangadex_api_schema_rust::v5::ChapterObject;
+use mangadex_api_schema_rust::{v5::ChapterObject, ApiData};
+use mangadex_api_types_rust::{ResponseType, ResultType};
 
 use crate::{DirsOptions, ManagerCoreResult};
 
@@ -14,7 +15,15 @@ impl Push<ChapterObject> for DirsOptions {
         let chapter_path = self.chapters_id_add(data.id);
         create_dir_all(&chapter_path)?;
         let mut file = BufWriter::new(File::create(chapter_path.join("data.json"))?);
-        serde_json::to_writer(&mut file, &data)?;
+        serde_json::to_writer(
+            &mut file,
+            &ApiData {
+                response: ResponseType::Entity,
+                result: ResultType::Ok,
+                data,
+            },
+        )?;
+        file.flush()?;
         Ok(())
     }
 }
