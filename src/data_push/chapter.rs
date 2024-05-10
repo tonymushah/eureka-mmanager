@@ -1,3 +1,5 @@
+pub mod image;
+
 use std::{
     fs::{create_dir_all, File},
     io::{BufWriter, Write},
