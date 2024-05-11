@@ -15,7 +15,7 @@ pub mod messages;
 
 use crate::{core::ManagerCoreResult, DirsOptionsVerificationError};
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct DirsOptions {
     pub data_dir: PathBuf,
     pub chapters: PathBuf,

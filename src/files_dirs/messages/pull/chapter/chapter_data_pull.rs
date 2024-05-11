@@ -1,10 +1,8 @@
-use std::{fs::File, io::BufReader};
-
 use actix::prelude::*;
-use mangadex_api_schema_rust::v5::{ChapterData, ChapterObject};
+use mangadex_api_schema_rust::v5::ChapterObject;
 use uuid::Uuid;
 
-use crate::{DirsOptions, ManagerCoreResult};
+use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
 
 #[derive(Debug, Clone, Hash, Default)]
 pub struct ChapterDataPullMessage(pub Uuid);
@@ -29,9 +27,6 @@ impl Handler<ChapterDataPullMessage> for DirsOptions {
     type Result = <ChapterDataPullMessage as Message>::Result;
     // TODO add cbor support
     fn handle(&mut self, msg: ChapterDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
-        let manga_id_path = self.chapters_add(format!("{}", msg.0)).join("data.json");
-        let file = BufReader::new(File::open(manga_id_path)?);
-        let manga: ChapterData = serde_json::from_reader(file)?;
-        Ok(manga.data)
+        self.pull(msg.into())
     }
 }

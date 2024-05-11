@@ -11,12 +11,26 @@ pub use random::{AsyncRand, Rand};
 pub use results::{AsyncPaginate, Paginate};
 pub use sort::{AsyncIntoSorted, IntoSorted};
 
-pub trait Related<T> {
-    fn is_related(&self, data: &T) -> bool;
+use crate::ManagerCoreResult;
+
+pub trait Pull<T, I> {
+    fn pull(&self, id: I) -> ManagerCoreResult<T>;
 }
 
-pub trait ParatialRelated<T> {
-    fn partial_related(&self, data: &T) -> Option<bool>;
+pub trait PartialRelated<T> {
+    fn prt_rlted(&self, data: &T) -> Option<bool>;
+}
+pub trait Related<T> {
+    fn rlted(&self, data: &T) -> bool;
+}
+
+impl<T, S> PartialRelated<T> for S
+where
+    S: Related<T>,
+{
+    fn prt_rlted(&self, data: &T) -> Option<bool> {
+        Some(self.rlted(data))
+    }
 }
 
 pub trait AsyncRelated<T> {

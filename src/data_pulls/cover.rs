@@ -2,13 +2,16 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fs::File, io::BufReader};
 
-use mangadex_api_schema_rust::v5::CoverObject;
+use mangadex_api_schema_rust::v5::{CoverData, CoverObject};
 use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use tokio_stream::{Stream, StreamExt};
+use uuid::Uuid;
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream};
+use crate::DirsOptions;
+
+use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
 use filter::CoverListDataPullFilterParams;
 
 impl<S> AsyncIntoSorted<CoverSortOrder> for S
@@ -108,3 +111,12 @@ impl<S> IntoParamedFilteredStream<CoverListDataPullFilterParams> for S where
 }
 
 impl<I> IntoFiltered<CoverListDataPullFilterParams> for I where I: Iterator<Item = CoverObject> {}
+
+impl Pull<CoverObject, Uuid> for DirsOptions {
+    fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<CoverObject> {
+        let manga_id_path = self.covers_add(format!("{}.json", id));
+        let file = BufReader::new(File::open(manga_id_path)?);
+        let manga: CoverData = serde_json::from_reader(file)?;
+        Ok(manga.data)
+    }
+}
