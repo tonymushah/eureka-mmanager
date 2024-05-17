@@ -27,6 +27,15 @@ pub struct DeleteChapterImagesMessage {
     images: ChapterImages,
 }
 
+impl DeleteChapterImagesMessage {
+    pub fn new<I: Into<ChapterImages>>(id: Uuid, images: I) -> Self {
+        Self {
+            id,
+            images: images.into(),
+        }
+    }
+}
+
 impl Message for DeleteChapterImagesMessage {
     type Result = crate::ManagerCoreResult<()>;
 }
