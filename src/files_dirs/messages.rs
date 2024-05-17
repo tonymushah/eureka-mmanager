@@ -1,3 +1,4 @@
+pub mod delete;
 pub mod join;
 pub mod modify;
 pub mod pull;

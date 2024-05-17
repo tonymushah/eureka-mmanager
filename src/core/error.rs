@@ -4,7 +4,10 @@ use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
 use std::{num::TryFromIntError, path::PathBuf};
 
-use crate::history::HistoryBaseError;
+use crate::{
+    files_dirs::messages::delete::chapter::images::DeleteChapterImagesError,
+    history::HistoryBaseError,
+};
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,6 +73,8 @@ pub enum Error {
     Regex(#[from] regex::Error),
     #[error("Missing Relationship {:?}", 0)]
     MissingRelationships(Vec<RelationshipType>),
+    #[error(transparent)]
+    DeleteChapterImages(#[from] DeleteChapterImagesError),
 }
 
 #[derive(Debug, thiserror::Error)]
