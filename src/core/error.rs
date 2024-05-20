@@ -75,6 +75,12 @@ pub enum Error {
     WatchRecv(#[from] tokio::sync::watch::error::RecvError),
     #[error("The given task was been cancelled")]
     TaskCanceled,
+    #[error("The MangaDexClient is not found")]
+    MangaDexClientNotFound,
+    #[error("The DirsOption actor is not found")]
+    DirsOptionsNotFound,
+    #[error("The HistoryService is not found")]
+    HistoryServiceNotFound,
 }
 
 #[derive(Debug, thiserror::Error)]

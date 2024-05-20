@@ -6,8 +6,14 @@ use crate::{
     data_push::manga::MangaRequiredRelationship,
     download::{
         manga::task::{MangaDonwloadingState, MangaDownloadTask},
-        messages::{StartDownload, TaskStateMessage},
-        state::{DownloadTaskState, TaskState},
+        messages::{state::GetManagerStateMessage, StartDownload, TaskStateMessage},
+        state::{
+            messages::get::{
+                client::GetClientMessage, dir_options::GetDirsOptionsMessage,
+                history::GetHistoryMessage,
+            },
+            DownloadTaskState, TaskState,
+        },
     },
     files_dirs::messages::push::PushDataMessage,
     history::{
@@ -21,15 +27,22 @@ impl Handler<StartDownload> for MangaDownloadTask {
     type Result = ();
     fn handle(&mut self, _msg: StartDownload, ctx: &mut Self::Context) -> Self::Result {
         if self.handle(TaskStateMessage, ctx) != TaskState::Loading {
-            let id = self.id;
-            let client = self.client.clone();
-            let dir_options = self.dir_option.clone();
+            self.sender.send_replace(DownloadTaskState::Loading(
+                MangaDonwloadingState::Preloading,
+            ));
+            let manager = self.manager.clone();
+
             let sender = self.sender.clone();
-            let history = self.history.clone();
+            let id = self.id;
+
             let entry = HistoryEntry::new(id, RelationshipType::Manga);
-            self.handle.replace(
+            if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
+                        let manager_state = manager.send(GetManagerStateMessage).await?;
+                        let client = manager_state.send(GetClientMessage).await?;
+                        let dir_options = manager_state.send(GetDirsOptionsMessage).await?;
+                        let history = manager_state.send(GetHistoryMessage).await?;
                         sender.send_replace(DownloadTaskState::Loading(
                             MangaDonwloadingState::FetchingData,
                         ));
@@ -57,7 +70,9 @@ impl Handler<StartDownload> for MangaDownloadTask {
                         }
                     }),
                 ),
-            );
+            ) {
+                ctx.cancel_future(t);
+            }
         }
     }
 }

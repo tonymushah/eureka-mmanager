@@ -3,13 +3,14 @@ use mangadex_api::MangaDexClient;
 
 use crate::{history::service::HistoryActorService, DirsOptions};
 
-use self::manga::MangaDownloadManager;
+use self::{manga::MangaDownloadManager, state::DownloadManagerState};
 
 pub mod manga;
 pub mod messages;
 pub mod state;
 
 pub struct DownloadManager {
+    state: Addr<DownloadManagerState>,
     manga: Addr<MangaDownloadManager>,
 }
 
@@ -19,9 +20,11 @@ impl DownloadManager {
         client: MangaDexClient,
         history: Addr<HistoryActorService>,
     ) -> Self {
+        let state = DownloadManagerState::new(dir_option, client, history).start();
         {
             Self {
-                manga: MangaDownloadManager::new(dir_option, client, history).start(),
+                manga: MangaDownloadManager::new(state.clone()).start(),
+                state,
             }
         }
     }

@@ -3,24 +3,20 @@ pub mod messages;
 use std::{ops::Deref, time::Duration};
 
 use actix::prelude::*;
-use mangadex_api::MangaDexClient;
 use mangadex_api_schema_rust::v5::MangaObject;
 use tokio::sync::watch::{channel, Sender};
 use uuid::Uuid;
 
-use crate::{
-    download::{
-        messages::DropSingleTaskMessage,
-        state::{DownloadTaskState, TaskState},
-    },
-    history::service::HistoryActorService,
-    DirsOptions,
+use crate::download::{
+    messages::DropSingleTaskMessage,
+    state::{DownloadTaskState, TaskState},
 };
 
 use super::MangaDownloadManager;
 
 #[derive(Debug)]
 pub enum MangaDonwloadingState {
+    Preloading,
     FetchingData,
 }
 
@@ -31,9 +27,6 @@ pub struct MangaDownloadTask {
     id: Uuid,
     handle: Option<SpawnHandle>,
     sender: Sender<MangaDownloadTaskState>,
-    dir_option: Addr<DirsOptions>,
-    client: MangaDexClient,
-    history: Addr<HistoryActorService>,
     manager: Addr<MangaDownloadManager>,
     have_been_read: bool,
     manager_handle: Option<SpawnHandle>,
@@ -54,20 +47,11 @@ impl Actor for MangaDownloadTask {
 }
 
 impl MangaDownloadTask {
-    pub(super) fn new(
-        dir_option: Addr<DirsOptions>,
-        client: MangaDexClient,
-        history: Addr<HistoryActorService>,
-        id: Uuid,
-        manager: Addr<MangaDownloadManager>,
-    ) -> Self {
+    pub(super) fn new(id: Uuid, manager: Addr<MangaDownloadManager>) -> Self {
         let (sender, _) = channel(MangaDownloadTaskState::Pending);
         Self {
             id,
             handle: None,
-            dir_option,
-            client,
-            history,
             sender,
             manager,
             have_been_read: false,

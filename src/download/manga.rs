@@ -4,33 +4,22 @@ pub mod task;
 use std::collections::HashMap;
 
 use actix::prelude::*;
-use mangadex_api::MangaDexClient;
 use uuid::Uuid;
-
-use crate::{history::service::HistoryActorService, DirsOptions};
 
 use self::task::MangaDownloadTask;
 
-use super::messages::DropSingleTaskMessage;
+use super::{messages::DropSingleTaskMessage, state::DownloadManagerState};
 
 #[derive(Debug)]
 pub struct MangaDownloadManager {
-    dir_option: Addr<DirsOptions>,
-    client: MangaDexClient,
-    history: Addr<HistoryActorService>,
+    state: Addr<DownloadManagerState>,
     tasks: HashMap<Uuid, Addr<MangaDownloadTask>>,
 }
 
 impl MangaDownloadManager {
-    pub fn new(
-        dir_option: Addr<DirsOptions>,
-        client: MangaDexClient,
-        history: Addr<HistoryActorService>,
-    ) -> Self {
+    pub fn new(state: Addr<DownloadManagerState>) -> Self {
         Self {
-            dir_option,
-            client,
-            history,
+            state,
             tasks: HashMap::new(),
         }
     }

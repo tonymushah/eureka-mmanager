@@ -49,16 +49,7 @@ impl Handler<MangaDownloadMessage> for MangaDownloadManager {
         let task = self
             .tasks
             .entry(msg.id)
-            .or_insert_with(|| {
-                MangaDownloadTask::new(
-                    self.dir_option.clone(),
-                    self.client.clone(),
-                    self.history.clone(),
-                    msg.id,
-                    ctx.address(),
-                )
-                .start()
-            })
+            .or_insert_with(|| MangaDownloadTask::new(msg.id, ctx.address()).start())
             .clone();
         let re_task = task.clone();
 

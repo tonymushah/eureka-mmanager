@@ -1,3 +1,5 @@
+pub mod state;
+
 use std::marker::PhantomData;
 
 use actix::prelude::*;
