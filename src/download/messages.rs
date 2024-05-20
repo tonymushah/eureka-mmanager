@@ -46,3 +46,9 @@ pub struct TaskStateMessage;
 impl Message for TaskStateMessage {
     type Result = TaskState;
 }
+
+pub struct GetTasksListMessage;
+
+impl Message for GetTasksListMessage {
+    type Result = Vec<Uuid>;
+}

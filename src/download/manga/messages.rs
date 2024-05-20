@@ -1,4 +1,5 @@
 pub mod new_task;
+pub mod tasks;
 
 use actix::{Handler, Message};
 pub use new_task::MangaDownloadMessage;
