@@ -1,8 +1,9 @@
 pub mod state;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 use actix::prelude::*;
+use tokio::sync::Notify;
 use uuid::Uuid;
 
 use super::state::{TaskState, WaitForFinished};
@@ -51,4 +52,10 @@ pub struct GetTasksListMessage;
 
 impl Message for GetTasksListMessage {
     type Result = Vec<Uuid>;
+}
+
+pub struct SubcribeToManagerMessage;
+
+impl Message for SubcribeToManagerMessage {
+    type Result = Arc<Notify>;
 }

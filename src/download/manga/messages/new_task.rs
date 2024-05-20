@@ -52,6 +52,7 @@ impl Handler<MangaDownloadMessage> for MangaDownloadManager {
             .or_insert_with(|| MangaDownloadTask::new(msg.id, ctx.address()).start())
             .clone();
         let re_task = task.clone();
+        self.notify.notify_waiters();
 
         if let DownloadMessageState::Downloading = msg.state {
             let fut = re_task
