@@ -1,3 +1,4 @@
+pub mod manga;
 pub mod state;
 
 use std::{marker::PhantomData, sync::Arc};
