@@ -53,16 +53,19 @@ impl Stream for CoverIdsListDataPull {
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        loop {
+
             if let Some(entry) = self.iter.next() {
                 if let Ok(res) = self.id_to_cover(entry) {
-                    return Poll::Ready(Some(res));
+                    Poll::Ready(Some(res))
+                }else {
+                    cx.waker().wake_by_ref();
+                    Poll::Pending
                 }
             } else {
-                return Poll::Ready(None);
+                Poll::Ready(None)
             }
         }
-    }
+    
 }
