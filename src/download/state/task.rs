@@ -69,11 +69,21 @@ impl<T, L> From<ManagerCoreResult<T>> for DownloadTaskState<T, L> {
 #[derive(Debug, Clone, MessageResponse)]
 pub struct WaitForFinished<T, L> {
     state: Receiver<DownloadTaskState<T, L>>,
+    waker_on_load: bool,
 }
 
 impl<T, L> WaitForFinished<T, L> {
     pub fn new(state: Receiver<DownloadTaskState<T, L>>) -> Self {
-        Self { state }
+        Self {
+            state,
+            waker_on_load: false,
+        }
+    }
+    pub fn waker_on_load(self, waker_on_load: bool) -> Self {
+        Self {
+            waker_on_load,
+            ..self
+        }
     }
 }
 
@@ -99,11 +109,15 @@ where
         match ready!(changed.as_mut().poll(cx)) {
             Ok(_) => match self.state.borrow().deref() {
                 DownloadTaskState::Pending => {
-                    cx.waker().wake_by_ref();
+                    if self.waker_on_load {
+                        cx.waker().wake_by_ref();
+                    }
                     Poll::Pending
                 }
                 DownloadTaskState::Loading(_) => {
-                    cx.waker().wake_by_ref();
+                    if self.waker_on_load {
+                        cx.waker().wake_by_ref();
+                    }
                     Poll::Pending
                 }
                 DownloadTaskState::Error(e) => {
