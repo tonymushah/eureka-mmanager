@@ -38,16 +38,17 @@ impl Stream for ChapterIdsListDataPull {
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        loop {
-            if let Some(entry) = self.iter.next() {
-                if let Ok(res) = self.id_to_chapter(entry) {
-                    return Poll::Ready(Some(res));
-                }
+        if let Some(entry) = self.iter.next() {
+            if let Ok(res) = self.id_to_chapter(entry) {
+                Poll::Ready(Some(res))
             } else {
-                return Poll::Ready(None);
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
+        } else {
+            Poll::Ready(None)
         }
     }
 }
