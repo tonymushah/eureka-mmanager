@@ -92,6 +92,7 @@ where
     T: Clone,
 {
     type Output = Result<T, WaitForFinishedError>;
+    // TODO test WaitForFinished with and without cx.waker().wake_by_ref()
     fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
         let mut state = self.state.clone();
         let mut changed = Box::pin(state.changed());
