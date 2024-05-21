@@ -1,5 +1,3 @@
-#[cfg(feature = "actix_web")]
-use actix_web::ResponseError;
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
 use std::{num::TryFromIntError, path::PathBuf};
@@ -37,8 +35,6 @@ pub enum Error {
     StringUTF16Error(#[from] std::string::FromUtf16Error),
     #[error("An error occured when parsing something into a String \n Details : {0}")]
     StringParseError(#[from] std::string::ParseError),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
     #[error("An error occured when building a mangdex_api request \n Details : {0}")]
     MangadexBuilderError(#[from] mangadex_api_types_rust::error::BuilderError),
     #[error("An Download Tasks limit Exceded {current}/{limit}")]
@@ -75,6 +71,16 @@ pub enum Error {
     MissingRelationships(Vec<RelationshipType>),
     #[error(transparent)]
     DeleteChapterImages(#[from] DeleteChapterImagesError),
+    #[error(transparent)]
+    WatchRecv(#[from] tokio::sync::watch::error::RecvError),
+    #[error("The given task was been cancelled")]
+    TaskCanceled,
+    #[error("The MangaDexClient is not found")]
+    MangaDexClientNotFound,
+    #[error("The DirsOption actor is not found")]
+    DirsOptionsNotFound,
+    #[error("The HistoryService is not found")]
+    HistoryServiceNotFound,
 }
 
 #[derive(Debug, thiserror::Error)]

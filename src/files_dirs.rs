@@ -4,16 +4,23 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use actix::{Actor, Context};
+use actix::{Actor, Context, Handler, Message};
 use log::error;
+use mangadex_api_schema_rust::v5::CoverObject;
+use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 mod chapters;
 mod covers;
 mod mangas;
 pub mod messages;
 
-use crate::{core::ManagerCoreResult, DirsOptionsVerificationError};
+use crate::{
+    core::ManagerCoreResult,
+    history::{service::messages::is_in::IsInMessage, IsIn},
+    DirsOptionsVerificationError,
+};
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct DirsOptions {
@@ -93,5 +100,49 @@ impl Actor for DirsOptions {
         if let Err(e) = self.verify_and_init() {
             error!("{:#?}", e);
         }
+    }
+}
+
+impl DirsOptions {
+    fn is_chapter_here(&self, id: Uuid) -> bool {
+        let chapter = self.chapters_add(format!("{id}"));
+        chapter.exists() && chapter.join("data.json").exists()
+    }
+    fn re_ca(&self, id: Uuid) -> ManagerCoreResult<CoverObject> {
+        use mangadex_api_schema_rust::ApiData;
+        use serde_json::from_reader;
+        let file = BufReader::new(File::open(self.covers_add(format!("{id}.json")))?);
+        let d: ApiData<CoverObject> = from_reader(file)?;
+        Ok(d.data)
+    }
+    fn cover_art(&self, id: Uuid) -> bool {
+        let cover: ManagerCoreResult<CoverObject> = self.re_ca(id);
+        if let Ok(p) = cover.map(|c| self.cover_images_add(c.attributes.file_name)) {
+            p.exists()
+        } else {
+            false
+        }
+    }
+    fn manga(&self, id: Uuid) -> bool {
+        self.mangas_add(format!("{id}.json")).exists()
+    }
+}
+
+impl IsIn<(Uuid, RelationshipType)> for DirsOptions {
+    type Output = bool;
+    fn is_in(&self, (id, rel): (Uuid, RelationshipType)) -> Self::Output {
+        match rel {
+            RelationshipType::Chapter => self.is_chapter_here(id),
+            RelationshipType::Manga => self.manga(id),
+            RelationshipType::CoverArt => self.cover_art(id),
+            _ => false,
+        }
+    }
+}
+
+impl Handler<IsInMessage> for DirsOptions {
+    type Result = <IsInMessage as Message>::Result;
+    fn handle(&mut self, msg: IsInMessage, _ctx: &mut Self::Context) -> Self::Result {
+        self.is_in((msg.id, msg.data_type))
     }
 }
