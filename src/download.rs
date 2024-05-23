@@ -5,6 +5,7 @@ use crate::{history::service::HistoryActorService, DirsOptions};
 
 use self::{manga::MangaDownloadManager, state::DownloadManagerState};
 
+pub mod cover;
 pub mod manga;
 pub mod messages;
 pub mod state;
