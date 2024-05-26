@@ -1,3 +1,4 @@
+pub mod cover;
 pub mod manga;
 pub mod state;
 
