@@ -1,11 +1,11 @@
 use actix::prelude::*;
 
-use crate::download::{manga::MangaDownloadManager, DownloadManager};
+use crate::download::{manga::MangaDownloadManager as Manager, DownloadManager, GetManager};
 
 pub struct GetMangaDownloadManagerMessage;
 
 impl Message for GetMangaDownloadManagerMessage {
-    type Result = Addr<MangaDownloadManager>;
+    type Result = Addr<Manager>;
 }
 
 impl Handler<GetMangaDownloadManagerMessage> for DownloadManager {
@@ -16,5 +16,11 @@ impl Handler<GetMangaDownloadManagerMessage> for DownloadManager {
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         self.manga.clone()
+    }
+}
+
+impl GetManager<Manager> for Addr<DownloadManager> {
+    async fn get(&self) -> Result<Addr<Manager>, MailboxError> {
+        self.send(GetMangaDownloadManagerMessage).await
     }
 }
