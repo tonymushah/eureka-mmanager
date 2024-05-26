@@ -1,6 +1,6 @@
 use actix::prelude::*;
 
-use crate::download::{cover::CoverDownloadManager as Manager, DownloadManager};
+use crate::download::{cover::CoverDownloadManager as Manager, DownloadManager, GetManager};
 
 pub struct GetCoverDownloadManagerMessage;
 
@@ -16,5 +16,11 @@ impl Handler<GetCoverDownloadManagerMessage> for DownloadManager {
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         self.cover.clone()
+    }
+}
+
+impl GetManager<Manager> for Addr<DownloadManager> {
+    async fn get(&self) -> Result<Addr<Manager>, MailboxError> {
+        self.send(GetCoverDownloadManagerMessage).await
     }
 }
