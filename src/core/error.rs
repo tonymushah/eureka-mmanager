@@ -1,6 +1,6 @@
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
-use std::{num::TryFromIntError, path::PathBuf};
+use std::{fmt::Display, num::TryFromIntError, ops::Deref, path::PathBuf, sync::Arc};
 
 use crate::{
     files_dirs::messages::delete::chapter::images::DeleteChapterImagesError,
@@ -81,6 +81,48 @@ pub enum Error {
     DirsOptionsNotFound,
     #[error("The HistoryService is not found")]
     HistoryServiceNotFound,
+    #[error("The initial state can't be sent")]
+    NotInitialized,
+}
+
+impl Error {
+    pub fn into_owned(self) -> OwnedError {
+        self.into()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct OwnedError(Arc<Error>);
+
+impl Deref for OwnedError {
+    type Target = Arc<Error>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<Arc<Error>> for OwnedError {
+    fn from(value: Arc<Error>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Error> for OwnedError {
+    fn from(value: Error) -> Self {
+        Arc::new(value).into()
+    }
+}
+
+impl Display for OwnedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.deref().as_ref().fmt(f)
+    }
+}
+
+impl std::error::Error for OwnedError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.deref().as_ref().source()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
