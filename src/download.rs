@@ -1,9 +1,18 @@
+use std::future::Future;
+
 use actix::prelude::*;
 use mangadex_api::MangaDexClient;
 
 use crate::{history::service::HistoryActorService, DirsOptions};
 
 use self::{cover::CoverDownloadManager, manga::MangaDownloadManager, state::DownloadManagerState};
+
+pub trait GetManager<T>
+where
+    T: Actor,
+{
+    fn get(&self) -> impl Future<Output = Result<Addr<T>, MailboxError>> + Send;
+}
 
 pub mod cover;
 pub mod manga;
