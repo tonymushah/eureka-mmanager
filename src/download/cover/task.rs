@@ -1,3 +1,5 @@
+pub mod messages;
+
 use actix::prelude::*;
 use mangadex_api_schema_rust::v5::CoverObject;
 use tokio::sync::watch::{channel, Sender};
