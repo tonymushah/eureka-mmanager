@@ -34,7 +34,7 @@ impl Actor for ChapterDownloadManager {
 
 impl Handler<DropSingleTaskMessage> for ChapterDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
-    fn handle(&mut self, msg: DropSingleTaskMessage, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.tasks.remove(&msg.0);
         self.notify.notify_waiters();
         Ok(())

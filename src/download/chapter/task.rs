@@ -35,6 +35,10 @@ pub enum DownloadMode {
     DataSaver,
 }
 
+impl Message for DownloadMode {
+    type Result = ();
+}
+
 impl From<DownloadMode> for Mode {
     fn from(value: DownloadMode) -> Self {
         match value {
@@ -93,6 +97,16 @@ impl ChapterDownloadTask {
             manager,
             have_been_read: false,
             manager_handle: None,
+        }
+    }
+}
+
+impl Handler<DownloadMode> for ChapterDownloadTask {
+    type Result = <DownloadMode as Message>::Result;
+    fn handle(&mut self, msg: DownloadMode, _ctx: &mut Self::Context) -> Self::Result {
+        let state = std::convert::Into::<TaskState>::into(self.sender.borrow().deref());
+        if !state.is_loading() {
+            self.mode = msg;
         }
     }
 }
