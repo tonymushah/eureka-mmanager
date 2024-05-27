@@ -1,3 +1,5 @@
+pub mod messages;
+
 use std::{ops::Deref, time::Duration};
 
 use actix::prelude::*;
