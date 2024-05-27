@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsStr,
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
@@ -144,5 +145,33 @@ impl Handler<IsInMessage> for DirsOptions {
     type Result = <IsInMessage as Message>::Result;
     fn handle(&mut self, msg: IsInMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.is_in((msg.id, msg.data_type))
+    }
+}
+
+pub(crate) trait FileExtension {
+    fn has_extension<S: AsRef<str>>(&self, extensions: &[S]) -> bool;
+    fn is_image(&self) -> bool {
+        self.has_extension(&[
+            "jpg", "jpeg", "jpe", "jif", "jfif", "jfi", "png", "gif", "webp", "tiff", "tif", "svg",
+            "svgz",
+        ])
+    }
+    fn is_json(&self) -> bool {
+        self.has_extension(&["json"])
+    }
+    fn is_cbor(&self) -> bool {
+        self.has_extension(&["cbor"])
+    }
+}
+
+impl<P: AsRef<Path>> FileExtension for P {
+    fn has_extension<S: AsRef<str>>(&self, extensions: &[S]) -> bool {
+        if let Some(extension) = self.as_ref().extension().and_then(OsStr::to_str) {
+            return extensions
+                .iter()
+                .any(|x| x.as_ref().eq_ignore_ascii_case(extension));
+        }
+
+        false
     }
 }

@@ -24,6 +24,7 @@ pub enum ChapterDownloadingState {
         index: usize,
         len: usize,
     },
+    FetchingAtHomeData,
 }
 
 pub type ChapterDownloadTaskState = DownloadTaskState<ChapterObject, ChapterDownloadingState>;

@@ -4,14 +4,33 @@ use std::{
 };
 
 use bytes::Bytes;
+use mangadex_api::utils::download::chapter::DownloadMode as ApiDownloadMode;
 use uuid::Uuid;
 
-use crate::{data_push::Push, DirsOptions};
+use crate::{data_push::Push, download::chapter::task::DownloadMode, DirsOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Mode {
     Data,
     DataSaver,
+}
+
+impl From<ApiDownloadMode> for Mode {
+    fn from(value: ApiDownloadMode) -> Self {
+        match value {
+            ApiDownloadMode::Normal => Self::Data,
+            ApiDownloadMode::DataSaver => Self::DataSaver,
+        }
+    }
+}
+
+impl From<DownloadMode> for Mode {
+    fn from(value: DownloadMode) -> Self {
+        match value {
+            DownloadMode::Normal => Self::Data,
+            DownloadMode::DataSaver => Self::DataSaver,
+        }
+    }
 }
 
 impl Default for Mode {
