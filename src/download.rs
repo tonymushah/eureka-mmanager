@@ -14,6 +14,7 @@ where
     fn get(&self) -> impl Future<Output = Result<Addr<T>, MailboxError>> + Send;
 }
 
+pub mod chapter;
 pub mod cover;
 pub mod manga;
 pub mod messages;
