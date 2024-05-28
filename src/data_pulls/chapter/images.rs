@@ -11,6 +11,12 @@ pub struct ChapterImagesData {
     pub data_saver: Vec<String>,
 }
 
+impl ChapterImagesData {
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty() && self.data_saver.is_empty()
+    }
+}
+
 fn m_read_dir<P: AsRef<Path>>(path: P) -> Vec<String> {
     read_dir(path)
         .map(|dir| {

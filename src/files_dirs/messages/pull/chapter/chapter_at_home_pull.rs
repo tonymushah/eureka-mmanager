@@ -1,8 +1,11 @@
+use std::{fs::read_dir, path::Path};
+
 use actix::prelude::*;
 use uuid::Uuid;
 
 use crate::{
     data_pulls::{chapter::images::ChapterImagesData, Pull},
+    files_dirs::FileExtension,
     DirsOptions, ManagerCoreResult,
 };
 
@@ -28,5 +31,26 @@ impl Message for ChapterImagesPullMessage {
 impl Pull<ChapterImagesData, ChapterImagesPullMessage> for DirsOptions {
     fn pull(&self, id: ChapterImagesPullMessage) -> ManagerCoreResult<ChapterImagesData> {
         self.pull(Into::<Uuid>::into(id))
+    }
+}
+
+fn get_data<P: AsRef<Path>>(p: P) -> Vec<String> {
+    read_dir(p)
+        .map(|read| {
+            read.flatten()
+                .map(|p| p.path())
+                .filter(|p| p.is_image())
+                .flat_map(|p| Some(String::from(p.as_os_str().to_str()?)))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
+impl Handler<ChapterImagesPullMessage> for DirsOptions {
+    type Result = <ChapterImagesPullMessage as Message>::Result;
+    fn handle(&mut self, msg: ChapterImagesPullMessage, _ctx: &mut Self::Context) -> Self::Result {
+        let data = get_data(self.chapters_id_data_add(msg.0));
+        let data_saver = get_data(self.chapters_id_data_saver_add(msg.0));
+        Ok(ChapterImagesData { data, data_saver })
     }
 }

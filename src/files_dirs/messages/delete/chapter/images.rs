@@ -3,12 +3,30 @@ use std::fs::remove_dir_all;
 use actix::prelude::*;
 use uuid::Uuid;
 
-use crate::DirsOptions;
+use crate::{data_push::chapter::image::Mode, download::chapter::task::DownloadMode, DirsOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ChapterImages {
     Data,
     DataSaver,
+}
+
+impl From<Mode> for ChapterImages {
+    fn from(value: Mode) -> Self {
+        match value {
+            Mode::Data => Self::Data,
+            Mode::DataSaver => Self::DataSaver,
+        }
+    }
+}
+
+impl From<DownloadMode> for ChapterImages {
+    fn from(value: DownloadMode) -> Self {
+        match value {
+            DownloadMode::Normal => Self::Data,
+            DownloadMode::DataSaver => Self::DataSaver,
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +43,7 @@ pub enum DeleteChapterImagesError {
 pub struct DeleteChapterImagesMessage {
     id: Uuid,
     images: ChapterImages,
+    ignore_conflict: bool,
 }
 
 impl DeleteChapterImagesMessage {
@@ -32,6 +51,13 @@ impl DeleteChapterImagesMessage {
         Self {
             id,
             images: images.into(),
+            ignore_conflict: false,
+        }
+    }
+    pub(crate) fn ignore_conflict(self, ignore: bool) -> Self {
+        Self {
+            ignore_conflict: ignore,
+            ..self
         }
     }
 }
@@ -49,17 +75,18 @@ impl Handler<DeleteChapterImagesMessage> for DirsOptions {
     ) -> Self::Result {
         let data_path = self.chapters_id_data_add(msg.id);
         let data_saver_path = self.chapters_id_data_saver_add(msg.id);
-        if data_path.exists() && data_saver_path.exists() {
-            match msg.images {
-                ChapterImages::Data => {
-                    remove_dir_all(data_path)?;
-                    Ok(())
-                }
-                ChapterImages::DataSaver => {
-                    remove_dir_all(data_saver_path)?;
-                    Ok(())
-                }
+        let remove = || match msg.images {
+            ChapterImages::Data => {
+                remove_dir_all(&data_path)?;
+                Ok(())
             }
+            ChapterImages::DataSaver => {
+                remove_dir_all(&data_saver_path)?;
+                Ok(())
+            }
+        };
+        if (data_path.exists() && data_saver_path.exists()) || msg.ignore_conflict {
+            remove()
         } else {
             Err(crate::Error::DeleteChapterImages(
                 DeleteChapterImagesError::Conflict,
