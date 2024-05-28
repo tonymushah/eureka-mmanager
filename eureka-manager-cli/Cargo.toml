@@ -4,4 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+actix = "0.13.3"
+anyhow = "1.0.86"
 api = { path = "../", package = "mangadex-desktop-api2" }
+clap = { version = "4.5.4", features = ["derive"] }
+fern = "0.6.2"
+file_listing = { path = "../id_list_txt_reader", package = "id_list_txt_reader" }
