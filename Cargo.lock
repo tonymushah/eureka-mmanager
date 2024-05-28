@@ -479,6 +479,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "eureka-manager-cli"
+version = "0.1.0"
+dependencies = [
+ "mangadex-desktop-api2",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

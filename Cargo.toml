@@ -57,4 +57,4 @@ once_cell = "1.19"
 toml = "0.8"
 
 [workspace]
-members = ["id_list_txt_reader"]
+members = [ "eureka-manager-cli","id_list_txt_reader"]
