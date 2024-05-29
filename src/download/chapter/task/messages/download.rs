@@ -84,6 +84,7 @@ impl Handler<StartDownload> for Task {
                         let current_images =
                             dir_options.send(ChapterImagesPullMessage(id)).await??;
                         let mut images: HashMap<String, usize> = Default::default();
+                        // getting current images size
                         match mode {
                             crate::download::chapter::task::DownloadMode::Normal => {
                                 for image in &current_images.data {
@@ -185,28 +186,36 @@ impl Handler<StartDownload> for Task {
                             match res_bytes {
                                 Ok(b) => {
                                     if let Err(e) = dir_options
-                                        .send(PushDataMessage::new(ChapterImagePushEntry::new(
-                                            id,
-                                            filename.clone(),
-                                            b,
-                                        )))
+                                        .send(PushDataMessage::new(
+                                            ChapterImagePushEntry::new(id, filename.clone(), b)
+                                                .mode(mode),
+                                        ))
                                         .await?
                                     {
                                         log::error!("[chapter|{id}|{filename}]>write - {e}");
                                     }
                                 }
                                 Err(e) => {
-                                    mark_have_error();
-                                    log::error!("[chapter|{id}|{filename}]>write - {e}");
-                                    if let Err(e) = dir_options
-                                        .send(PushDataMessage::new(ChapterImagePushEntry::new(
-                                            id,
-                                            filename.clone(),
-                                            Bytes::new(),
-                                        )))
-                                        .await?
+                                    if let mangadex_api_types_rust::error::Error::SkippedDownload(
+                                        _,
+                                    ) = &e
                                     {
+                                    } else {
+                                        mark_have_error();
                                         log::error!("[chapter|{id}|{filename}]>write - {e}");
+                                        if let Err(e) = dir_options
+                                            .send(PushDataMessage::new(
+                                                ChapterImagePushEntry::new(
+                                                    id,
+                                                    filename.clone(),
+                                                    Bytes::new(),
+                                                )
+                                                .mode(mode),
+                                            ))
+                                            .await?
+                                        {
+                                            log::error!("[chapter|{id}|{filename}]>write - {e}");
+                                        }
                                     }
                                 }
                             }
