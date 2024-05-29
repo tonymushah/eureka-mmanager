@@ -54,15 +54,18 @@ impl Handler<StartDownload> for Task {
                     async move {
                         println!("starting");
                         // Getting manager state data
+
                         let manager_state = manager.send(GetManagerStateMessage).await?;
                         let client = manager_state.send(GetClientMessage).await?;
                         let dir_options = manager_state.send(GetDirsOptionsMessage).await?;
                         let history = manager_state.send(GetHistoryMessage).await?;
-
+                        println!("fetched required data");
                         // fetching chapter data
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingData));
+                        println!("send data");
                         // insert data in history
                         history.send(InsertMessage::new(entry).commit()).await??;
+                        println!("history send data");
                         let res = client
                             .chapter()
                             .id(id)
@@ -70,11 +73,12 @@ impl Handler<StartDownload> for Task {
                             .includes(ChapterRequiredRelationship::get_includes())
                             .send()
                             .await?;
+                        println!("fetch data");
                         // push chapter data to the dirs_option actor
                         dir_options
                             .send(PushDataMessage::new(res.data.clone()).verify(true))
                             .await??;
-
+                        println!("fetch data");
                         // Getting fetching AtHome data
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingAtHomeData));
                         let current_images =

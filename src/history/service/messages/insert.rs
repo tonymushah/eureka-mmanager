@@ -6,7 +6,7 @@ use crate::{
     history::{
         history_w_file::traits::{AsyncAutoCommitRollbackInsert, AutoCommitRollbackInsert},
         service::HistoryActorService,
-        AsyncInsert, HistoryEntry, Insert,
+        AsyncInsert, HistoryEntry, HistoryWFile, Insert,
     },
     ManagerCoreResult,
 };
@@ -69,12 +69,34 @@ impl Message for InsertMessage {
 
 impl Handler<InsertMessage> for HistoryActorService {
     type Result = ManagerCoreResult<()>;
-    fn handle(&mut self, msg: InsertMessage, _ctx: &mut Self::Context) -> Self::Result {
-        if msg.auto_commit {
-            <Self as AutoCommitRollbackInsert<HistoryEntry>>::insert(self, msg.entry)
+    fn handle(&mut self, msg: InsertMessage, ctx: &mut Self::Context) -> Self::Result {
+        println!("getted history message");
+        if let Some(history) = self.get_history_mut(msg.data_type) {
+            if msg.auto_commit {
+                <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(
+                    history, msg.entry,
+                )?;
+            } else {
+                <HistoryWFile as Insert<HistoryEntry>>::insert(history, msg.entry)?;
+            }
         } else {
-            <Self as Insert<HistoryEntry>>::insert(self, msg.entry)
+            HistoryWFile::init(msg.data_type, self.dirs.clone()).into_actor(self).map(move|res, this, _| {
+                match res {
+                    Ok(mut history) => {
+                        if msg.auto_commit {
+                        let _ = <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(&mut history, msg.entry);
+                    } else {
+                        let _ = <HistoryWFile as Insert<HistoryEntry>>::insert(&mut history, msg.entry);
+                    }
+                    this.files.insert(msg.data_type, history);
+                    }
+                    Err(e) => {
+                        log::error!("{e}");
+                    }
+                };
+            }).wait(ctx);
         }
+        Ok(())
     }
 }
 

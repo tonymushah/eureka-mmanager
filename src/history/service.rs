@@ -10,10 +10,8 @@ use super::{HistoryEntry, HistoryWFile, Remove};
 pub mod messages;
 
 use crate::history::{
-    history_w_file::traits::{
-        AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable,
-    },
-    Insert, IsIn,
+    history_w_file::traits::{AutoCommitRollbackRemove, Commitable, RollBackable},
+    IsIn,
 };
 
 #[derive(Debug, Clone)]
@@ -59,16 +57,6 @@ impl HistoryActorService {
     fn get_history_mut(&mut self, rel: RelationshipType) -> Option<&mut HistoryWFile> {
         self.files.get_mut(&rel)
     }
-    fn get_history_or_init(
-        &mut self,
-        rel: RelationshipType,
-    ) -> ManagerCoreResult<&mut HistoryWFile> {
-        if let std::collections::hash_map::Entry::Occupied(mut e) = self.files.entry(rel) {
-            e.insert(HistoryWFile::init(rel, self.dirs.clone())?);
-        }
-        self.get_history_mut(rel)
-            .ok_or(crate::Error::HistoryFileNotFound(rel))
-    }
 }
 
 impl IsIn<HistoryEntry> for HistoryActorService {
@@ -77,15 +65,6 @@ impl IsIn<HistoryEntry> for HistoryActorService {
         self.get_history(to_use.data_type)
             .map(|h| h.is_in(to_use).unwrap_or(false))
             .unwrap_or(false)
-    }
-}
-
-impl Insert<HistoryEntry> for HistoryActorService {
-    type Output = ManagerCoreResult<()>;
-    fn insert(&mut self, input: HistoryEntry) -> Self::Output {
-        let file = self.get_history_or_init(input.data_type)?;
-        <HistoryWFile as Insert<HistoryEntry>>::insert(file, input)?;
-        Ok(())
     }
 }
 
@@ -116,18 +95,6 @@ impl RollBackable for HistoryActorService {
         for (_, file) in self.files.iter_mut() {
             <HistoryWFile as RollBackable>::rollback(file)?;
         }
-        Ok(())
-    }
-}
-
-impl AutoCommitRollbackInsert<HistoryEntry> for HistoryActorService {
-    type Output = ManagerCoreResult<()>;
-    fn insert(
-        &mut self,
-        input: HistoryEntry,
-    ) -> <Self as AutoCommitRollbackInsert<HistoryEntry>>::Output {
-        let file = self.get_history_or_init(input.data_type)?;
-        <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(file, input)?;
         Ok(())
     }
 }
