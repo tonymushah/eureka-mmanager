@@ -70,7 +70,6 @@ impl Message for InsertMessage {
 impl Handler<InsertMessage> for HistoryActorService {
     type Result = ManagerCoreResult<()>;
     fn handle(&mut self, msg: InsertMessage, ctx: &mut Self::Context) -> Self::Result {
-        println!("getted history message");
         if let Some(history) = self.get_history_mut(msg.data_type) {
             if msg.auto_commit {
                 <HistoryWFile as AutoCommitRollbackInsert<HistoryEntry>>::insert(
