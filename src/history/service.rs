@@ -23,8 +23,15 @@ pub struct HistoryActorService {
 }
 
 impl HistoryActorService {
-    pub async fn new(dirs: Addr<DirsOptions>) -> Self {
-        let files = dirs
+    pub fn new_blocking(dirs: Addr<DirsOptions>) -> Self {
+        Self {
+            dirs,
+            files: Default::default(),
+        }
+    }
+    pub async fn load_files(&mut self) {
+        self.files = self
+            .dirs
             .send(Into::<JoinHistoryMessage<&'static str>>::into(""))
             .await
             .map(|p| {
@@ -40,8 +47,11 @@ impl HistoryActorService {
             .into_iter()
             .map(|file| (*file.get_history().get_data_type(), file))
             .collect();
-
-        Self { files, dirs }
+    }
+    pub async fn new(dirs: Addr<DirsOptions>) -> Self {
+        let mut this = Self::new_blocking(dirs);
+        this.load_files().await;
+        this
     }
     fn get_history(&self, rel: RelationshipType) -> Option<&HistoryWFile> {
         self.files.get(&rel)

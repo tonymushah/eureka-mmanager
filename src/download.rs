@@ -31,23 +31,24 @@ pub struct DownloadManager {
 }
 
 impl DownloadManager {
-    pub fn new(
-        dir_option: Addr<DirsOptions>,
-        client: MangaDexClient,
-        history: Addr<HistoryActorService>,
-    ) -> Self {
+    pub async fn new(dir_option: Addr<DirsOptions>, client: MangaDexClient) -> Self {
+        let history = HistoryActorService::new(dir_option.clone()).await.start();
         let state = DownloadManagerState::new(dir_option, client, history).start();
-        {
-            Self {
-                manga: MangaDownloadManager::new(state.clone()).start(),
-                cover: CoverDownloadManager::new(state.clone()).start(),
-                chapter: ChapterDownloadManager::new(state.clone()).start(),
-                state,
-            }
-        }
+        state.into()
     }
 }
 
 impl Actor for DownloadManager {
     type Context = Context<Self>;
+}
+
+impl From<Addr<DownloadManagerState>> for DownloadManager {
+    fn from(state: Addr<DownloadManagerState>) -> Self {
+        Self {
+            manga: MangaDownloadManager::new(state.clone()).start(),
+            cover: CoverDownloadManager::new(state.clone()).start(),
+            chapter: ChapterDownloadManager::new(state.clone()).start(),
+            state,
+        }
+    }
 }
