@@ -3,13 +3,13 @@ use std::{future::Future, ops::Deref, task::Poll};
 use actix::prelude::*;
 use tokio::sync::watch::Receiver;
 
-use crate::ManagerCoreResult;
+use crate::{ManagerCoreResult, OwnedError};
 
 #[derive(Debug)]
 pub enum DownloadTaskState<T, L> {
     Pending,
     Loading(L),
-    Error(crate::Error),
+    Error(OwnedError),
     Done(T),
     Canceled,
 }
@@ -57,7 +57,7 @@ impl<T, L> From<ManagerCoreResult<T>> for DownloadTaskState<T, L> {
     fn from(value: ManagerCoreResult<T>) -> Self {
         match value {
             Ok(v) => Self::Done(v),
-            Err(v) => Self::Error(v),
+            Err(v) => Self::Error(v.into()),
         }
     }
 }
@@ -78,7 +78,7 @@ pub enum WaitForFinishedError {
     #[error("The task was been canceled")]
     Canceled,
     #[error("{0}")]
-    Error(String),
+    Error(OwnedError),
     #[error(transparent)]
     RecvError(#[from] tokio::sync::watch::error::RecvError),
 }
@@ -99,7 +99,7 @@ where
                         DownloadTaskState::Pending => Poll::Pending,
                         DownloadTaskState::Loading(_) => Poll::Pending,
                         DownloadTaskState::Error(e) => {
-                            Poll::Ready(Err(WaitForFinishedError::Error(e.to_string())))
+                            Poll::Ready(Err(WaitForFinishedError::Error(e.clone())))
                         }
                         DownloadTaskState::Done(d) => Poll::Ready(Ok(d.clone())),
                         DownloadTaskState::Canceled => {
