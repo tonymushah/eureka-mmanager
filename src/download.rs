@@ -5,7 +5,10 @@ use mangadex_api::MangaDexClient;
 
 use crate::{history::service::HistoryActorService, DirsOptions};
 
-use self::{cover::CoverDownloadManager, manga::MangaDownloadManager, state::DownloadManagerState};
+use self::{
+    chapter::ChapterDownloadManager, cover::CoverDownloadManager, manga::MangaDownloadManager,
+    state::DownloadManagerState,
+};
 
 pub trait GetManager<T>
 where
@@ -24,6 +27,7 @@ pub struct DownloadManager {
     state: Addr<DownloadManagerState>,
     manga: Addr<MangaDownloadManager>,
     cover: Addr<CoverDownloadManager>,
+    chapter: Addr<ChapterDownloadManager>,
 }
 
 impl DownloadManager {
@@ -37,6 +41,7 @@ impl DownloadManager {
             Self {
                 manga: MangaDownloadManager::new(state.clone()).start(),
                 cover: CoverDownloadManager::new(state.clone()).start(),
+                chapter: ChapterDownloadManager::new(state.clone()).start(),
                 state,
             }
         }

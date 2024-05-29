@@ -1,6 +1,7 @@
-use std::{sync::Arc, sync::Mutex};
+use std::thread::spawn;
 
 use actix::prelude::*;
+use tokio::runtime::Runtime;
 
 use crate::download::{
     manga::{messages::MangaDownloadMessage, MangaDownloadManager as Manager},
@@ -38,25 +39,15 @@ impl Message for DMMangaDownloadMessage {
 
 impl Handler<DMMangaDownloadMessage> for DownloadManager {
     type Result = <DMMangaDownloadMessage as Message>::Result;
-    fn handle(&mut self, msg: DMMangaDownloadMessage, ctx: &mut Self::Context) -> Self::Result {
-        let mutex = Arc::new(Mutex::<
-            Option<crate::ManagerCoreResult<<MangaDownloadMessage as Message>::Result>>,
-        >::new(None));
-        let mutex_ = mutex.clone();
-        self.manga
-            .send(msg.0)
-            .into_actor(self)
-            .map(move |d, _, _| {
-                if let Ok(mut write) = mutex_.lock() {
-                    write.replace(d.map_err(crate::Error::MailBox));
-                }
-            })
-            .wait(ctx);
-        let lock = mutex.lock();
-        if let Ok(mut d) = lock {
-            d.take().ok_or(crate::Error::NotInitialized)?
-        } else {
-            Err(crate::Error::NotInitialized)
-        }
+    fn handle(&mut self, msg: DMMangaDownloadMessage, _ctx: &mut Self::Context) -> Self::Result {
+        let manga = self.manga.clone();
+        spawn(
+            move || -> crate::ManagerCoreResult<<MangaDownloadMessage as Message>::Result> {
+                let runtime = Runtime::new()?;
+                Ok(runtime.block_on(async move { manga.send(msg.0).await })?)
+            },
+        )
+        .join()
+        .map_err(|e| crate::Error::StdThreadJoin(format!("{:#?}", e)))?
     }
 }
