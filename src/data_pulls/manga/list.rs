@@ -50,17 +50,19 @@ impl Stream for MangaListDataPull {
 
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        loop {
-            if let Some(entry) = self.read_dir.next() {
-                match Self::dir_entry_to_manga(entry) {
-                    Ok(o) => return Poll::Ready(Some(o)),
-                    Err(e) => log::error!("{}", e),
+        if let Some(entry) = self.read_dir.next() {
+            match Self::dir_entry_to_manga(entry) {
+                Ok(o) => Poll::Ready(Some(o)),
+                Err(e) => {
+                    log::error!("{}", e);
+                    cx.waker().wake_by_ref();
+                    Poll::Pending
                 }
-            } else {
-                return Poll::Ready(None);
             }
+        } else {
+            Poll::Ready(None)
         }
     }
 }
