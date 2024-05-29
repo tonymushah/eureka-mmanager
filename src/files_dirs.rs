@@ -124,6 +124,7 @@ impl DirsOptions {
             false
         }
     }
+
     fn manga(&self, id: Uuid) -> bool {
         self.mangas_add(format!("{id}.json")).exists()
     }
