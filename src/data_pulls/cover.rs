@@ -2,6 +2,10 @@ pub mod filter;
 pub mod ids;
 pub mod list;
 
+pub use self::{
+    filter::CoverListDataPullFilterParams, ids::CoverIdsListDataPull, list::CoverListDataPull,
+};
+
 use std::{cmp::Ordering, fs::File, io::BufReader};
 
 use mangadex_api_schema_rust::v5::{CoverData, CoverObject};
@@ -12,7 +16,6 @@ use uuid::Uuid;
 use crate::DirsOptions;
 
 use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
-use filter::CoverListDataPullFilterParams;
 
 impl<S> AsyncIntoSorted<CoverSortOrder> for S
 where
