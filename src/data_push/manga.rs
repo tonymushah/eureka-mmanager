@@ -4,8 +4,10 @@ use std::{
 };
 
 use itertools::Itertools;
-use mangadex_api_schema_rust::v5::MangaObject;
-use mangadex_api_types_rust::{ReferenceExpansionResource, RelationshipType};
+use mangadex_api_schema_rust::{v5::MangaObject, ApiData};
+use mangadex_api_types_rust::{
+    ReferenceExpansionResource, RelationshipType, ResponseType, ResultType,
+};
 use uuid::Uuid;
 
 use crate::{data_pulls::Pull, DirsOptions};
@@ -67,7 +69,14 @@ impl MangaRequiredRelationship {
 impl Push<MangaObject> for DirsOptions {
     fn push(&mut self, data: MangaObject) -> crate::ManagerCoreResult<()> {
         let mut file = BufWriter::new(File::create(self.mangas_add(format!("{}.json", data.id)))?);
-        serde_json::to_writer(&mut file, &data)?;
+        serde_json::to_writer(
+            &mut file,
+            &ApiData {
+                response: ResponseType::Entity,
+                data,
+                result: ResultType::Ok,
+            },
+        )?;
         file.flush()?;
         Ok(())
     }
