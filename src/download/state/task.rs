@@ -76,7 +76,7 @@ impl<T, L> WaitForFinished<T, L> {
     pub fn new(state: Receiver<DownloadTaskState<T, L>>) -> Self {
         Self {
             state,
-            waker_on_load: false,
+            waker_on_load: true,
         }
     }
     pub fn waker_on_load(self, waker_on_load: bool) -> Self {
