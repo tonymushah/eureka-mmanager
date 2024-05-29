@@ -7,11 +7,13 @@ use crate::download::{
     state::WaitForFinished,
 };
 
-impl Handler<WaitForFinishedMessage<Object, State>> for Task {
-    type Result = <WaitForFinishedMessage<Object, State> as Message>::Result;
+pub type WaitForFinishedCoverMessage = WaitForFinishedMessage<Object, State>;
+
+impl Handler<WaitForFinishedCoverMessage> for Task {
+    type Result = <WaitForFinishedCoverMessage as Message>::Result;
     fn handle(
         &mut self,
-        _msg: WaitForFinishedMessage<Object, State>,
+        _msg: WaitForFinishedCoverMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         if !self.have_been_read {

@@ -1,4 +1,5 @@
 pub mod new_task;
+pub use self::new_task::ChapterDownloadMessage;
 
 use actix::{Handler, Message};
 

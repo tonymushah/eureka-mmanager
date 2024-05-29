@@ -1,3 +1,4 @@
+pub mod chapter;
 pub mod cover;
 pub mod manga;
 pub mod state;
@@ -30,6 +31,12 @@ pub struct StartDownload;
 
 #[derive(Debug, Default)]
 pub struct WaitForFinishedMessage<T: ?Sized, L: ?Sized>(PhantomData<T>, PhantomData<L>);
+
+impl<T: ?Sized, L: ?Sized> WaitForFinishedMessage<T, L> {
+    pub fn new() -> Self {
+        Self(PhantomData::<T>, PhantomData::<L>)
+    }
+}
 
 impl<T, L> Message for WaitForFinishedMessage<T, L>
 where
