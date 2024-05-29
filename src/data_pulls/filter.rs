@@ -46,17 +46,19 @@ where
     fn poll_next(
         mut self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        loop {
+    ) -> Poll<Option<Self::Item>> {
             match ready!(self.as_mut().stream.as_mut().poll_next(cx)) {
                 Some(m) => {
                     if self.params.is_valid(&m) {
-                        return Poll::Ready(Some(m));
+                        Poll::Ready(Some(m))
+                    }else {
+                        cx.waker().wake_by_ref();
+                        Poll::Pending
                     }
                 }
-                None => return Poll::Ready(None),
+                None => Poll::Ready(None),
             }
-        }
+        
     }
 }
 

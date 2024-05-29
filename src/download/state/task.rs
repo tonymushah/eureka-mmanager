@@ -1,4 +1,8 @@
-use std::{future::Future, ops::Deref, task::Poll};
+use std::{
+    future::Future,
+    ops::Deref,
+    task::{ready, Poll},
+};
 
 use actix::prelude::*;
 use tokio::sync::watch::Receiver;
@@ -65,11 +69,21 @@ impl<T, L> From<ManagerCoreResult<T>> for DownloadTaskState<T, L> {
 #[derive(Debug, Clone, MessageResponse)]
 pub struct WaitForFinished<T, L> {
     state: Receiver<DownloadTaskState<T, L>>,
+    waker_on_load: bool,
 }
 
 impl<T, L> WaitForFinished<T, L> {
     pub fn new(state: Receiver<DownloadTaskState<T, L>>) -> Self {
-        Self { state }
+        Self {
+            state,
+            waker_on_load: false,
+        }
+    }
+    pub fn waker_on_load(self, waker_on_load: bool) -> Self {
+        Self {
+            waker_on_load,
+            ..self
+        }
     }
 }
 
@@ -88,28 +102,30 @@ where
     T: Clone,
 {
     type Output = Result<T, WaitForFinishedError>;
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-    ) -> Poll<Self::Output> {
-        match self.state.has_changed() {
-            Ok(changed) => {
-                if changed {
-                    match self.state.borrow().deref() {
-                        DownloadTaskState::Pending => Poll::Pending,
-                        DownloadTaskState::Loading(_) => Poll::Pending,
-                        DownloadTaskState::Error(e) => {
-                            Poll::Ready(Err(WaitForFinishedError::Error(e.clone())))
-                        }
-                        DownloadTaskState::Done(d) => Poll::Ready(Ok(d.clone())),
-                        DownloadTaskState::Canceled => {
-                            Poll::Ready(Err(WaitForFinishedError::Canceled))
-                        }
+    // TODO test WaitForFinished with and without cx.waker().wake_by_ref()
+    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
+        let mut state = self.state.clone();
+        let mut changed = Box::pin(state.changed());
+        match ready!(changed.as_mut().poll(cx)) {
+            Ok(_) => match self.state.borrow().deref() {
+                DownloadTaskState::Pending => {
+                    if self.waker_on_load {
+                        cx.waker().wake_by_ref();
                     }
-                } else {
                     Poll::Pending
                 }
-            }
+                DownloadTaskState::Loading(_) => {
+                    if self.waker_on_load {
+                        cx.waker().wake_by_ref();
+                    }
+                    Poll::Pending
+                }
+                DownloadTaskState::Error(e) => {
+                    Poll::Ready(Err(WaitForFinishedError::Error(e.clone())))
+                }
+                DownloadTaskState::Done(d) => Poll::Ready(Ok(d.clone())),
+                DownloadTaskState::Canceled => Poll::Ready(Err(WaitForFinishedError::Canceled)),
+            },
             Err(e) => Poll::Ready(Err(WaitForFinishedError::RecvError(e))),
         }
     }
