@@ -138,4 +138,7 @@ impl AutoCommitRollbackRemove<HistoryEntry> for HistoryActorService {
 
 impl Actor for HistoryActorService {
     type Context = Context<Self>;
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        let _ = self.commit();
+    }
 }

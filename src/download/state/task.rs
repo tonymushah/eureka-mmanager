@@ -31,17 +31,17 @@ impl TaskState {
     pub fn is_finished(&self) -> bool {
         *self == Self::Done || *self == Self::Canceled || *self == Self::Error
     }
+    pub fn is_pending(&self) -> bool {
+        matches!(*self, Self::Pending)
+    }
+    pub fn is_loading(&self) -> bool {
+        matches!(*self, Self::Loading)
+    }
 }
 
 impl<T, L> From<DownloadTaskState<T, L>> for TaskState {
     fn from(value: DownloadTaskState<T, L>) -> Self {
-        match value {
-            DownloadTaskState::Pending => Self::Pending,
-            DownloadTaskState::Loading(_) => Self::Loading,
-            DownloadTaskState::Error(_) => Self::Error,
-            DownloadTaskState::Done(_) => Self::Done,
-            DownloadTaskState::Canceled => Self::Canceled,
-        }
+        (&value).into()
     }
 }
 

@@ -9,7 +9,7 @@ pub mod history;
 
 mod r#core;
 
-pub use crate::r#core::{DirsOptionsVerificationError, Error, ErrorType};
+pub use crate::r#core::{DirsOptionsVerificationError, Error, ErrorType, OwnedError};
 
 pub use files_dirs::{
     messages::{
