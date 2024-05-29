@@ -55,12 +55,14 @@ impl Message for ChapterDownloadMessage {
 impl Handler<ChapterDownloadMessage> for Manager {
     type Result = <ChapterDownloadMessage as Message>::Result;
     fn handle(&mut self, msg: ChapterDownloadMessage, ctx: &mut Self::Context) -> Self::Result {
+        println!("new task d");
         let task = self
             .tasks
             .entry(msg.id)
             .or_insert_with(|| Task::new(msg.id, msg.mode, ctx.address()).start())
             .clone();
         let re_task = task.clone();
+        println!("new task");
         self.notify.notify_waiters();
 
         if let DownloadMessageState::Downloading = msg.state {

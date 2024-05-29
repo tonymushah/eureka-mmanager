@@ -39,6 +39,7 @@ use crate::{
 impl Handler<StartDownload> for Task {
     type Result = ();
     fn handle(&mut self, _msg: StartDownload, ctx: &mut Self::Context) -> Self::Result {
+        println!("starting...");
         if self.handle(TaskStateMessage, ctx) != TaskState::Loading {
             self.sender
                 .send_replace(DownloadTaskState::Loading(State::Preloading));
@@ -51,6 +52,7 @@ impl Handler<StartDownload> for Task {
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
+                        println!("starting");
                         // Getting manager state data
                         let manager_state = manager.send(GetManagerStateMessage).await?;
                         let client = manager_state.send(GetClientMessage).await?;
