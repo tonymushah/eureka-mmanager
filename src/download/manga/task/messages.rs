@@ -1,5 +1,5 @@
-mod cancel;
-mod download;
-mod state;
-mod sub;
-mod wait;
+pub mod cancel;
+pub mod download;
+pub mod state;
+pub mod sub;
+pub mod wait;

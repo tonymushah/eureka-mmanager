@@ -7,11 +7,13 @@ use crate::download::{
     state::WaitForFinished,
 };
 
-impl Handler<WaitForFinishedMessage<MangaObject, MangaDonwloadingState>> for MangaDownloadTask {
-    type Result = <WaitForFinishedMessage<MangaObject, MangaDonwloadingState> as Message>::Result;
+pub type WaitForFinishedMangaMessage = WaitForFinishedMessage<MangaObject, MangaDonwloadingState>;
+
+impl Handler<WaitForFinishedMangaMessage> for MangaDownloadTask {
+    type Result = <WaitForFinishedMangaMessage as Message>::Result;
     fn handle(
         &mut self,
-        _msg: WaitForFinishedMessage<MangaObject, MangaDonwloadingState>,
+        _msg: WaitForFinishedMangaMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         if !self.have_been_read {

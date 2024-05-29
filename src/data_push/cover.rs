@@ -48,11 +48,11 @@ impl Push<CoverObject> for DirsOptions {
             })
             .unwrap_or_default()
         {
+            self.push(data)
+        } else {
             Err(crate::Error::MissingRelationships(vec![
                 RelationshipType::Manga,
             ]))
-        } else {
-            self.push(data)
         }
     }
 }

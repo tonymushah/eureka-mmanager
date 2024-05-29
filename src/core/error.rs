@@ -67,7 +67,7 @@ pub enum Error {
     CiboriumSerIo(#[from] ciborium::ser::Error<std::io::Error>),
     #[error("Regex error {0}")]
     Regex(#[from] regex::Error),
-    #[error("Missing Relationship {:?}", 0)]
+    #[error("Missing Relationship {0:#?}")]
     MissingRelationships(Vec<RelationshipType>),
     #[error(transparent)]
     DeleteChapterImages(#[from] DeleteChapterImagesError),

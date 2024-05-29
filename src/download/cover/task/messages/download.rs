@@ -73,7 +73,9 @@ impl Handler<StartDownload> for Task {
                             let _ = this.sender.send(DownloadTaskState::Done(data));
                         }
                         Err(err) => {
-                            let _ = this.sender.send_replace(DownloadTaskState::Error(err));
+                            let _ = this
+                                .sender
+                                .send_replace(DownloadTaskState::Error(err.into()));
                         }
                     }),
                 ),

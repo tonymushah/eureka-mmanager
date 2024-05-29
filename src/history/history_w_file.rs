@@ -7,7 +7,6 @@ use std::{
 use actix::Addr;
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
-use tokio::runtime::Handle;
 
 use crate::{core::ManagerCoreResult, files_dirs::DirsOptions, Error, JoinHistoryMessage};
 
@@ -44,24 +43,15 @@ impl HistoryWFile {
             file: file.as_ref().to_path_buf(),
         })
     }
-    pub fn init(
+    pub async fn init(
         relationship_type: RelationshipType,
         dir_options: Addr<DirsOptions>,
     ) -> ManagerCoreResult<Self> {
-        let handle = Handle::current();
-        let path = std::thread::spawn(move || {
-            handle.block_on(async move {
-                let p = dir_options
-                    .send(JoinHistoryMessage(
-                        format!("{}.json", serde_json::to_string(&relationship_type)?)
-                            .replace('\"', ""),
-                    ))
-                    .await?;
-                Ok::<PathBuf, crate::Error>(p)
-            })
-        })
-        .join()
-        .map_err(|er| crate::Error::StdThreadJoin(format!("{:?}", er)))??;
+        let path = dir_options
+            .send(JoinHistoryMessage(
+                format!("{}.json", serde_json::to_string(&relationship_type)?).replace('\"', ""),
+            ))
+            .await?;
         let history = match Self::from_file(path.clone()) {
             Ok(data) => data,
             Err(_) => HistoryWFile::new(relationship_type, path),
