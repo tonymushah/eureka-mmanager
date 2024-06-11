@@ -3,7 +3,9 @@ use dev::ToEnvelope;
 use tokio::sync::watch::Receiver;
 
 use crate::download::{
-    messages::{CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage},
+    messages::{
+        CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage, WaitForFinishedMessage,
+    },
     state::{TaskState, WaitForFinished},
 };
 
@@ -109,5 +111,31 @@ pub trait AsyncCanBeWaited: AsyncState {
     type Loading;
     fn wait(
         &mut self,
-    ) -> impl std::future::Future<Output = WaitForFinished<Self::Ok, Self::Loading>> + Send;
+    ) -> impl std::future::Future<Output = MailBoxResult<WaitForFinished<Self::Ok, Self::Loading>>> + Send;
+}
+
+impl<A> AsyncCanBeWaited for Addr<A>
+where
+    A: Handler<SubcribeMessage<<A as State>::State>>
+        + Subscribe
+        + Handler<TaskStateMessage>
+        + State
+        + CanBeWaited
+        + Handler<WaitForFinishedMessage<<A as CanBeWaited>::Ok, <A as CanBeWaited>::Loading>>,
+    <A as State>::State: Send + Sync,
+    <A as CanBeWaited>::Loading: Send + Sync,
+    <A as CanBeWaited>::Ok: Send + Sync,
+    <A as Actor>::Context: ToEnvelope<A, SubcribeMessage<<A as State>::State>>
+        + ToEnvelope<A, TaskStateMessage>
+        + ToEnvelope<A, WaitForFinishedMessage<<A as CanBeWaited>::Ok, <A as CanBeWaited>::Loading>>,
+{
+    type Loading = <A as CanBeWaited>::Loading;
+    type Ok = <A as CanBeWaited>::Ok;
+    async fn wait(&mut self) -> MailBoxResult<WaitForFinished<Self::Ok, Self::Loading>> {
+        self.send(WaitForFinishedMessage::<
+            <A as CanBeWaited>::Ok,
+            <A as CanBeWaited>::Loading,
+        >::new())
+            .await
+    }
 }
