@@ -31,3 +31,32 @@ pub trait CanBeWaited: State {
     type Loading;
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading>;
 }
+
+pub trait AsyncCancelable {
+    async fn cancel(&self);
+}
+
+pub trait AsyncDownload {
+    async fn download(&self);
+}
+
+pub trait AsyncState
+where
+    Self::State: Into<TaskState>,
+{
+    type State;
+    async fn state(&self) -> TaskState {
+        self.inner_state().await.into()
+    }
+    async fn inner_state(&self) -> Self::State;
+}
+
+pub trait AsyncSubscribe: AsyncState {
+    async fn subscribe(&mut self) -> crate::ManagerCoreResult<Receiver<Self::State>>;
+}
+
+pub trait AsyncCanBeWaited: AsyncState {
+    type Ok;
+    type Loading;
+    async fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading>;
+}
