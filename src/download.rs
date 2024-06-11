@@ -22,6 +22,7 @@ pub mod cover;
 pub mod manga;
 pub mod messages;
 pub mod state;
+pub mod traits;
 
 pub struct DownloadManager {
     state: Addr<DownloadManagerState>,
