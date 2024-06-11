@@ -1,16 +1,23 @@
 use actix::{AsyncContext, Handler};
 
 use crate::download::{
-    manga::task::{MangaDownloadTask, MangaDownloadTaskState},
+    manga::task::{MangaDownloadTask as Task, MangaDownloadTaskState as State},
     messages::CancelTaskMessage,
+    traits::Cancelable,
 };
 
-impl Handler<CancelTaskMessage> for MangaDownloadTask {
+impl Handler<CancelTaskMessage> for Task {
     type Result = ();
     fn handle(&mut self, _msg: CancelTaskMessage, ctx: &mut Self::Context) -> Self::Result {
+        self.cancel(ctx)
+    }
+}
+
+impl Cancelable for Task {
+    fn cancel(&mut self, ctx: &mut Self::Context) {
         if let Some(handle) = self.handle.take() {
             ctx.cancel_future(handle);
         }
-        self.sender.send_replace(MangaDownloadTaskState::Canceled);
+        self.sender.send_replace(State::Canceled);
     }
 }
