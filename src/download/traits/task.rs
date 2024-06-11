@@ -3,7 +3,7 @@ use dev::ToEnvelope;
 use tokio::sync::watch::Receiver;
 
 use crate::download::{
-    messages::{CancelTaskMessage, StartDownload, TaskStateMessage},
+    messages::{CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage},
     state::{TaskState, WaitForFinished},
 };
 
@@ -85,8 +85,23 @@ where
 
 pub trait AsyncSubscribe: AsyncState {
     fn subscribe(
-        &mut self,
+        &self,
     ) -> impl std::future::Future<Output = crate::ManagerCoreResult<Receiver<Self::State>>> + Send;
+}
+
+impl<A> AsyncSubscribe for Addr<A>
+where
+    A: Handler<SubcribeMessage<<A as State>::State>>
+        + Subscribe
+        + Handler<TaskStateMessage>
+        + State,
+    <A as State>::State: Send + Sync,
+    <A as Actor>::Context:
+        ToEnvelope<A, SubcribeMessage<<A as State>::State>> + ToEnvelope<A, TaskStateMessage>,
+{
+    async fn subscribe(&self) -> crate::ManagerCoreResult<Receiver<Self::State>> {
+        self.send(SubcribeMessage::<Self::State>::new()).await?
+    }
 }
 
 pub trait AsyncCanBeWaited: AsyncState {

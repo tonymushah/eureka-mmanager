@@ -25,6 +25,12 @@ impl<T: 'static> Message for SubcribeMessage<T> {
     type Result = crate::ManagerCoreResult<tokio::sync::watch::Receiver<T>>;
 }
 
+impl<T: ?Sized> SubcribeMessage<T> {
+    pub fn new() -> Self {
+        Self(PhantomData::<T>)
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, Message)]
 #[rtype(result = "()")]
 pub struct StartDownload;
