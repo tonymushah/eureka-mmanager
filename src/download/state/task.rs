@@ -9,7 +9,7 @@ use tokio::sync::watch::Receiver;
 
 use crate::{ManagerCoreResult, OwnedError};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DownloadTaskState<T, L> {
     Pending,
     Loading(L),
