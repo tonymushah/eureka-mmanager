@@ -14,6 +14,7 @@ use crate::{
             },
             DownloadTaskState, TaskState,
         },
+        traits::task::Download,
     },
     files_dirs::messages::push::PushDataMessage,
     history::{
@@ -23,9 +24,8 @@ use crate::{
     ManagerCoreResult,
 };
 
-impl Handler<StartDownload> for Task {
-    type Result = ();
-    fn handle(&mut self, _msg: StartDownload, ctx: &mut Self::Context) -> Self::Result {
+impl Download for Task {
+    fn download(&mut self, ctx: &mut Self::Context) {
         if self.handle(TaskStateMessage, ctx) != TaskState::Loading {
             self.sender
                 .send_replace(DownloadTaskState::Loading(State::Preloading));
@@ -83,5 +83,12 @@ impl Handler<StartDownload> for Task {
                 ctx.cancel_future(t);
             }
         }
+    }
+}
+
+impl Handler<StartDownload> for Task {
+    type Result = ();
+    fn handle(&mut self, _msg: StartDownload, ctx: &mut Self::Context) -> Self::Result {
+        self.download(ctx);
     }
 }

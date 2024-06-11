@@ -149,6 +149,7 @@ impl Handler<IsInMessage> for DirsOptions {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) trait FileExtension {
     fn has_extension<S: AsRef<str>>(&self, extensions: &[S]) -> bool;
     fn is_image(&self) -> bool {

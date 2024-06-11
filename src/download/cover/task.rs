@@ -14,7 +14,7 @@ use crate::download::{
 
 use super::CoverDownloadManager;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum CoverDownloadingState {
     Preloading,
     FetchingData,
