@@ -5,22 +5,15 @@ use mangadex_api::MangaDexClient;
 use mangadex_api_types_rust::RelationshipType;
 use mangadex_desktop_api2::{
     download::{
-        chapter::{
-            messages::ChapterDownloadMessage,
-            task::{messages::wait::WaitForFinishedChapterMessage, DownloadMode},
-        },
-        cover::{
-            messages::new_task::CoverDownloadMessage,
-            task::messages::wait::WaitForFinishedCoverMessage,
-        },
-        manga::{
-            messages::MangaDownloadMessage, task::messages::wait::WaitForFinishedMangaMessage,
-        },
+        chapter::{messages::ChapterDownloadMessage, task::DownloadMode},
+        cover::messages::new_task::CoverDownloadMessage,
+        manga::messages::MangaDownloadMessage,
         messages::{
             chapter::GetChapterDownloadManagerMessage, cover::GetCoverDownloadManagerMessage,
             manga::GetMangaDownloadManagerMessage, state::GetManagerStateMessage,
         },
         state::{messages::get::GetDirsOptionsMessage, DownloadMessageState},
+        traits::task::AsyncCanBeWaited,
         DownloadManager,
     },
     files_dirs::messages::pull::{
@@ -95,7 +88,7 @@ fn main() -> anyhow::Result<()> {
                         .state(DownloadMessageState::Downloading),
                 )
                 .await?
-                .send(WaitForFinishedChapterMessage::new())
+                .wait()
                 .await?
                 .await?;
             println!("downloaded chapter [{}]", chapter.id);
@@ -113,7 +106,7 @@ fn main() -> anyhow::Result<()> {
                             .state(DownloadMessageState::Downloading),
                     )
                     .await?
-                    .send(WaitForFinishedMangaMessage::new())
+                    .wait()
                     .await?
                     .await?;
                 println!("downloaded manga [{}]", manga.id);
@@ -131,7 +124,7 @@ fn main() -> anyhow::Result<()> {
                                 .state(DownloadMessageState::Downloading),
                         )
                         .await?
-                        .send(WaitForFinishedCoverMessage::new())
+                        .wait()
                         .await?
                         .await?;
                     println!("download cover [{}]", cover.id);
@@ -153,7 +146,7 @@ fn main() -> anyhow::Result<()> {
                                 .state(DownloadMessageState::Downloading),
                         )
                         .await?
-                        .send(WaitForFinishedCoverMessage::new())
+                        .wait()
                         .await?
                         .await?;
                     println!("download cover [{}]", cover.id);
