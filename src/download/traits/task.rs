@@ -1,7 +1,10 @@
 use actix::prelude::*;
 use tokio::sync::watch::Receiver;
 
-use crate::download::state::{TaskState, WaitForFinished};
+use crate::download::{
+    messages::CancelTaskMessage,
+    state::{TaskState, WaitForFinished},
+};
 
 pub trait Cancelable: Actor {
     fn cancel(&mut self, ctx: &mut Self::Context);
@@ -32,8 +35,21 @@ pub trait CanBeWaited: State {
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading>;
 }
 
+type MailBoxResult<T, E = MailboxError> = Result<T, E>;
+
 pub trait AsyncCancelable {
-    fn cancel(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn cancel(&self) -> impl std::future::Future<Output = MailBoxResult<()>> + Send;
+}
+
+impl<A> AsyncCancelable for Addr<A>
+where
+    A: Handler<CancelTaskMessage> + Cancelable,
+    <A as actix::Actor>::Context:
+        actix::dev::ToEnvelope<A, crate::download::messages::CancelTaskMessage>,
+{
+    async fn cancel(&self) -> MailBoxResult<()> {
+        self.send(CancelTaskMessage).await
+    }
 }
 
 pub trait AsyncDownload {
