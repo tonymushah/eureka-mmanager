@@ -1,8 +1,9 @@
 use actix::prelude::*;
+use dev::ToEnvelope;
 use tokio::sync::watch::Receiver;
 
 use crate::download::{
-    messages::CancelTaskMessage,
+    messages::{CancelTaskMessage, StartDownload},
     state::{TaskState, WaitForFinished},
 };
 
@@ -53,7 +54,17 @@ where
 }
 
 pub trait AsyncDownload {
-    fn download(&self) -> impl std::future::Future<Output = ()> + Send;
+    fn download(&self) -> impl std::future::Future<Output = MailBoxResult<()>> + Send;
+}
+
+impl<A> AsyncDownload for Addr<A>
+where
+    A: Handler<StartDownload> + Download,
+    <A as Actor>::Context: ToEnvelope<A, StartDownload>,
+{
+    async fn download(&self) -> MailBoxResult<()> {
+        self.send(StartDownload).await
+    }
 }
 
 pub trait AsyncState
