@@ -5,6 +5,7 @@ use crate::download::{
     manga::task::{MangaDonwloadingState, MangaDownloadTask},
     messages::WaitForFinishedMessage,
     state::WaitForFinished,
+    traits::CanBeWaited,
 };
 
 pub type WaitForFinishedMangaMessage = WaitForFinishedMessage<MangaObject, MangaDonwloadingState>;
@@ -16,6 +17,14 @@ impl Handler<WaitForFinishedMangaMessage> for MangaDownloadTask {
         _msg: WaitForFinishedMangaMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
+        self.wait()
+    }
+}
+
+impl CanBeWaited for MangaDownloadTask {
+    type Ok = MangaObject;
+    type Loading = MangaDonwloadingState;
+    fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading> {
         if !self.have_been_read {
             self.have_been_read = true;
         }
