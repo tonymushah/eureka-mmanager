@@ -5,9 +5,21 @@ use crate::download::{
     cover::task::{CoverDownloadTask as Task, CoverDownloadingState as State},
     messages::WaitForFinishedMessage,
     state::WaitForFinished,
+    traits::CanBeWaited,
 };
 
 pub type WaitForFinishedCoverMessage = WaitForFinishedMessage<Object, State>;
+
+impl CanBeWaited for Task {
+    type Loading = State;
+    type Ok = Object;
+    fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading> {
+        if !self.have_been_read {
+            self.have_been_read = true;
+        }
+        WaitForFinished::new(self.sender.subscribe())
+    }
+}
 
 impl Handler<WaitForFinishedCoverMessage> for Task {
     type Result = <WaitForFinishedCoverMessage as Message>::Result;
@@ -16,9 +28,6 @@ impl Handler<WaitForFinishedCoverMessage> for Task {
         _msg: WaitForFinishedCoverMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
-        if !self.have_been_read {
-            self.have_been_read = true;
-        }
-        WaitForFinished::new(self.sender.subscribe())
+        self.wait()
     }
 }
