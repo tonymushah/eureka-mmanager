@@ -14,7 +14,7 @@ use crate::download::{
 
 use super::MangaDownloadManager;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MangaDonwloadingState {
     Preloading,
     FetchingData,
