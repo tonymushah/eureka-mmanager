@@ -33,30 +33,35 @@ pub trait CanBeWaited: State {
 }
 
 pub trait AsyncCancelable {
-    async fn cancel(&self);
+    fn cancel(&self) -> impl std::future::Future<Output = ()> + Send;
 }
 
 pub trait AsyncDownload {
-    async fn download(&self);
+    fn download(&self) -> impl std::future::Future<Output = ()> + Send;
 }
 
 pub trait AsyncState
 where
+    Self: Sync,
     Self::State: Into<TaskState>,
 {
     type State;
-    async fn state(&self) -> TaskState {
-        self.inner_state().await.into()
+    fn state(&self) -> impl std::future::Future<Output = TaskState> + Send {
+        async { self.inner_state().await.into() }
     }
-    async fn inner_state(&self) -> Self::State;
+    fn inner_state(&self) -> impl std::future::Future<Output = Self::State> + Send;
 }
 
 pub trait AsyncSubscribe: AsyncState {
-    async fn subscribe(&mut self) -> crate::ManagerCoreResult<Receiver<Self::State>>;
+    fn subscribe(
+        &mut self,
+    ) -> impl std::future::Future<Output = crate::ManagerCoreResult<Receiver<Self::State>>> + Send;
 }
 
 pub trait AsyncCanBeWaited: AsyncState {
     type Ok;
     type Loading;
-    async fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading>;
+    fn wait(
+        &mut self,
+    ) -> impl std::future::Future<Output = WaitForFinished<Self::Ok, Self::Loading>> + Send;
 }
