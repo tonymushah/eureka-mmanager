@@ -6,7 +6,7 @@ use crate::download::{
     cover::task::{CoverDownloadTask as Task, CoverDownloadTaskState},
     messages::TaskStateMessage,
     state::TaskState,
-    traits::State,
+    traits::task::State,
 };
 
 impl Handler<TaskStateMessage> for Task {

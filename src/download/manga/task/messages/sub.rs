@@ -3,7 +3,7 @@ use actix::prelude::*;
 use crate::download::{
     manga::task::{MangaDownloadTask, MangaDownloadTaskState},
     messages::SubcribeMessage,
-    traits::Subscribe,
+    traits::task::Subscribe,
 };
 
 impl Handler<SubcribeMessage<MangaDownloadTaskState>> for MangaDownloadTask {

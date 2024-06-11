@@ -3,7 +3,7 @@ use actix::prelude::*;
 use crate::download::{
     cover::task::{CoverDownloadTask as Task, CoverDownloadTaskState as State},
     messages::SubcribeMessage,
-    traits::Subscribe,
+    traits::task::Subscribe,
 };
 
 impl Handler<SubcribeMessage<State>> for Task {

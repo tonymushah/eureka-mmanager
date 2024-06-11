@@ -5,7 +5,7 @@ use crate::download::{
     chapter::task::{ChapterDownloadTask as Task, ChapterDownloadingState as State},
     messages::WaitForFinishedMessage,
     state::WaitForFinished,
-    traits::CanBeWaited,
+    traits::task::CanBeWaited,
 };
 
 pub type WaitForFinishedChapterMessage = WaitForFinishedMessage<Object, State>;

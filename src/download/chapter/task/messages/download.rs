@@ -21,7 +21,7 @@ use crate::{
             },
             DownloadTaskState, TaskState,
         },
-        traits::Download,
+        traits::task::Download,
     },
     files_dirs::messages::{
         delete::DeleteChapterImagesMessage,

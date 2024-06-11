@@ -5,7 +5,7 @@ use crate::download::{
     manga::task::{MangaDonwloadingState, MangaDownloadTask},
     messages::WaitForFinishedMessage,
     state::WaitForFinished,
-    traits::CanBeWaited,
+    traits::task::CanBeWaited,
 };
 
 pub type WaitForFinishedMangaMessage = WaitForFinishedMessage<MangaObject, MangaDonwloadingState>;

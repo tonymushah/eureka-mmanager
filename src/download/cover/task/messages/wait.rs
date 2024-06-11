@@ -5,7 +5,7 @@ use crate::download::{
     cover::task::{CoverDownloadTask as Task, CoverDownloadingState as State},
     messages::WaitForFinishedMessage,
     state::WaitForFinished,
-    traits::CanBeWaited,
+    traits::task::CanBeWaited,
 };
 
 pub type WaitForFinishedCoverMessage = WaitForFinishedMessage<Object, State>;

@@ -6,7 +6,7 @@ use crate::download::{
     manga::task::{MangaDownloadTask, MangaDownloadTaskState},
     messages::TaskStateMessage,
     state::TaskState,
-    traits::State,
+    traits::task::State,
 };
 
 impl State for MangaDownloadTask {

@@ -3,7 +3,7 @@ use actix::{AsyncContext, Handler};
 use crate::download::{
     manga::task::{MangaDownloadTask as Task, MangaDownloadTaskState as State},
     messages::CancelTaskMessage,
-    traits::Cancelable,
+    traits::task::Cancelable,
 };
 
 impl Handler<CancelTaskMessage> for Task {

@@ -6,7 +6,7 @@ use crate::download::{
     chapter::task::{ChapterDownloadTask as Task, ChapterDownloadTaskState},
     messages::TaskStateMessage,
     state::TaskState,
-    traits::State,
+    traits::task::State,
 };
 
 impl Handler<TaskStateMessage> for Task {
