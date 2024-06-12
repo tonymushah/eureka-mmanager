@@ -109,6 +109,11 @@ impl TaskManager for ChapterDownloadManager {
         }
         task
     }
+
+    fn drop_task(&mut self, id: Uuid) {
+        self.tasks.remove(&id);
+        self.notify.notify_waiters();
+    }
 }
 
 impl Handler<ChapterDownloadMessage> for ChapterDownloadManager {
@@ -135,8 +140,7 @@ impl Actor for ChapterDownloadManager {
 impl Handler<DropSingleTaskMessage> for ChapterDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.tasks.remove(&msg.0);
-        self.notify.notify_waiters();
+        self.drop_task(msg.0);
         Ok(())
     }
 }
