@@ -1,23 +1,29 @@
-pub mod new_task;
-pub mod tasks;
-
 use actix::{Handler, Message};
-pub use new_task::MangaDownloadMessage;
 
-use crate::download::messages::{state::GetManagerStateMessage, SubcribeToManagerMessage};
+use crate::download::{
+    messages::{state::GetManagerStateMessage, GetTasksListMessage, SubcribeToManagerMessage},
+    traits::managers::TaskManager,
+};
 
 use super::MangaDownloadManager;
 
 impl Handler<GetManagerStateMessage> for MangaDownloadManager {
     type Result = <GetManagerStateMessage as Message>::Result;
     fn handle(&mut self, _msg: GetManagerStateMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.state.clone()
+        self.state()
     }
 }
 
 impl Handler<SubcribeToManagerMessage> for MangaDownloadManager {
     type Result = <SubcribeToManagerMessage as Message>::Result;
     fn handle(&mut self, _msg: SubcribeToManagerMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.notify.clone()
+        self.notify()
+    }
+}
+
+impl Handler<GetTasksListMessage> for MangaDownloadManager {
+    type Result = <GetTasksListMessage as Message>::Result;
+    fn handle(&mut self, _msg: GetTasksListMessage, _ctx: &mut Self::Context) -> Self::Result {
+        self.tasks_id()
     }
 }

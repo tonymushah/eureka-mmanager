@@ -5,9 +5,9 @@ use mangadex_api::MangaDexClient;
 use mangadex_api_types_rust::RelationshipType;
 use mangadex_desktop_api2::{
     download::{
-        chapter::{messages::ChapterDownloadMessage, task::DownloadMode},
-        cover::messages::new_task::CoverDownloadMessage,
-        manga::messages::MangaDownloadMessage,
+        chapter::{task::DownloadMode, ChapterDownloadMessage},
+        cover::CoverDownloadMessage,
+        manga::MangaDownloadMessage,
         messages::{
             chapter::GetChapterDownloadManagerMessage, cover::GetCoverDownloadManagerMessage,
             manga::GetMangaDownloadManagerMessage, state::GetManagerStateMessage,
