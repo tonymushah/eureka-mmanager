@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::download::state::DownloadManagerState;
 
-pub trait DownloadManager: Actor
+pub trait TaskManager: Actor
 where
     Self::Task: Actor,
 {
