@@ -9,7 +9,11 @@ use uuid::Uuid;
 
 use self::task::CoverDownloadTask;
 
-use super::{messages::DropSingleTaskMessage, state::DownloadManagerState};
+use super::{
+    messages::{DropSingleTaskMessage, StartDownload},
+    state::{DownloadManagerState, DownloadMessageState, TaskState},
+    traits::task::AsyncState,
+};
 
 #[derive(Debug)]
 pub struct CoverDownloadManager {
@@ -30,6 +34,68 @@ impl CoverDownloadManager {
 
 impl Actor for CoverDownloadManager {
     type Context = Context<Self>;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CoverDownloadMessage {
+    id: Uuid,
+    state: DownloadMessageState,
+}
+
+impl CoverDownloadMessage {
+    pub fn new(id: Uuid) -> Self {
+        Self {
+            id,
+            state: DownloadMessageState::Pending,
+        }
+    }
+    pub fn state(self, state: DownloadMessageState) -> Self {
+        Self { state, ..self }
+    }
+}
+
+impl From<Uuid> for CoverDownloadMessage {
+    fn from(value: Uuid) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<CoverDownloadMessage> for Uuid {
+    fn from(value: CoverDownloadMessage) -> Self {
+        value.id
+    }
+}
+
+impl Message for CoverDownloadMessage {
+    type Result = Addr<CoverDownloadTask>;
+}
+
+impl Handler<CoverDownloadMessage> for CoverDownloadManager {
+    type Result = <CoverDownloadMessage as Message>::Result;
+    fn handle(&mut self, msg: CoverDownloadMessage, ctx: &mut Self::Context) -> Self::Result {
+        let task = self
+            .tasks
+            .entry(msg.id)
+            .or_insert_with(|| CoverDownloadTask::new(msg.id, ctx.address()).start())
+            .clone();
+        let re_task = task.clone();
+        self.notify.notify_waiters();
+
+        if let DownloadMessageState::Downloading = msg.state {
+            let fut = async move { re_task.state().await.map(|s| (s, re_task)) }
+                .into_actor(self)
+                .map_ok(move |(s, re_task), _this, _ctx| {
+                    if s != TaskState::Loading {
+                        re_task.do_send(StartDownload);
+                    }
+                })
+                .map(|s, _, _| {
+                    let _ = s;
+                });
+            ctx.wait(fut)
+        }
+        task
+    }
 }
 
 impl Handler<DropSingleTaskMessage> for CoverDownloadManager {

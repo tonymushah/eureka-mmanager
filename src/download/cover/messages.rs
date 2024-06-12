@@ -1,5 +1,3 @@
-pub mod new_task;
-
 use actix::{Handler, Message};
 
 use crate::download::messages::{
