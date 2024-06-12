@@ -37,6 +37,5 @@ impl Handler<DropSingleTaskMessage> for MangaDownloadManager {
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.tasks.remove(&msg.0);
         self.notify.notify_waiters();
-        Ok(())
     }
 }

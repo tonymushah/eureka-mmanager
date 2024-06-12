@@ -15,7 +15,7 @@ use super::state::{TaskState, WaitForFinished};
 pub struct DropSingleTaskMessage(pub Uuid);
 
 impl Message for DropSingleTaskMessage {
-    type Result = crate::ManagerCoreResult<()>;
+    type Result = ();
 }
 
 #[derive(Debug, Default)]

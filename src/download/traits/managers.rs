@@ -83,7 +83,6 @@ where
         self.send(msg).await
     }
     async fn drop_task(&self, id: Uuid) -> MailBoxResult<()> {
-        let _ = self.send(DropSingleTaskMessage(id)).await?;
-        Ok(())
+        self.send(DropSingleTaskMessage(id)).await
     }
 }

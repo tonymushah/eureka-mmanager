@@ -139,6 +139,5 @@ impl Handler<DropSingleTaskMessage> for CoverDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.drop_task(msg.0);
-        Ok(())
     }
 }
