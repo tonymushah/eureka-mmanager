@@ -1,7 +1,6 @@
-use std::{fs::remove_file, thread};
+use std::fs::remove_file;
 
 use actix::prelude::*;
-use tokio::runtime::Runtime;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
@@ -44,48 +43,60 @@ pub struct MangaDeleteData {
 }
 
 impl Handler<DeleteMangaMessage> for DirsOptions {
-    type Result = <DeleteMangaMessage as Message>::Result;
+    type Result = ResponseActFuture<Self, <DeleteMangaMessage as Message>::Result>;
     fn handle(&mut self, msg: DeleteMangaMessage, ctx: &mut Self::Context) -> Self::Result {
         let manga_path = self.mangas_add(format!("{}.json", msg.0));
-        let manga_chapters_data_pull = self
-            .handle(ChapterListDataPullMessage, ctx)?
-            .to_filtered(ChapterListDataPullFilterParams {
-                manga_id: Some(msg.0),
-                ..Default::default()
+        let manga_chapters_data_pull = {
+            let mut to_fn = || {
+                Ok::<_, crate::Error>(
+                    self.handle(ChapterListDataPullMessage, ctx)?
+                        .to_filtered(ChapterListDataPullFilterParams {
+                            manga_id: Some(msg.0),
+                            ..Default::default()
+                        })
+                        .map(|c| c.id)
+                        .collect::<Vec<Uuid>>(),
+                )
+            };
+            to_fn()
+        };
+        let manga_covers_data_pull = {
+            let mut to_fn = || {
+                Ok::<_, crate::Error>(
+                    self.handle(CoverListDataPullMessage, ctx)?
+                        .to_filtered(CoverListDataPullFilterParams {
+                            manga_ids: vec![msg.0],
+                            ..Default::default()
+                        })
+                        .map(|c| c.id)
+                        .collect::<Vec<Uuid>>(),
+                )
+            };
+            to_fn()
+        };
+        let fut = async move {
+            Ok::<_, crate::Error>(MangaDeleteData {
+                chapters: manga_chapters_data_pull?.await,
+                covers: manga_covers_data_pull?.await,
             })
-            .map(|c| c.id)
-            .collect::<Vec<Uuid>>();
-        let manga_covers_data_pull = self
-            .handle(CoverListDataPullMessage, ctx)?
-            .to_filtered(CoverListDataPullFilterParams {
-                manga_ids: vec![msg.0],
-                ..Default::default()
-            })
-            .map(|c| c.id)
-            .collect::<Vec<Uuid>>();
-        let delete_data = thread::spawn(move || -> crate::ManagerCoreResult<MangaDeleteData> {
-            let runtime = Runtime::new()?;
-            Ok(MangaDeleteData {
-                chapters: runtime.block_on(manga_chapters_data_pull),
-                covers: runtime.block_on(manga_covers_data_pull),
-            })
-        })
-        .join()
-        .map_err(|e| crate::Error::StdThreadJoin(format!("{:#?}", e)))??;
-
-        for chapter in &delete_data.chapters {
-            if let Err(e) = self.handle(DeleteChapterMessage::new(*chapter), ctx) {
+        }
+        .into_actor(self)
+        .map_ok(move |delete_data, this, ctx| {
+            for chapter in &delete_data.chapters {
+                if let Err(e) = this.handle(DeleteChapterMessage::new(*chapter), ctx) {
+                    log::error!("{e}");
+                }
+            }
+            for cover in &delete_data.covers {
+                if let Err(e) = this.handle(DeleteCoverMessage(*cover), ctx) {
+                    log::error!("{e}");
+                }
+            }
+            if let Err(e) = remove_file(manga_path) {
                 log::error!("{e}");
             }
-        }
-        for cover in &delete_data.covers {
-            if let Err(e) = self.handle(DeleteCoverMessage(*cover), ctx) {
-                log::error!("{e}");
-            }
-        }
-        if let Err(e) = remove_file(manga_path) {
-            log::error!("{e}");
-        }
-        Ok(delete_data)
+            delete_data
+        });
+        Box::pin(fut)
     }
 }
