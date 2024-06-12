@@ -1,4 +1,7 @@
+use std::future::Future;
+
 use actix::prelude::*;
+use dev::ToEnvelope;
 
 use crate::{data_push::Push, DirsOptions, ManagerCoreResult};
 
@@ -32,5 +35,26 @@ where
         } else {
             self.push(msg.data)
         }
+    }
+}
+
+pub trait PushActorAddr<T: Send>: Sync {
+    fn push(&self, data: T) -> impl Future<Output = ManagerCoreResult<()>>;
+    fn verify_and_push(&self, data: T) -> impl Future<Output = ManagerCoreResult<()>>;
+}
+
+impl<T> PushActorAddr<T> for Addr<DirsOptions>
+where
+    DirsOptions: Push<T> + Handler<PushDataMessage<T>>,
+    <DirsOptions as Actor>::Context: ToEnvelope<DirsOptions, PushDataMessage<T>>,
+    T: Send + 'static,
+{
+    async fn push(&self, data: T) -> ManagerCoreResult<()> {
+        self.send(PushDataMessage::new(data)).await??;
+        Ok(())
+    }
+    async fn verify_and_push(&self, data: T) -> ManagerCoreResult<()> {
+        self.send(PushDataMessage::new(data).verify(true)).await??;
+        Ok(())
     }
 }
