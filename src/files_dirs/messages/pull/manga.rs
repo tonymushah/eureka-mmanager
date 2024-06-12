@@ -19,12 +19,12 @@ pub use self::{
 };
 
 pub trait MangaDataPullAsyncTrait: Sync {
-    fn get_manga(&self, id: Uuid) -> impl Future<Output = ManagerCoreResult<MangaObject>>;
-    fn get_manga_list(&self) -> impl Future<Output = ManagerCoreResult<MangaListDataPull>>;
+    fn get_manga(&self, id: Uuid) -> impl Future<Output = ManagerCoreResult<MangaObject>> + Send;
+    fn get_manga_list(&self) -> impl Future<Output = ManagerCoreResult<MangaListDataPull>> + Send;
     fn get_manga_list_by_ids(
         &self,
         ids: impl Iterator<Item = Uuid>,
-    ) -> impl Future<Output = MailBoxResult<MangaIdsListDataPull>>;
+    ) -> impl Future<Output = MailBoxResult<MangaIdsListDataPull>> + Send;
 }
 
 impl MangaDataPullAsyncTrait for Addr<DirsOptions> {
