@@ -12,7 +12,7 @@ use self::task::CoverDownloadTask;
 use super::{
     messages::{DropSingleTaskMessage, StartDownload},
     state::{DownloadManagerState, DownloadMessageState, TaskState},
-    traits::task::AsyncState,
+    traits::{managers::TaskManager, task::AsyncState},
 };
 
 #[derive(Debug)]
@@ -70,9 +70,34 @@ impl Message for CoverDownloadMessage {
     type Result = Addr<CoverDownloadTask>;
 }
 
-impl Handler<CoverDownloadMessage> for CoverDownloadManager {
-    type Result = <CoverDownloadMessage as Message>::Result;
-    fn handle(&mut self, msg: CoverDownloadMessage, ctx: &mut Self::Context) -> Self::Result {
+impl TaskManager for CoverDownloadManager {
+    type Task = CoverDownloadTask;
+    type DownloadMessage = CoverDownloadMessage;
+
+    fn state(&self) -> Addr<DownloadManagerState> {
+        self.state.clone()
+    }
+
+    fn notify(&self) -> Arc<Notify> {
+        self.notify.clone()
+    }
+
+    fn tasks_id(&self) -> Vec<Uuid> {
+        self.tasks.keys().copied().collect()
+    }
+
+    fn tasks(&self) -> Vec<Addr<Self::Task>> {
+        self.tasks
+            .values() /* .filter(|v| v.connected())*/
+            .cloned()
+            .collect()
+    }
+
+    fn new_task(
+        &mut self,
+        msg: Self::DownloadMessage,
+        ctx: &mut Self::Context,
+    ) -> Addr<Self::Task> {
         let task = self
             .tasks
             .entry(msg.id)
@@ -96,13 +121,24 @@ impl Handler<CoverDownloadMessage> for CoverDownloadManager {
         }
         task
     }
+
+    fn drop_task(&mut self, id: Uuid) {
+        self.tasks.remove(&id);
+        self.notify.notify_waiters();
+    }
+}
+
+impl Handler<CoverDownloadMessage> for CoverDownloadManager {
+    type Result = <CoverDownloadMessage as Message>::Result;
+    fn handle(&mut self, msg: CoverDownloadMessage, ctx: &mut Self::Context) -> Self::Result {
+        self.new_task(msg, ctx)
+    }
 }
 
 impl Handler<DropSingleTaskMessage> for CoverDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
-        self.tasks.remove(&msg.0);
-        self.notify.notify_waiters();
+        self.drop_task(msg.0);
         Ok(())
     }
 }
