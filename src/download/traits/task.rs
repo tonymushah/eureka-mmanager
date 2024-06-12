@@ -40,7 +40,7 @@ pub trait CanBeWaited: State {
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading>;
 }
 
-pub trait AsyncCancelable {
+pub trait AsyncCancelable: Sync {
     fn cancel(&self) -> impl std::future::Future<Output = MailBoxResult<()>> + Send;
 }
 
@@ -55,7 +55,7 @@ where
     }
 }
 
-pub trait AsyncDownload {
+pub trait AsyncDownload: Sync {
     fn download(&self) -> impl std::future::Future<Output = MailBoxResult<()>> + Send;
 }
 
@@ -69,7 +69,7 @@ where
     }
 }
 
-pub trait AsyncState {
+pub trait AsyncState: Sync {
     type State;
     fn state(&self) -> impl std::future::Future<Output = MailBoxResult<TaskState>> + Send;
 }
