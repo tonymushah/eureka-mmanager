@@ -7,7 +7,7 @@ use mangadex_desktop_api2::{
     download::{
         chapter::{task::DownloadMode, ChapterDownloadMessage},
         cover::CoverDownloadMessage,
-        manga::messages::MangaDownloadMessage,
+        manga::MangaDownloadMessage,
         messages::{
             chapter::GetChapterDownloadManagerMessage, cover::GetCoverDownloadManagerMessage,
             manga::GetMangaDownloadManagerMessage, state::GetManagerStateMessage,
