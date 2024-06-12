@@ -9,6 +9,7 @@ use crate::download::state::DownloadManagerState;
 pub trait TaskManager: Actor
 where
     Self::Task: Actor,
+    Self::DownloadMessage: Message<Result = Addr<Self::Task>>,
 {
     type Task;
     type DownloadMessage;
