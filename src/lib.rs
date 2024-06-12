@@ -7,6 +7,8 @@ pub mod extractors;
 pub mod files_dirs;
 pub mod history;
 
+type MailBoxResult<T, E = actix::MailboxError> = Result<T, E>;
+
 mod r#core;
 
 pub use crate::r#core::{DirsOptionsVerificationError, Error, ErrorType, OwnedError};
