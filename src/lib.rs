@@ -54,6 +54,10 @@ pub mod prelude {
             },
             DirsOptions,
         },
+        history::{
+            history_w_file::traits::*, service::HistoryActorService, AsyncInsert, AsyncIsIn,
+            AsyncRemove, HistoryEntry,
+        },
         Error, ManagerCoreResult, OwnedError,
     };
 }
