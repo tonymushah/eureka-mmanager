@@ -19,9 +19,14 @@ pub use files_dirs::DirsOptions;
 pub mod prelude {
     pub use super::{
         data_pulls::{
-            chapter::ChapterListDataPullFilterParams, cover::CoverListDataPullFilterParams,
-            manga::MangaListDataPullFilterParams, AsyncIntoSorted, AsyncPaginate, AsyncRand,
-            IntoFiltered, IntoParamedFilteredStream, IntoSorted, Paginate, Rand,
+            chapter::ChapterListDataPullFilterParams,
+            cover::CoverListDataPullFilterParams,
+            manga::{
+                aggregate::{AsyncIntoMangaAggreagate, IntoMangaAggreagate},
+                MangaListDataPullFilterParams,
+            },
+            AsyncIntoSorted, AsyncPaginate, AsyncRand, IntoFiltered, IntoParamedFilteredStream,
+            IntoSorted, Paginate, Rand,
         },
         data_push::Push,
         download::{
@@ -49,5 +54,6 @@ pub mod prelude {
             },
             DirsOptions,
         },
+        Error, ManagerCoreResult, OwnedError,
     };
 }
