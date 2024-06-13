@@ -8,7 +8,9 @@ use actix::Addr;
 use mangadex_api_types_rust::RelationshipType;
 use serde::Serialize;
 
-use crate::{core::ManagerCoreResult, files_dirs::DirsOptions, Error, JoinHistoryMessage};
+use crate::{
+    core::ManagerCoreResult, files_dirs::DirsOptions, prelude::JoinPathAsyncTraits, Error,
+};
 
 use self::traits::{AutoCommitRollbackInsert, AutoCommitRollbackRemove, Commitable, RollBackable};
 
@@ -48,9 +50,9 @@ impl HistoryWFile {
         dir_options: Addr<DirsOptions>,
     ) -> ManagerCoreResult<Self> {
         let path = dir_options
-            .send(JoinHistoryMessage(
+            .join_history(
                 format!("{}.json", serde_json::to_string(&relationship_type)?).replace('\"', ""),
-            ))
+            )
             .await?;
         let history = match Self::from_file(path.clone()) {
             Ok(data) => data,

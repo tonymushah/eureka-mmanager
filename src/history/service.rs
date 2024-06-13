@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::read_dir};
 use actix::prelude::*;
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::{DirsOptions, JoinHistoryMessage, ManagerCoreResult};
+use crate::{prelude::JoinPathAsyncTraits, DirsOptions, ManagerCoreResult};
 
 use super::{HistoryEntry, HistoryWFile, Remove};
 
@@ -30,7 +30,7 @@ impl HistoryActorService {
     pub async fn load_files(&mut self) {
         self.files = self
             .dirs
-            .send(Into::<JoinHistoryMessage<&'static str>>::into(""))
+            .join_history("")
             .await
             .map(|p| {
                 read_dir(p)

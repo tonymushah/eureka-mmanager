@@ -12,13 +12,42 @@ mod r#core;
 
 pub use crate::r#core::{DirsOptionsVerificationError, Error, ErrorType, OwnedError};
 
-pub use files_dirs::{
-    messages::{
-        join::{
-            JoinChaptersMessage, JoinCoversImagesMessage, JoinCoversMessage, JoinDataMessage,
-            JoinHistoryMessage,
+pub use download::DownloadManager;
+pub use files_dirs::DirsOptions;
+
+/// The `mangadex-desktop-api2` prelude
+pub mod prelude {
+    pub use super::{
+        data_pulls::{
+            chapter::ChapterListDataPullFilterParams, cover::CoverListDataPullFilterParams,
+            manga::MangaListDataPullFilterParams, AsyncIntoSorted, AsyncPaginate, AsyncRand,
+            IntoFiltered, IntoParamedFilteredStream, IntoSorted, Paginate, Rand,
         },
-        modify::{ModifyChaptersDirMessage, ModifyCoversDirMessage, ModifyDataDirMessage},
-    },
-    DirsOptions,
-};
+        data_push::Push,
+        download::{
+            chapter::{task::ChapterDownloadTask, ChapterDownloadManager},
+            cover::{task::CoverDownloadTask, CoverDownloadManager},
+            manga::{task::MangaDownloadTask, MangaDownloadManager},
+            traits::{
+                managers::TaskManagerAddr,
+                task::{
+                    AsyncCanBeWaited, AsyncCancelable, AsyncDownload, AsyncState, AsyncSubscribe,
+                },
+            },
+            DownloadManager, GetManager,
+        },
+        files_dirs::{
+            messages::{
+                delete::DeleteDataAsyncTrait,
+                join::JoinPathAsyncTraits,
+                modify::ModifyDirOptionAsyncTrait,
+                pull::{
+                    chapter::ChapterDataPullAsyncTrait, cover::CoverDataPullAsyncTrait,
+                    manga::MangaDataPullAsyncTrait,
+                },
+                push::PushActorAddr,
+            },
+            DirsOptions,
+        },
+    };
+}
