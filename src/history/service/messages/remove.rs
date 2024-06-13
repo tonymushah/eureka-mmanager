@@ -80,7 +80,7 @@ impl Handler<RemoveMessage> for HistoryActorService {
 
 impl<'a> AsyncAutoCommitRollbackRemove<'a, HistoryEntry> for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
-    async fn remove(
+    async fn remove_and_commit(
         &'a mut self,
         value: HistoryEntry,
     ) -> <Self as AsyncAutoCommitRollbackRemove<HistoryEntry>>::Output {
