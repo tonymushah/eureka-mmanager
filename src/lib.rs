@@ -3,7 +3,6 @@ pub use crate::r#core::ManagerCoreResult;
 pub mod data_pulls;
 pub mod data_push;
 pub mod download;
-pub mod extractors;
 pub mod files_dirs;
 pub mod history;
 
