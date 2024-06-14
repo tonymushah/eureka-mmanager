@@ -1,4 +1,9 @@
-use crate::download::{chapter::ChapterDownloadManager as Manager, DownloadManager, GetManager};
+use std::future::Future;
+
+use crate::{
+    download::{chapter::ChapterDownloadManager as Manager, DownloadManager, GetManager},
+    MailBoxResult,
+};
 use actix::prelude::*;
 use dev::ToEnvelope;
 
@@ -26,5 +31,18 @@ where
 {
     async fn get(&self) -> Result<Addr<Manager>, MailboxError> {
         self.send(GetChapterDownloadManagerMessage).await
+    }
+}
+
+pub trait GetChapterDownloadManager: Sync {
+    fn get_chapter_manager(&self) -> impl Future<Output = MailBoxResult<Addr<Manager>>> + Send;
+}
+
+impl<A> GetChapterDownloadManager for A
+where
+    A: GetManager<Manager> + Sync,
+{
+    fn get_chapter_manager(&self) -> impl Future<Output = MailBoxResult<Addr<Manager>>> + Send {
+        self.get()
     }
 }
