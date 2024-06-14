@@ -25,7 +25,11 @@ impl Handler<GetMangaDownloadManagerMessage> for DownloadManager {
     }
 }
 
-impl GetManager<Manager> for Addr<DownloadManager> {
+impl<A> GetManager<Manager> for Addr<A>
+where
+    A: Actor + Handler<GetMangaDownloadManagerMessage>,
+    <A as Actor>::Context: ToEnvelope<A, GetMangaDownloadManagerMessage>,
+{
     async fn get(&self) -> Result<Addr<Manager>, MailboxError> {
         self.send(GetMangaDownloadManagerMessage).await
     }
@@ -35,12 +39,11 @@ pub trait GetMangaDownloadManager: Sync {
     fn get_manga_manager(&self) -> impl Future<Output = MailBoxResult<Addr<Manager>>> + Send;
 }
 
-impl<A> GetMangaDownloadManager for Addr<A>
+impl<A> GetMangaDownloadManager for A
 where
-    A: Actor + Handler<GetMangaDownloadManagerMessage>,
-    <A as Actor>::Context: ToEnvelope<A, GetMangaDownloadManagerMessage>,
+    A: GetManager<Manager> + Sync,
 {
     fn get_manga_manager(&self) -> impl Future<Output = MailBoxResult<Addr<Manager>>> + Send {
-        self.send(GetMangaDownloadManagerMessage)
+        self.get()
     }
 }
