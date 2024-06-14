@@ -1,6 +1,12 @@
-use actix::prelude::*;
+use std::future::Future;
 
-use crate::download::{cover::CoverDownloadManager as Manager, DownloadManager, GetManager};
+use actix::prelude::*;
+use dev::ToEnvelope;
+
+use crate::{
+    download::{cover::CoverDownloadManager as Manager, DownloadManager, GetManager},
+    MailBoxResult,
+};
 
 pub struct GetCoverDownloadManagerMessage;
 
@@ -19,8 +25,25 @@ impl Handler<GetCoverDownloadManagerMessage> for DownloadManager {
     }
 }
 
-impl GetManager<Manager> for Addr<DownloadManager> {
+impl<A> GetManager<Manager> for Addr<A>
+where
+    A: Actor + Handler<GetCoverDownloadManagerMessage>,
+    <A as Actor>::Context: ToEnvelope<A, GetCoverDownloadManagerMessage>,
+{
     async fn get(&self) -> Result<Addr<Manager>, MailboxError> {
         self.send(GetCoverDownloadManagerMessage).await
+    }
+}
+
+pub trait GetCoverDownloadManager: Sync {
+    fn get_cover_manager(&self) -> impl Future<Output = MailBoxResult<Addr<Manager>>> + Send;
+}
+
+impl<A> GetCoverDownloadManager for A
+where
+    A: GetManager<Manager> + Sync,
+{
+    fn get_cover_manager(&self) -> impl Future<Output = MailBoxResult<Addr<Manager>>> + Send {
+        self.get()
     }
 }
