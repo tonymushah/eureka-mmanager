@@ -1,5 +1,6 @@
 use crate::download::{chapter::ChapterDownloadManager as Manager, DownloadManager, GetManager};
 use actix::prelude::*;
+use dev::ToEnvelope;
 
 pub struct GetChapterDownloadManagerMessage;
 
@@ -18,7 +19,11 @@ impl Handler<GetChapterDownloadManagerMessage> for DownloadManager {
     }
 }
 
-impl GetManager<Manager> for Addr<DownloadManager> {
+impl<A> GetManager<Manager> for Addr<A>
+where
+    A: Actor + Handler<GetChapterDownloadManagerMessage>,
+    <A as Actor>::Context: ToEnvelope<A, GetChapterDownloadManagerMessage>,
+{
     async fn get(&self) -> Result<Addr<Manager>, MailboxError> {
         self.send(GetChapterDownloadManagerMessage).await
     }
