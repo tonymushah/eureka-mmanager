@@ -8,8 +8,9 @@ use actix::Addr;
 use mangadex_api::MangaDexClient;
 
 use crate::{
-    download::state::DownloadManagerState, history::service::HistoryActorService, DirsOptions,
-    MailBoxResult,
+    download::{messages::state::GetManagerState, state::DownloadManagerState},
+    history::service::HistoryActorService,
+    DirsOptions, MailBoxResult,
 };
 
 pub use self::{
@@ -31,5 +32,20 @@ impl GetManagerStateData for Addr<DownloadManagerState> {
     }
     fn get_history(&self) -> impl Future<Output = MailBoxResult<Addr<HistoryActorService>>> + Send {
         self.send(GetHistoryMessage)
+    }
+}
+
+impl<A> GetManagerStateData for A
+where
+    A: GetManagerState + Sync,
+{
+    async fn get_client(&self) -> MailBoxResult<MangaDexClient> {
+        self.get_manager_state().await?.get_client().await
+    }
+    async fn get_dir_options(&self) -> MailBoxResult<Addr<DirsOptions>> {
+        self.get_manager_state().await?.get_dir_options().await
+    }
+    async fn get_history(&self) -> MailBoxResult<Addr<HistoryActorService>> {
+        self.get_manager_state().await?.get_history().await
     }
 }
