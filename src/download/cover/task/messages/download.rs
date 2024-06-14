@@ -6,27 +6,21 @@ use crate::{
     data_push::cover::required_cover_references,
     download::{
         cover::task::{CoverDownloadTask as Task, CoverDownloadingState as State},
-        messages::{state::GetManagerStateMessage, StartDownload, TaskStateMessage},
-        state::{
-            messages::get::{
-                client::GetClientMessage, dir_options::GetDirsOptionsMessage,
-                history::GetHistoryMessage,
-            },
-            DownloadTaskState, TaskState,
-        },
-        traits::task::Download,
+        messages::StartDownload,
+        state::{messages::get::GetManagerStateData, DownloadTaskState, TaskState},
+        traits::task::{Download, State as TaskStateTrait},
     },
-    files_dirs::messages::push::PushDataMessage,
     history::{
-        service::messages::{insert::InsertMessage, remove::RemoveMessage},
+        history_w_file::traits::{AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove},
         HistoryEntry,
     },
+    prelude::PushActorAddr,
     ManagerCoreResult,
 };
 
 impl Download for Task {
     fn download(&mut self, ctx: &mut Self::Context) {
-        if self.handle(TaskStateMessage, ctx) != TaskState::Loading {
+        if self.state() != TaskState::Loading {
             self.sender
                 .send_replace(DownloadTaskState::Loading(State::Preloading));
             let manager = self.manager.clone();
@@ -38,12 +32,10 @@ impl Download for Task {
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
-                        let manager_state = manager.send(GetManagerStateMessage).await?;
-                        let client = manager_state.send(GetClientMessage).await?;
-                        let dir_options = manager_state.send(GetDirsOptionsMessage).await?;
-                        let history = manager_state.send(GetHistoryMessage).await?;
+                        let client = manager.get_client().await?;
+                        let mut history = manager.get_history().await?;
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingData));
-                        history.send(InsertMessage::new(entry).commit()).await??;
+                        history.insert_and_commit(entry).await?;
                         let res = client
                             .cover()
                             .cover_id(id)
@@ -51,9 +43,7 @@ impl Download for Task {
                             .includes(required_cover_references())
                             .send()
                             .await?;
-                        dir_options
-                            .send(PushDataMessage::new(res.data.clone()).verify(true))
-                            .await??;
+                        manager.verify_and_push(res.data.clone()).await?;
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingImage));
                         let (_, image) = client
                             .download()
@@ -61,10 +51,8 @@ impl Download for Task {
                             .build()?
                             .via_cover_api_object(res.data.clone())
                             .await;
-                        dir_options
-                            .send(PushDataMessage::new((res.data.clone(), image?)).verify(true))
-                            .await??;
-                        history.send(RemoveMessage::new(entry).commit()).await??;
+                        manager.push((res.data.clone(), image?)).await?;
+                        history.remove_and_commit(entry).await?;
                         Ok(res.data)
                     }
                     .into_actor(self)

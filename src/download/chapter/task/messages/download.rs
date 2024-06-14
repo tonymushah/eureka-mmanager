@@ -13,33 +13,21 @@ use crate::{
     data_push::chapter::{image::ChapterImagePushEntry, ChapterRequiredRelationship},
     download::{
         chapter::task::{ChapterDownloadTask as Task, ChapterDownloadingState as State},
-        messages::{state::GetManagerStateMessage, StartDownload, TaskStateMessage},
-        state::{
-            messages::get::{
-                client::GetClientMessage, dir_options::GetDirsOptionsMessage,
-                history::GetHistoryMessage,
-            },
-            DownloadTaskState, TaskState,
-        },
-        traits::task::Download,
-    },
-    files_dirs::messages::{
-        delete::DeleteChapterImagesMessage,
-        pull::chapter::{
-            ChapterImageDataPullMessage, ChapterImageDataSaverPullMessage, ChapterImagesPullMessage,
-        },
-        push::PushDataMessage,
+        messages::StartDownload,
+        state::{messages::get::GetManagerStateData, DownloadTaskState, TaskState},
+        traits::task::{Download, State as TaskStateTrait},
     },
     history::{
-        service::messages::{insert::InsertMessage, remove::RemoveMessage},
+        history_w_file::traits::{AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove},
         HistoryEntry,
     },
+    prelude::{ChapterDataPullAsyncTrait, DeleteDataAsyncTrait, PushActorAddr},
     ManagerCoreResult,
 };
 
 impl Download for Task {
     fn download(&mut self, ctx: &mut Self::Context) {
-        if self.handle(TaskStateMessage, ctx) != TaskState::Loading {
+        if self.state() != TaskState::Loading {
             self.sender
                 .send_replace(DownloadTaskState::Loading(State::Preloading));
             let manager = self.manager.clone();
@@ -53,14 +41,12 @@ impl Download for Task {
                     async move {
                         // Getting manager state data
 
-                        let manager_state = manager.send(GetManagerStateMessage).await?;
-                        let client = manager_state.send(GetClientMessage).await?;
-                        let dir_options = manager_state.send(GetDirsOptionsMessage).await?;
-                        let history = manager_state.send(GetHistoryMessage).await?;
+                        let client = manager.get_client().await?;
+                        let mut history = manager.get_history().await?;
                         // fetching chapter data
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingData));
                         // insert data in history
-                        history.send(InsertMessage::new(entry).commit()).await??;
+                        history.insert_and_commit(entry).await?;
                         let res = client
                             .chapter()
                             .id(id)
@@ -69,21 +55,17 @@ impl Download for Task {
                             .send()
                             .await?;
                         // push chapter data to the dirs_option actor
-                        dir_options
-                            .send(PushDataMessage::new(res.data.clone()).verify(true))
-                            .await??;
+                        manager.verify_and_push(res.data.clone()).await?;
                         // Getting fetching AtHome data
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingAtHomeData));
-                        let current_images =
-                            dir_options.send(ChapterImagesPullMessage(id)).await??;
+                        let current_images = manager.get_chapter_images(id).await?;
                         let mut images: HashMap<String, usize> = Default::default();
                         // getting current images size
                         match mode {
                             crate::download::chapter::task::DownloadMode::Normal => {
                                 for image in &current_images.data {
-                                    if let Ok(b) = dir_options
-                                        .send(ChapterImageDataPullMessage(id, image.clone()))
-                                        .await?
+                                    if let Ok(b) =
+                                        manager.get_chapter_image(id, image.clone()).await
                                     {
                                         images.insert(image.clone(), b.len());
                                     }
@@ -91,9 +73,9 @@ impl Download for Task {
                             }
                             crate::download::chapter::task::DownloadMode::DataSaver => {
                                 for image in &current_images.data_saver {
-                                    if let Ok(b) = dir_options
-                                        .send(ChapterImageDataSaverPullMessage(id, image.clone()))
-                                        .await?
+                                    if let Ok(b) = manager
+                                        .get_chapter_image_data_saver(id, image.clone())
+                                        .await
                                     {
                                         images.insert(image.clone(), b.len());
                                     }
@@ -155,10 +137,8 @@ impl Download for Task {
                             .await?;
                         // Delete if the chapter data is new
                         if is_new.load(AtomicOrd::Relaxed) {
-                            let _ = dir_options
-                                .send(
-                                    DeleteChapterImagesMessage::new(id, mode).ignore_conflict(true),
-                                )
+                            manager
+                                .delete_chapter_images_ignore_conflict(id, mode)
                                 .await?;
                         }
                         // Fetches each images and stores it
@@ -178,12 +158,12 @@ impl Download for Task {
                             }));
                             match res_bytes {
                                 Ok(b) => {
-                                    if let Err(e) = dir_options
-                                        .send(PushDataMessage::new(
+                                    if let Err(e) = manager
+                                        .push(
                                             ChapterImagePushEntry::new(id, filename.clone(), b)
                                                 .mode(mode),
-                                        ))
-                                        .await?
+                                        )
+                                        .await
                                     {
                                         log::error!("[chapter|{id}|{filename}]>write - {e}");
                                     }
@@ -196,16 +176,16 @@ impl Download for Task {
                                     } else {
                                         mark_have_error();
                                         log::error!("[chapter|{id}|{filename}]>write - {e}");
-                                        if let Err(e) = dir_options
-                                            .send(PushDataMessage::new(
+                                        if let Err(e) = manager
+                                            .push(
                                                 ChapterImagePushEntry::new(
                                                     id,
                                                     filename.clone(),
                                                     Bytes::new(),
                                                 )
                                                 .mode(mode),
-                                            ))
-                                            .await?
+                                            )
+                                            .await
                                         {
                                             log::error!("[chapter|{id}|{filename}]>write - {e}");
                                         }
@@ -214,7 +194,7 @@ impl Download for Task {
                             }
                         }
                         if !have_error {
-                            history.send(RemoveMessage::new(entry).commit()).await??;
+                            history.remove_and_commit(entry).await?;
                         }
                         Ok(res.data)
                     }

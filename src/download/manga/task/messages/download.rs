@@ -6,27 +6,21 @@ use crate::{
     data_push::manga::MangaRequiredRelationship,
     download::{
         manga::task::{MangaDonwloadingState, MangaDownloadTask},
-        messages::{state::GetManagerStateMessage, StartDownload, TaskStateMessage},
-        state::{
-            messages::get::{
-                client::GetClientMessage, dir_options::GetDirsOptionsMessage,
-                history::GetHistoryMessage,
-            },
-            DownloadTaskState, TaskState,
-        },
-        traits::task::Download,
+        messages::StartDownload,
+        state::{messages::get::GetManagerStateData, DownloadTaskState, TaskState},
+        traits::task::{Download, State as TaskStateTrait},
     },
-    files_dirs::messages::push::PushDataMessage,
     history::{
-        service::messages::{insert::InsertMessage, remove::RemoveMessage},
+        history_w_file::traits::{AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove},
         HistoryEntry,
     },
+    prelude::PushActorAddr,
     ManagerCoreResult,
 };
 
 impl Download for MangaDownloadTask {
     fn download(&mut self, ctx: &mut Self::Context) {
-        if self.handle(TaskStateMessage, ctx) != TaskState::Loading {
+        if self.state() != TaskState::Loading {
             self.sender.send_replace(DownloadTaskState::Loading(
                 MangaDonwloadingState::Preloading,
             ));
@@ -39,14 +33,12 @@ impl Download for MangaDownloadTask {
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
-                        let manager_state = manager.send(GetManagerStateMessage).await?;
-                        let client = manager_state.send(GetClientMessage).await?;
-                        let dir_options = manager_state.send(GetDirsOptionsMessage).await?;
-                        let history = manager_state.send(GetHistoryMessage).await?;
+                        let client = manager.get_client().await?;
+                        let mut history = manager.get_history().await?;
                         sender.send_replace(DownloadTaskState::Loading(
                             MangaDonwloadingState::FetchingData,
                         ));
-                        history.send(InsertMessage::new(entry).commit()).await??;
+                        history.insert_and_commit(entry).await?;
                         let res = client
                             .manga()
                             .id(id)
@@ -54,10 +46,8 @@ impl Download for MangaDownloadTask {
                             .includes(MangaRequiredRelationship::get_includes())
                             .send()
                             .await?;
-                        dir_options
-                            .send(PushDataMessage::new(res.data.clone()).verify(true))
-                            .await??;
-                        history.send(RemoveMessage::new(entry).commit()).await??;
+                        manager.verify_and_push(res.data.clone()).await?;
+                        history.remove_and_commit(entry).await?;
                         Ok(res.data)
                     }
                     .into_actor(self)

@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     data_pulls::manga::{MangaIdsListDataPull, MangaListDataPull},
+    download::state::messages::get::GetManagerStateData,
     DirsOptions, MailBoxResult, ManagerCoreResult,
 };
 
@@ -23,7 +24,7 @@ pub trait MangaDataPullAsyncTrait: Sync {
     fn get_manga_list(&self) -> impl Future<Output = ManagerCoreResult<MangaListDataPull>> + Send;
     fn get_manga_list_by_ids(
         &self,
-        ids: impl Iterator<Item = Uuid>,
+        ids: impl Iterator<Item = Uuid> + Send,
     ) -> impl Future<Output = MailBoxResult<MangaIdsListDataPull>> + Send;
 }
 
@@ -36,8 +37,29 @@ impl MangaDataPullAsyncTrait for Addr<DirsOptions> {
     }
     fn get_manga_list_by_ids(
         &self,
-        ids: impl Iterator<Item = Uuid>,
+        ids: impl Iterator<Item = Uuid> + Send,
     ) -> impl Future<Output = MailBoxResult<MangaIdsListDataPull>> {
         self.send(MangaIdsListDataPullMessage(ids.collect()))
+    }
+}
+
+impl<A> MangaDataPullAsyncTrait for A
+where
+    A: GetManagerStateData + Sync,
+{
+    async fn get_manga(&self, id: Uuid) -> ManagerCoreResult<MangaObject> {
+        self.get_dir_options().await?.get_manga(id).await
+    }
+    async fn get_manga_list(&self) -> ManagerCoreResult<MangaListDataPull> {
+        self.get_dir_options().await?.get_manga_list().await
+    }
+    async fn get_manga_list_by_ids(
+        &self,
+        ids: impl Iterator<Item = Uuid> + Send,
+    ) -> MailBoxResult<MangaIdsListDataPull> {
+        self.get_dir_options()
+            .await?
+            .get_manga_list_by_ids(ids)
+            .await
     }
 }

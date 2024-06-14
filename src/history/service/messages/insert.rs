@@ -101,7 +101,7 @@ impl Handler<InsertMessage> for HistoryActorService {
 
 impl<'a> AsyncAutoCommitRollbackInsert<'a, HistoryEntry> for Addr<HistoryActorService> {
     type Output = ManagerCoreResult<()>;
-    async fn insert(
+    async fn insert_and_commit(
         &'a mut self,
         value: HistoryEntry,
     ) -> <Self as AsyncAutoCommitRollbackInsert<HistoryEntry>>::Output {

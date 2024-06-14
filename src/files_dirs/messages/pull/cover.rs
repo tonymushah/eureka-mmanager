@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::{
     data_pulls::cover::{CoverIdsListDataPull, CoverListDataPull},
+    download::state::messages::get::GetManagerStateData,
     DirsOptions, MailBoxResult, ManagerCoreResult,
 };
 
@@ -27,7 +28,7 @@ pub trait CoverDataPullAsyncTrait: Sync {
     fn get_covers(&self) -> impl Future<Output = ManagerCoreResult<CoverListDataPull>> + Send;
     fn get_covers_by_ids(
         &self,
-        ids: impl Iterator<Item = Uuid>,
+        ids: impl Iterator<Item = Uuid> + Send,
     ) -> impl Future<Output = MailBoxResult<CoverIdsListDataPull>> + Send;
     fn get_cover_with_image(
         &self,
@@ -49,8 +50,29 @@ impl CoverDataPullAsyncTrait for Addr<DirsOptions> {
     }
     fn get_covers_by_ids(
         &self,
-        ids: impl Iterator<Item = Uuid>,
+        ids: impl Iterator<Item = Uuid> + Send,
     ) -> impl Future<Output = MailBoxResult<CoverIdsListDataPull>> + Send {
         self.send(CoverIdsListDataPullMessage(ids.collect()))
+    }
+}
+
+impl<A> CoverDataPullAsyncTrait for A
+where
+    A: GetManagerStateData + Sync,
+{
+    async fn get_cover(&self, id: Uuid) -> ManagerCoreResult<CoverObject> {
+        self.get_dir_options().await?.get_cover(id).await
+    }
+    async fn get_cover_image(&self, id: Uuid) -> ManagerCoreResult<Bytes> {
+        self.get_dir_options().await?.get_cover_image(id).await
+    }
+    async fn get_covers(&self) -> ManagerCoreResult<CoverListDataPull> {
+        self.get_dir_options().await?.get_covers().await
+    }
+    async fn get_covers_by_ids(
+        &self,
+        ids: impl Iterator<Item = Uuid> + Send,
+    ) -> MailBoxResult<CoverIdsListDataPull> {
+        self.get_dir_options().await?.get_covers_by_ids(ids).await
     }
 }

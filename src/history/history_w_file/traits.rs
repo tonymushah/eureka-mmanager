@@ -32,7 +32,7 @@ pub trait AsyncRollBackable {
 
 pub trait AsyncAutoCommitRollbackInsert<'a, T> {
     type Output;
-    fn insert(
+    fn insert_and_commit(
         &'a mut self,
         input: T,
     ) -> impl std::future::Future<Output = <Self as AsyncAutoCommitRollbackInsert<T>>::Output> + Send;
@@ -40,7 +40,7 @@ pub trait AsyncAutoCommitRollbackInsert<'a, T> {
 
 pub trait AsyncAutoCommitRollbackRemove<'a, T> {
     type Output;
-    fn remove(
+    fn remove_and_commit(
         &'a mut self,
         input: T,
     ) -> impl std::future::Future<Output = <Self as AsyncAutoCommitRollbackRemove<T>>::Output> + Send;
