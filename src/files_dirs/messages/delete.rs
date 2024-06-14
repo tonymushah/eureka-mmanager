@@ -23,6 +23,11 @@ pub trait DeleteDataAsyncTrait: Sync {
         id: Uuid,
         mode: impl Into<ChapterImages> + Send + 'static,
     ) -> impl Future<Output = ManagerCoreResult<()>> + Send;
+    fn delete_chapter_images_ignore_conflict(
+        &self,
+        id: Uuid,
+        mode: impl Into<ChapterImages> + Send + 'static,
+    ) -> impl Future<Output = ManagerCoreResult<()>> + Send;
     fn delete_chapter(&self, id: Uuid) -> impl Future<Output = ManagerCoreResult<()>> + Send;
     fn delete_cover(&self, id: Uuid) -> impl Future<Output = ManagerCoreResult<()>> + Send;
     fn delete_manga(
@@ -38,6 +43,14 @@ impl DeleteDataAsyncTrait for Addr<DirsOptions> {
         mode: impl Into<ChapterImages> + Send + 'static,
     ) -> ManagerCoreResult<()> {
         self.send(DeleteChapterImagesMessage::new(id, mode)).await?
+    }
+    async fn delete_chapter_images_ignore_conflict(
+        &self,
+        id: Uuid,
+        mode: impl Into<ChapterImages> + Send + 'static,
+    ) -> ManagerCoreResult<()> {
+        self.send(DeleteChapterImagesMessage::new(id, mode).ignore_conflict(true))
+            .await?
     }
     async fn delete_chapter(&self, id: Uuid) -> ManagerCoreResult<()> {
         self.send(DeleteChapterMessage::new(id)).await?
