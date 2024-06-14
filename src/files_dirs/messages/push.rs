@@ -3,7 +3,10 @@ use std::future::Future;
 use actix::prelude::*;
 use dev::ToEnvelope;
 
-use crate::{data_push::Push, DirsOptions, ManagerCoreResult};
+use crate::{
+    data_push::Push, download::state::messages::get::GetManagerStateData, DirsOptions,
+    ManagerCoreResult,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct PushDataMessage<T> {
@@ -55,6 +58,23 @@ where
     }
     async fn verify_and_push(&self, data: T) -> ManagerCoreResult<()> {
         self.send(PushDataMessage::new(data).verify(true)).await??;
+        Ok(())
+    }
+}
+
+impl<A, T> PushActorAddr<T> for A
+where
+    A: GetManagerStateData + Sync,
+    DirsOptions: Push<T> + Handler<PushDataMessage<T>>,
+    <DirsOptions as Actor>::Context: ToEnvelope<DirsOptions, PushDataMessage<T>>,
+    T: Send + 'static,
+{
+    async fn push(&self, data: T) -> ManagerCoreResult<()> {
+        self.get_dir_options().await?.push(data).await?;
+        Ok(())
+    }
+    async fn verify_and_push(&self, data: T) -> ManagerCoreResult<()> {
+        self.get_dir_options().await?.verify_and_push(data).await?;
         Ok(())
     }
 }
