@@ -8,8 +8,9 @@ use actix::Addr;
 use mangadex_api::MangaDexClient;
 
 use crate::{
-    download::state::DownloadManagerState, history::service::HistoryActorService, DirsOptions,
-    MailBoxResult,
+    download::{messages::state::GetManagerState, state::DownloadManagerState},
+    history::service::HistoryActorService,
+    DirsOptions, MailBoxResult,
 };
 
 pub use self::{
@@ -50,5 +51,32 @@ impl UpdateManagerStateData for Addr<DownloadManagerState> {
         history: impl Into<Addr<HistoryActorService>> + Send + 'static,
     ) -> impl Future<Output = MailBoxResult<Addr<HistoryActorService>>> + Send {
         self.send(UpdateHistoryMessage(history.into()))
+    }
+}
+
+impl<A> UpdateManagerStateData for A
+where
+    A: GetManagerState + Sync,
+{
+    async fn set_client(
+        &self,
+        client: impl Into<MangaDexClient> + Send + 'static,
+    ) -> MailBoxResult<MangaDexClient> {
+        self.get_manager_state().await?.set_client(client).await
+    }
+    async fn set_dir_options(
+        &self,
+        dirs_options: impl Into<Addr<DirsOptions>> + Send + 'static,
+    ) -> MailBoxResult<Addr<DirsOptions>> {
+        self.get_manager_state()
+            .await?
+            .set_dir_options(dirs_options)
+            .await
+    }
+    async fn set_history(
+        &self,
+        history: impl Into<Addr<HistoryActorService>> + Send + 'static,
+    ) -> MailBoxResult<Addr<HistoryActorService>> {
+        self.get_manager_state().await?.set_history(history).await
     }
 }
