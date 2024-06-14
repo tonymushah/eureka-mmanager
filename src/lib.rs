@@ -33,6 +33,14 @@ pub mod prelude {
             chapter::{task::ChapterDownloadTask, ChapterDownloadManager},
             cover::{task::CoverDownloadTask, CoverDownloadManager},
             manga::{task::MangaDownloadTask, MangaDownloadManager},
+            messages::{
+                chapter::GetChapterDownloadManager, cover::GetCoverDownloadManager,
+                manga::GetMangaDownloadManager,
+            },
+            state::{
+                messages::{get::GetManagerStateData, update::UpdateManagerStateData},
+                DownloadManagerState,
+            },
             traits::{
                 managers::TaskManagerAddr,
                 task::{
