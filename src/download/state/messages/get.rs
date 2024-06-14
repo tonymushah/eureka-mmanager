@@ -17,19 +17,19 @@ pub use self::{
 };
 
 pub trait GetManagerStateData: Sync {
-    fn client(&self) -> impl Future<Output = MailBoxResult<MangaDexClient>> + Send;
-    fn dir_options(&self) -> impl Future<Output = MailBoxResult<Addr<DirsOptions>>> + Send;
-    fn history(&self) -> impl Future<Output = MailBoxResult<Addr<HistoryActorService>>> + Send;
+    fn get_client(&self) -> impl Future<Output = MailBoxResult<MangaDexClient>> + Send;
+    fn get_dir_options(&self) -> impl Future<Output = MailBoxResult<Addr<DirsOptions>>> + Send;
+    fn get_history(&self) -> impl Future<Output = MailBoxResult<Addr<HistoryActorService>>> + Send;
 }
 
 impl GetManagerStateData for Addr<DownloadManagerState> {
-    fn client(&self) -> impl Future<Output = MailBoxResult<MangaDexClient>> + Send {
+    fn get_client(&self) -> impl Future<Output = MailBoxResult<MangaDexClient>> + Send {
         self.send(GetClientMessage)
     }
-    fn dir_options(&self) -> impl Future<Output = MailBoxResult<Addr<DirsOptions>>> + Send {
+    fn get_dir_options(&self) -> impl Future<Output = MailBoxResult<Addr<DirsOptions>>> + Send {
         self.send(GetDirsOptionsMessage)
     }
-    fn history(&self) -> impl Future<Output = MailBoxResult<Addr<HistoryActorService>>> + Send {
+    fn get_history(&self) -> impl Future<Output = MailBoxResult<Addr<HistoryActorService>>> + Send {
         self.send(GetHistoryMessage)
     }
 }
