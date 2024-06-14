@@ -16,6 +16,7 @@ use crate::{
     data_pulls::chapter::{
         ids::ChapterIdsListDataPull, images::ChapterImagesData, list::ChapterListDataPull,
     },
+    download::state::messages::get::GetManagerStateData,
     DirsOptions, MailBoxResult, ManagerCoreResult,
 };
 
@@ -83,5 +84,51 @@ impl ChapterDataPullAsyncTrait for Addr<DirsOptions> {
         ids: impl Iterator<Item = Uuid>,
     ) -> impl Future<Output = MailBoxResult<ChapterIdsListDataPull>> + Send {
         self.send(ChapterIdsListDataPullMessage(ids.collect()))
+    }
+}
+
+impl<A> ChapterDataPullAsyncTrait for A
+where
+    A: GetManagerStateData + Sync,
+{
+    async fn get_chapter(&self, id: Uuid) -> ManagerCoreResult<ChapterObject> {
+        self.get_dir_options().await?.get_chapter(id).await
+    }
+
+    async fn get_chapter_images(&self, id: Uuid) -> ManagerCoreResult<ChapterImagesData> {
+        self.get_dir_options().await?.get_chapter_images(id).await
+    }
+
+    async fn get_chapters(&self) -> ManagerCoreResult<ChapterListDataPull> {
+        self.get_dir_options().await?.get_chapters().await
+    }
+
+    async fn get_chapter_image(
+        &self,
+        id: Uuid,
+        filename: impl AsRef<Path> + Send + 'static,
+    ) -> ManagerCoreResult<Bytes> {
+        self.get_dir_options()
+            .await?
+            .get_chapter_image(id, filename)
+            .await
+    }
+
+    async fn get_chapter_image_data_saver(
+        &self,
+        id: Uuid,
+        filename: impl AsRef<Path> + Send + 'static,
+    ) -> ManagerCoreResult<Bytes> {
+        self.get_dir_options()
+            .await?
+            .get_chapter_image_data_saver(id, filename)
+            .await
+    }
+
+    async fn get_chapters_by_ids(
+        &self,
+        ids: impl Iterator<Item = Uuid> + Send,
+    ) -> MailBoxResult<ChapterIdsListDataPull> {
+        self.get_dir_options().await?.get_chapters_by_ids(ids).await
     }
 }
