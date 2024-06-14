@@ -13,27 +13,20 @@ use crate::{
     data_push::chapter::{image::ChapterImagePushEntry, ChapterRequiredRelationship},
     download::{
         chapter::task::{ChapterDownloadTask as Task, ChapterDownloadingState as State},
-        messages::{state::GetManagerStateMessage, StartDownload, TaskStateMessage},
-        state::{
-            messages::get::{
-                client::GetClientMessage, dir_options::GetDirsOptionsMessage,
-                history::GetHistoryMessage,
-            },
-            DownloadTaskState, TaskState,
-        },
+        messages::{StartDownload, TaskStateMessage},
+        state::{messages::get::GetManagerStateData, DownloadTaskState, TaskState},
         traits::task::Download,
     },
     files_dirs::messages::{
         delete::DeleteChapterImagesMessage,
-        pull::chapter::{
-            ChapterImageDataPullMessage, ChapterImageDataSaverPullMessage, ChapterImagesPullMessage,
-        },
+        pull::chapter::{ChapterImageDataPullMessage, ChapterImageDataSaverPullMessage},
         push::PushDataMessage,
     },
     history::{
         service::messages::{insert::InsertMessage, remove::RemoveMessage},
         HistoryEntry,
     },
+    prelude::{ChapterDataPullAsyncTrait, PushActorAddr},
     ManagerCoreResult,
 };
 
@@ -53,10 +46,9 @@ impl Download for Task {
                     async move {
                         // Getting manager state data
 
-                        let manager_state = manager.send(GetManagerStateMessage).await?;
-                        let client = manager_state.send(GetClientMessage).await?;
-                        let dir_options = manager_state.send(GetDirsOptionsMessage).await?;
-                        let history = manager_state.send(GetHistoryMessage).await?;
+                        let client = manager.get_client().await?;
+                        let dir_options = manager.get_dir_options().await?;
+                        let history = manager.get_history().await?;
                         // fetching chapter data
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingData));
                         // insert data in history
@@ -69,13 +61,10 @@ impl Download for Task {
                             .send()
                             .await?;
                         // push chapter data to the dirs_option actor
-                        dir_options
-                            .send(PushDataMessage::new(res.data.clone()).verify(true))
-                            .await??;
+                        dir_options.verify_and_push(res.data.clone()).await?;
                         // Getting fetching AtHome data
                         sender.send_replace(DownloadTaskState::Loading(State::FetchingAtHomeData));
-                        let current_images =
-                            dir_options.send(ChapterImagesPullMessage(id)).await??;
+                        let current_images = dir_options.get_chapter_images(id).await?;
                         let mut images: HashMap<String, usize> = Default::default();
                         // getting current images size
                         match mode {
