@@ -15,6 +15,7 @@ pub struct WhenError {
     result: String,
 }
 
+/// This is the crate Error
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("An std::io::Error captured! \n Details : {0}")]
@@ -89,6 +90,9 @@ impl Error {
     pub fn into_owned(self) -> OwnedError {
         self.into()
     }
+    pub fn into_type(&self) -> ErrorType {
+        self.into()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -141,7 +145,12 @@ pub enum DirsOptionsVerificationError {
     Mangas,
 }
 
-#[derive(serde::Serialize, Debug, serde::Deserialize)]
+/// This is just [`Error`] but without the values.
+///
+/// It can be useful if you just want or share the error without using [`OwnedError`]
+#[derive(
+    serde::Serialize, Debug, serde::Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash,
+)]
 pub enum ErrorType {
     Io,
     ReqwestError,
@@ -152,7 +161,6 @@ pub enum ErrorType {
     StringUtf8Error,
     StringUTF16Error,
     StringParseError,
-    Other,
     MangadexBuilderError,
     DownloadTaskLimitExceded,
     TryIntError,
@@ -160,6 +168,63 @@ pub enum ErrorType {
     AcquireError,
     RollBacked,
     RwLockError,
+    DirsOptionsVerification,
+    MailBox,
+    HistoryFileNotFound,
+    StdThreadJoin,
+    HistoryBase,
+    InvalidFileName,
+    CiboriumDeIo,
+    CiboriumSerIo,
+    Regex,
+    MissingRelationships,
+    DeleteChapterImages,
+    WatchRecv,
+    TaskCanceled,
+    MangaDexClientNotFound,
+    DirsOptionsNotFound,
+    HistoryServiceNotFound,
+    NotInitialized,
+}
+
+impl From<&Error> for ErrorType {
+    fn from(value: &Error) -> Self {
+        match value {
+            Error::Io(_) => Self::Io,
+            Error::ReqwestError(_) => Self::ReqwestError,
+            Error::MangadexAPIError(_) => Self::MangadexAPIError,
+            Error::TokioJoinError(_) => Self::TokioJoinError,
+            Error::SerdeJsonError(_) => Self::SerdeJsonError,
+            Error::UuidError(_) => Self::UuidError,
+            Error::StringUtf8Error(_) => Self::StringUtf8Error,
+            Error::StringUTF16Error(_) => Self::StringUTF16Error,
+            Error::StringParseError(_) => Self::StringParseError,
+            Error::MangadexBuilderError(_) => Self::MangadexBuilderError,
+            Error::DownloadTaskLimitExceded { .. } => Self::DownloadTaskLimitExceded,
+            Error::TryIntError(_) => Self::TryIntError,
+            Error::OneshotRecvError(_) => Self::OneshotRecvError,
+            Error::AcquireError(_) => Self::AcquireError,
+            Error::RollBacked(_) => Self::RollBacked,
+            Error::RwLockError(_) => Self::RwLockError,
+            Error::DirsOptionsVerification(_) => Self::DirsOptionsVerification,
+            Error::MailBox(_) => Self::MailBox,
+            Error::HistoryFileNotFound(_) => Self::HistoryFileNotFound,
+            Error::StdThreadJoin(_) => Self::StdThreadJoin,
+            Error::HistoryBase(_) => Self::HistoryBase,
+            Error::InvalidFileName(_) => Self::InvalidFileName,
+            Error::CiboriumDeIo(_) => Self::CiboriumDeIo,
+            Error::CiboriumSerIo(_) => Self::CiboriumSerIo,
+            Error::Regex(_) => Self::Regex,
+            Error::MissingRelationships(_) => Self::MissingRelationships,
+            Error::DeleteChapterImages(_) => Self::DeleteChapterImages,
+            Error::WatchRecv(_) => Self::WatchRecv,
+            Error::TaskCanceled => Self::TaskCanceled,
+            Error::MangaDexClientNotFound => Self::MangaDexClientNotFound,
+            Error::DirsOptionsNotFound => Self::DirsOptionsNotFound,
+            Error::HistoryServiceNotFound => Self::HistoryServiceNotFound,
+            Error::NotInitialized => Self::NotInitialized,
+        }
+    }
 }
 
 impl Serialize for Error {
