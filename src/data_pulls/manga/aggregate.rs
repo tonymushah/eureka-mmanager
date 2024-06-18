@@ -114,24 +114,30 @@ fn insert_in_collector(collector: &mut AggregateCollector, chapter: ChapterObjec
     };
 }
 
-fn collector_to_aggregate(collector: AggregateCollector) -> MangaAggregate {
-    let volumes = collector
-        .into_iter()
-        .filter_map(|(volume, chapters)| -> Option<VolumeAggregate> {
-            let v_count = chapters
-                .values()
-                .map(|c| c.count)
-                .reduce(|acc, e| acc + e)?;
-            Some(VolumeAggregate {
-                volume: volume.0,
-                count: v_count,
-                chapters: chapters.into_values().collect_vec(),
+trait ToMangaAgg {
+    fn agg(self) -> MangaAggregate;
+}
+
+impl ToMangaAgg for AggregateCollector {
+    fn agg(self) -> MangaAggregate {
+        let volumes = self
+            .into_iter()
+            .filter_map(|(volume, chapters)| -> Option<VolumeAggregate> {
+                let v_count = chapters
+                    .values()
+                    .map(|c| c.count)
+                    .reduce(|acc, e| acc + e)?;
+                Some(VolumeAggregate {
+                    volume: volume.0,
+                    count: v_count,
+                    chapters: chapters.into_values().collect_vec(),
+                })
             })
-        })
-        .collect_vec();
-    MangaAggregate {
-        result: ResultType::Ok,
-        volumes,
+            .collect_vec();
+        MangaAggregate {
+            result: ResultType::Ok,
+            volumes,
+        }
     }
 }
 
@@ -140,12 +146,12 @@ where
     I: Iterator<Item = ChapterObject>,
 {
     fn aggregate(self, params: MangaAggregateParam) -> MangaAggregate {
-        let filtered = self.to_filtered(Into::<ChapterListDataPullFilterParams>::into(params));
-        let mut collector = AggregateCollector::new();
-        for chapter in filtered {
-            insert_in_collector(&mut collector, chapter);
-        }
-        collector_to_aggregate(collector)
+        self.to_filtered(Into::<ChapterListDataPullFilterParams>::into(params))
+            .fold(AggregateCollector::new(), |mut collector, chapter| {
+                insert_in_collector(&mut collector, chapter);
+                collector
+            })
+            .agg()
     }
 }
 
@@ -154,11 +160,13 @@ where
     S: Stream<Item = ChapterObject> + Send,
 {
     async fn aggregate(self, params: MangaAggregateParam) -> MangaAggregate {
-        let mut filtered = self.to_filtered(Into::<ChapterListDataPullFilterParams>::into(params));
-        let mut collector = AggregateCollector::new();
-        while let Some(chapter) = filtered.next().await {
-            insert_in_collector(&mut collector, chapter);
-        }
-        collector_to_aggregate(collector)
+        let filtered = self.to_filtered(Into::<ChapterListDataPullFilterParams>::into(params));
+        filtered
+            .fold(AggregateCollector::new(), |mut collector, chapter| {
+                insert_in_collector(&mut collector, chapter);
+                collector
+            })
+            .await
+            .agg()
     }
 }
