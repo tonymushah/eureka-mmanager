@@ -41,6 +41,9 @@ pub trait AsyncRelated<T> {
     ) -> impl std::future::Future<Output = Result<bool, <Self as AsyncRelated<T>>::Error>> + Send;
 }
 
+/// Guess if the input value is valid to the host struct
+///
+/// Can be used to filter stream, or iterators
 pub trait Validate<T> {
     fn is_valid(&self, input: &T) -> bool;
 }
