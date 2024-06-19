@@ -70,6 +70,10 @@ impl Ord for AggregateNumber {
     }
 }
 
+/// If you want to get [`MangaAggregate`] data from an [`Stream<Item = ChapterObject>`],
+/// then this is great way to do that.
+///
+/// This is already implemented for every [`Stream<Item = ChapterObject>`] out there.
 pub trait AsyncIntoMangaAggreagate {
     fn aggregate(
         self,
@@ -77,6 +81,10 @@ pub trait AsyncIntoMangaAggreagate {
     ) -> impl std::future::Future<Output = MangaAggregate> + Send;
 }
 
+/// If you want to get [`MangaAggregate`] data from an [`Iterator<Item = ChapterObject>`],
+/// then this is great way to do that.
+///
+/// This is already implemented for every [`Iterator<Item = ChapterObject>`] out there.
 pub trait IntoMangaAggreagate {
     fn aggregate(self, params: MangaAggregateParam) -> MangaAggregate;
 }
