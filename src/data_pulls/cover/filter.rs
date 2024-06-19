@@ -6,6 +6,11 @@ use uuid::Uuid;
 
 use crate::{data_pulls::Validate, option_bool_match};
 
+/// This parameter that allows you to filter a [`tokio_stream::Stream<Item = CoverObject>`] or a [`Iterator<Item = CoverObject>`]
+/// via [`crate::prelude::IntoParamedFilteredStream`] for an async stream
+/// or [`crate::prelude::IntoFiltered`] for an non-blocking iterator.
+///
+/// You can convert an [`CoverListParam`] into this
 #[derive(Debug, Clone, Deserialize, Serialize, Default, Hash)]
 pub struct CoverListDataPullFilterParams {
     pub manga_ids: Vec<Uuid>,
