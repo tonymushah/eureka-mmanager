@@ -1,7 +1,14 @@
+use std::collections::HashMap;
+
 use actix::prelude::*;
+use mangadex_api_types_rust::{Language, RelationshipType};
+use tokio_stream::StreamExt;
 use uuid::Uuid;
 
-use crate::{data_pulls::manga::ids::MangaIdsListDataPull, DirsOptions};
+use crate::{
+    data_pulls::manga::ids::MangaIdsListDataPull,
+    files_dirs::messages::pull::chapter::ChapterListDataPullMessage, DirsOptions,
+};
 
 #[derive(Debug, Clone, Hash, Default)]
 pub struct MangaIdsListDataPullMessage(pub Vec<Uuid>);
@@ -23,12 +30,45 @@ impl Message for MangaIdsListDataPullMessage {
 }
 
 impl Handler<MangaIdsListDataPullMessage> for DirsOptions {
-    type Result = MangaIdsListDataPull;
+    type Result = ResponseFuture<MangaIdsListDataPull>;
     fn handle(
         &mut self,
         msg: MangaIdsListDataPullMessage,
-        _ctx: &mut Self::Context,
+        ctx: &mut Self::Context,
     ) -> Self::Result {
-        MangaIdsListDataPull::new(self.mangas.clone(), msg.into())
+        let msg: Vec<Uuid> = msg.into();
+        let pull = MangaIdsListDataPull::new(self.mangas.clone(), msg.clone());
+        let chap_pull = self.handle(ChapterListDataPullMessage, ctx).map(move |p| {
+            p.filter_map(move |chapter| {
+                let manga = chapter
+                    .find_first_relationships(RelationshipType::Manga)?
+                    .id;
+                if msg.contains(&manga) {
+                    Some(chapter)
+                } else {
+                    None
+                }
+            })
+            .fold(HashMap::<Uuid, Vec<Language>>::new(), |mut acc, value| {
+                if let Some(manga_id) = value
+                    .find_first_relationships(RelationshipType::Manga)
+                    .map(|rel| rel.id)
+                {
+                    let current_lang = value.attributes.translated_language;
+                    let langs = acc.entry(manga_id).or_default();
+                    if !langs.contains(&current_lang) {
+                        langs.push(current_lang);
+                    }
+                }
+                acc
+            })
+        });
+        Box::pin(async move {
+            let mut pull = pull;
+            if let Ok(langs_fut) = chap_pull {
+                pull = pull.with_available_langs(langs_fut.await);
+            }
+            pull
+        })
     }
 }
