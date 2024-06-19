@@ -11,6 +11,9 @@ use uuid::Uuid;
 
 use crate::{data_pulls::Validate, option_bool_match};
 
+/// This parameter that allows you to filter a [`tokio_stream::Stream<Item = ChapterObject>`] or a [`Iterator<Item = ChapterObject>`]
+/// via [`crate::prelude::IntoParamedFilteredStream`] for an async stream
+/// or [`crate::prelude::IntoFiltered`] for an non-blocking iterator
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct ChapterListDataPullFilterParams {
     pub title: Option<String>,

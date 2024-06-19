@@ -1,6 +1,9 @@
-use std::{fs::File, io::BufReader, path::PathBuf, task::Poll, vec::IntoIter};
+use std::{
+    collections::HashMap, fs::File, io::BufReader, path::PathBuf, task::Poll, vec::IntoIter,
+};
 
 use mangadex_api_schema_rust::v5::{MangaData, MangaObject};
+use mangadex_api_types_rust::Language;
 use tokio_stream::Stream;
 use uuid::Uuid;
 
@@ -10,6 +13,7 @@ use crate::ManagerCoreResult;
 
 #[derive(Debug, MessageResponse)]
 pub struct MangaIdsListDataPull {
+    available_langs: HashMap<Uuid, Vec<Language>>,
     manga_path: PathBuf,
     iter: IntoIter<Uuid>,
 }
@@ -19,7 +23,15 @@ impl MangaIdsListDataPull {
         Self {
             manga_path,
             iter: ids.into_iter(),
+            available_langs: Default::default(),
         }
+    }
+    pub(crate) fn with_available_langs(
+        mut self,
+        available_langs: HashMap<Uuid, Vec<Language>>,
+    ) -> Self {
+        self.available_langs = available_langs;
+        self
     }
     fn id_to_manga_json(&self, entry: &Uuid) -> ManagerCoreResult<MangaObject> {
         let entry = self.manga_path.join(format!("{entry}.json"));
@@ -40,7 +52,12 @@ impl MangaIdsListDataPull {
         Ok(o)
     }
     fn id_to_manga(&self, entry: Uuid) -> ManagerCoreResult<MangaObject> {
-        if let Ok(o) = self.id_to_manga_cbor(&entry) {
+        if let Ok(mut o) = self.id_to_manga_cbor(&entry) {
+            if let Some(langs) = self.available_langs.get(&o.id) {
+                o.attributes
+                    .available_translated_languages
+                    .clone_from(langs);
+            }
             Ok(o)
         } else {
             self.id_to_manga_json(&entry)

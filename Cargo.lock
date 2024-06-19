@@ -1200,7 +1200,6 @@ version = "1.0.0-alpha.1"
 dependencies = [
  "actix",
  "anyhow",
- "async-stream",
  "bytes",
  "ciborium",
  "criterion",

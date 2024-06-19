@@ -15,7 +15,7 @@ pub use crate::r#core::{DirsOptionsVerificationError, Error, ErrorType, OwnedErr
 pub use download::DownloadManager;
 pub use files_dirs::DirsOptions;
 
-/// The `mangadex-desktop-api2` prelude
+/// The `mangadex-desktop-api2` prelude module
 pub mod prelude {
     pub use super::{
         data_pulls::{
