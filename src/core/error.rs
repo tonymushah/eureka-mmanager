@@ -87,14 +87,21 @@ pub enum Error {
 }
 
 impl Error {
+    /// Transform the error into an [`OwnedError`]
     pub fn into_owned(self) -> OwnedError {
         self.into()
     }
+    /// Transform the error into an [`ErrorType`]
     pub fn into_type(&self) -> ErrorType {
         self.into()
     }
 }
 
+/// This is just [`Error`] wrapped into an [`Arc`],
+/// allows you to share the error "safely" between thread
+/// since [`Error`] doesn't implement [`Clone`].
+///
+/// If you don't want the value or want a light-weight alternative to this, use [`ErrorType`] instead
 #[derive(Debug, Clone)]
 pub struct OwnedError(Arc<Error>);
 
@@ -146,6 +153,8 @@ pub enum DirsOptionsVerificationError {
 }
 
 /// This is just [`Error`] but without the values.
+///
+/// You can get it by using [`Into::into`] on [`Error`] or use [`Error::into_type`].
 ///
 /// It can be useful if you just want or share the error without using [`OwnedError`]
 #[derive(
@@ -224,6 +233,12 @@ impl From<&Error> for ErrorType {
             Error::HistoryServiceNotFound => Self::HistoryServiceNotFound,
             Error::NotInitialized => Self::NotInitialized,
         }
+    }
+}
+
+impl From<Error> for ErrorType {
+    fn from(value: Error) -> Self {
+        (&value).into()
     }
 }
 
