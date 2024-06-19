@@ -5,6 +5,7 @@ use mangadex_api_types_rust::{ResponseType, ResultType};
 use serde::{Deserialize, Serialize};
 use tokio_stream::{Stream, StreamExt};
 
+/// The result of [`Paginate::paginate`] or [`AsyncPaginate::paginate`].
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Collection<T> {
     pub data: Vec<T>,
@@ -14,6 +15,11 @@ pub struct Collection<T> {
 }
 
 impl<T> Collection<T> {
+    /// Transform this into an [`Results`].
+    ///
+    /// __Why it returns a [`Result<Results<T>, TryFromIntError>`]?__
+    ///
+    /// Since [`Results::offset`], [`Results::total`], [`Results::limit`], [`Results::total`] is not [`usize`], we need to transform them into an [`u32`].
     pub fn into_results(self) -> Result<Results<T>, TryFromIntError> {
         self.try_into()
     }
@@ -33,6 +39,13 @@ impl<T> TryFrom<Collection<T>> for Results<T> {
     }
 }
 
+/// Paginate allows you to get portion of the underlying stream.
+///
+/// This is heavily inspired by the [SQL offset limit system](https://www.postgresql.org/docs/current/queries-limit.html).
+///
+/// If you want an synchronous version, use [`Paginate`] instead.
+///
+/// Note: If the underlying [`Stream::size_hint`] doesn't give the total, it will collect the stream into a [`Vec`] and call [`Paginate::paginate`] after.
 pub trait AsyncPaginate<T> {
     fn paginate(
         self,
@@ -41,6 +54,11 @@ pub trait AsyncPaginate<T> {
     ) -> impl std::future::Future<Output = Collection<T>> + Send;
 }
 
+/// Paginate allows you to get portion of the underlying [`Vec`] (unfortunalty).
+///
+/// This is heavily inspired by the [SQL offset limit system](https://www.postgresql.org/docs/current/queries-limit.html).
+///
+/// If you want an asynchronous version, use [`Paginate`] instead.
 pub trait Paginate<T> {
     fn paginate(self, offset: usize, limit: usize) -> Collection<T>;
 }
