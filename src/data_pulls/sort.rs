@@ -1,4 +1,4 @@
-/// This allows you sort your [`tokio_stream::Stream`] with some sort of parameter [`P`].
+/// This allows you sort your [`tokio_stream::Stream`] with some sort of parameter `P`.
 ///
 /// Please note that it returns a [`Vec`].
 /// Which means that you need to collect all the stream data and then implement sort code after that.
@@ -11,7 +11,7 @@ pub trait AsyncIntoSorted<P> {
     ) -> impl std::future::Future<Output = Vec<<Self as AsyncIntoSorted<P>>::Item>> + Send;
 }
 
-/// This allows you sort your [`Vec`] or [`Iterator`] (which I tried but It doesn't work) with some sort of parameter [`P`].
+/// This allows you sort your [`Vec`] or [`Iterator`] (which I tried but It doesn't work) with some sort of parameter`` P`.
 ///
 /// __But what's the difference between [`[T]::sort_by`](https://doc.rust-lang.org/std/primitive.slice.html#method.sort_by)?__
 ///
