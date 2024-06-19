@@ -1,11 +1,13 @@
 use rand::random;
 use tokio_stream::{Stream, StreamExt};
 
+/// Get a random value asynchronously
 pub trait AsyncRand {
     type Output;
     fn random(self) -> impl std::future::Future<Output = Option<Self::Output>> + Send;
 }
 
+// Get a random value synchronously
 pub trait Rand {
     type Output;
     fn random(self) -> Option<Self::Output>;
