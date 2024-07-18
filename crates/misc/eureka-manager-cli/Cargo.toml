@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix = "0.13.3"
+actix.workspace = true
 anyhow = "1.0.86"
-api = { path = "../", package = "mangadex-desktop-api2" }
+mangadex-desktop-api2 = {package = "api", workspace = true  }
 clap = { version = "4.5.4", features = ["derive"] }
 fern = "0.6.2"
-file_listing = { path = "../id_list_txt_reader", package = "id_list_txt_reader" }
+id_list_txt_reader = { workspace = true, package = "file_listing" }
