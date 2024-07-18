@@ -67,6 +67,7 @@ impl MangaRequiredRelationship {
 }
 
 impl Push<MangaObject> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: MangaObject) -> crate::ManagerCoreResult<()> {
         let mut file = BufWriter::new(File::create(self.mangas_add(format!("{}.json", data.id)))?);
         serde_json::to_writer(
@@ -100,6 +101,7 @@ impl Push<MangaObject> for DirsOptions {
 }
 
 impl Push<Vec<MangaObject>> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: Vec<MangaObject>) -> crate::ManagerCoreResult<()> {
         for manga in data {
             self.push(manga)?;
