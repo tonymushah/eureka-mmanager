@@ -1,0 +1,27 @@
+[package]
+name = "mangadex-desktop-api2-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio-stream = { workspace = true, optional = true }
+uuid.workspace = true
+rand.workspace = true
+ciborium.workspace = true
+url.workspace = true
+mangadex-api-schema-rust.workspace = true
+mangadex-api-types-rust.workspace = true
+bytes.workspace = true
+itertools.workspace = true
+mangadex-api-input-types.workspace = true
+actix = { workspace = true, optional = true }
+regex.workspace = true
+log = { workspace = true, optional = true }
+
+[features]
+actix = ["dep:actix"]
+log = ["dep:log"]
+stream = ["dep:tokio-stream"]

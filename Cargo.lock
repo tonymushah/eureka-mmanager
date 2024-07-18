@@ -1054,7 +1054,6 @@ dependencies = [
  "actix",
  "anyhow",
  "bytes",
- "ciborium",
  "criterion",
  "itertools 0.13.0",
  "log",
@@ -1062,9 +1061,8 @@ dependencies = [
  "mangadex-api-input-types",
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
+ "mangadex-desktop-api2-core",
  "once_cell",
- "rand",
- "regex",
  "reqwest",
  "serde",
  "serde_json",
@@ -1072,6 +1070,28 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "toml",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "mangadex-desktop-api2-core"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "bytes",
+ "ciborium",
+ "itertools 0.10.5",
+ "log",
+ "mangadex-api-input-types",
+ "mangadex-api-schema-rust",
+ "mangadex-api-types-rust",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio-stream",
  "url",
  "uuid",
 ]
