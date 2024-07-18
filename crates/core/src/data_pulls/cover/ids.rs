@@ -1,6 +1,9 @@
-use std::{fs::File, io::BufReader, path::PathBuf, task::Poll, vec::IntoIter};
+#[cfg(feature = "stream")]
+use std::task::Poll;
+use std::{fs::File, io::BufReader, path::PathBuf, vec::IntoIter};
 
 use mangadex_api_schema_rust::v5::{CoverData, CoverObject};
+#[cfg(feature = "stream")]
 use tokio_stream::Stream;
 use uuid::Uuid;
 
@@ -47,6 +50,16 @@ impl CoverIdsListDataPull {
     }
 }
 
+impl Iterator for CoverIdsListDataPull {
+    type Item = ManagerCoreResult<CoverObject>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.iter.next()?;
+        Some(self.id_to_cover(next))
+    }
+}
+
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl Stream for CoverIdsListDataPull {
     type Item = CoverObject;
 
@@ -54,8 +67,8 @@ impl Stream for CoverIdsListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(entry) = self.iter.next() {
-            if let Ok(res) = self.id_to_cover(entry) {
+        if let Some(entry) = self.next() {
+            if let Ok(res) = entry {
                 Poll::Ready(Some(res))
             } else {
                 cx.waker().wake_by_ref();

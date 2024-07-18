@@ -1,6 +1,9 @@
-use std::{fs::File, io::BufReader, path::PathBuf, task::Poll, vec::IntoIter};
+use std::{fs::File, io::BufReader, path::PathBuf, vec::IntoIter};
 
 use mangadex_api_schema_rust::v5::{ChapterData, ChapterObject};
+#[cfg(feature = "stream")]
+use std::task::Poll;
+#[cfg(feature = "stream")]
 use tokio_stream::Stream;
 use uuid::Uuid;
 
@@ -32,6 +35,16 @@ impl ChapterIdsListDataPull {
     }
 }
 
+impl Iterator for ChapterIdsListDataPull {
+    type Item = ManagerCoreResult<ChapterObject>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.iter.next()?;
+        Some(self.id_to_chapter(next))
+    }
+}
+
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl Stream for ChapterIdsListDataPull {
     type Item = ChapterObject;
 
@@ -39,8 +52,8 @@ impl Stream for ChapterIdsListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(entry) = self.iter.next() {
-            if let Ok(res) = self.id_to_chapter(entry) {
+        if let Some(entry) = self.next() {
+            if let Ok(res) = entry {
                 Poll::Ready(Some(res))
             } else {
                 cx.waker().wake_by_ref();

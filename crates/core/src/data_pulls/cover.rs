@@ -10,13 +10,18 @@ use std::{cmp::Ordering, fs::File, io::BufReader};
 
 use mangadex_api_schema_rust::v5::{CoverData, CoverObject};
 use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
+#[cfg(feature = "stream")]
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use crate::{DirsOptions, ManagerCoreResult};
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
+use super::{sort::IntoSorted, IntoFiltered, Pull};
+#[cfg(feature = "stream")]
+use super::{AsyncIntoSorted, IntoParamedFilteredStream};
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S> AsyncIntoSorted<CoverSortOrder> for S
 where
     S: Stream<Item = CoverObject> + Send,
@@ -108,6 +113,7 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
     }
 }
 
+#[cfg(feature = "stream")]
 impl<S> IntoParamedFilteredStream<CoverListDataPullFilterParams> for S where
     S: Stream<Item = CoverObject>
 {

@@ -4,9 +4,10 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::data_pulls::{
-    chapter::ChapterListDataPullFilterParams, IntoFiltered, IntoParamedFilteredStream,
-};
+use crate::data_pulls::{chapter::ChapterListDataPullFilterParams, IntoFiltered};
+
+#[cfg(feature = "stream")]
+use crate::data_pulls::IntoParamedFilteredStream;
 
 use itertools::Itertools;
 use mangadex_api_input_types::manga::aggregate::MangaAggregateParam;
@@ -15,6 +16,7 @@ use mangadex_api_schema_rust::v5::{
     ChapterObject, MangaAggregate,
 };
 use mangadex_api_types_rust::ResultType;
+#[cfg(feature = "stream")]
 use tokio_stream::{Stream, StreamExt};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -74,6 +76,8 @@ impl Ord for AggregateNumber {
 /// then this is great way to do that.
 ///
 /// This is already implemented for every [`Stream<Item = ChapterObject>`] out there.
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub trait AsyncIntoMangaAggreagate {
     fn aggregate(
         self,
@@ -162,7 +166,8 @@ where
             .agg()
     }
 }
-
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S> AsyncIntoMangaAggreagate for S
 where
     S: Stream<Item = ChapterObject> + Send,

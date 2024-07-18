@@ -1,14 +1,17 @@
+#[cfg(feature = "stream")]
+use std::task::Poll;
 use std::{
     collections::HashMap,
     fs::{read_dir, DirEntry, File, ReadDir},
     io::BufReader,
     iter::Flatten,
     path::PathBuf,
-    task::Poll,
 };
 
 use mangadex_api_schema_rust::v5::{MangaData, MangaObject};
 use mangadex_api_types_rust::Language;
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 use tokio_stream::Stream;
 use uuid::Uuid;
 
@@ -62,6 +65,16 @@ impl MangaListDataPull {
     }
 }
 
+impl Iterator for MangaListDataPull {
+    type Item = ManagerCoreResult<MangaObject>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.read_dir.next()?;
+        Some(self.dir_entry_to_manga(next))
+    }
+}
+
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl Stream for MangaListDataPull {
     type Item = MangaObject;
 
@@ -69,8 +82,8 @@ impl Stream for MangaListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(entry) = self.read_dir.next() {
-            match self.dir_entry_to_manga(entry) {
+        if let Some(entry) = self.next() {
+            match entry {
                 Ok(o) => Poll::Ready(Some(o)),
                 Err(_e) => {
                     #[cfg(feature = "log")]

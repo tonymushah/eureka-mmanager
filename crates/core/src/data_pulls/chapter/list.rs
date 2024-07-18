@@ -1,12 +1,14 @@
+#[cfg(feature = "stream")]
+use std::task::Poll;
 use std::{
     fs::{read_dir, DirEntry, File, ReadDir},
     io::BufReader,
     iter::Flatten,
     path::PathBuf,
-    task::Poll,
 };
 
 use mangadex_api_schema_rust::v5::{ChapterData, ChapterObject};
+#[cfg(feature = "stream")]
 use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
@@ -34,6 +36,16 @@ impl ChapterListDataPull {
     }
 }
 
+impl Iterator for ChapterListDataPull {
+    type Item = ManagerCoreResult<ChapterObject>;
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.read_dir.next()?;
+        Some(Self::dir_entry_to_chapter(next))
+    }
+}
+
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl Stream for ChapterListDataPull {
     type Item = ChapterObject;
 
@@ -41,15 +53,15 @@ impl Stream for ChapterListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-            if let Some(entry) = self.read_dir.next() {
-                if let Ok(res) = Self::dir_entry_to_chapter(entry) {
-                    Poll::Ready(Some(res))
-                }else {
-                    cx.waker().wake_by_ref();
-                    Poll::Pending
-                }
+        if let Some(entry) = self.next() {
+            if let Ok(res) = entry {
+                Poll::Ready(Some(res))
             } else {
-                Poll::Ready(None)
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
+        } else {
+            Poll::Ready(None)
+        }
     }
 }

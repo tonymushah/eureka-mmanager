@@ -1,9 +1,11 @@
+use std::iter::Filter;
+#[cfg(feature = "stream")]
 use std::{
-    iter::Filter,
     pin::Pin,
     task::{ready, Poll},
 };
 
+#[cfg(feature = "stream")]
 use tokio_stream::Stream;
 
 use super::Validate;
@@ -11,7 +13,8 @@ use super::Validate;
 /// A [`Stream`] that filter another [`Stream`] with a Parameter that implement [`Validate`]
 /// since filtering don't need to collect the underlying stream.
 ///
-/// This is only used internally with [``]
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub struct ParamedFilteredStream<S, P>
 where
     S: Stream,
@@ -21,6 +24,8 @@ where
     params: P,
 }
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S, P> Unpin for ParamedFilteredStream<S, P>
 where
     S: Stream,
@@ -28,6 +33,8 @@ where
 {
 }
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S, P> ParamedFilteredStream<S, P>
 where
     S: Stream,
@@ -41,6 +48,8 @@ where
     }
 }
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S, P> Stream for ParamedFilteredStream<S, P>
 where
     S: Stream,
@@ -68,6 +77,8 @@ where
 /// Filter an [`Stream`] with a [`Validate`] param.
 ///
 /// Use [`IntoFiltered`] for an synchronous version
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 pub trait IntoParamedFilteredStream<P>: Stream + Sized
 where
     P: Validate<Self::Item>,

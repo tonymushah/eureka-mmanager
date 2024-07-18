@@ -6,7 +6,10 @@ pub mod random;
 pub mod results;
 pub mod sort;
 
-pub use filter::{IntoFiltered, IntoParamedFilteredStream};
+pub use filter::IntoFiltered;
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
+pub use filter::IntoParamedFilteredStream;
 pub use random::{AsyncRand, Rand};
 pub use results::{AsyncPaginate, Paginate};
 pub use sort::{AsyncIntoSorted, IntoSorted};

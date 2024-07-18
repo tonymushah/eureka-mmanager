@@ -10,13 +10,18 @@ pub use ids::MangaIdsListDataPull;
 pub use list::MangaListDataPull;
 use mangadex_api_schema_rust::v5::{MangaData, MangaObject};
 use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
+#[cfg(feature = "stream")]
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use crate::{DirsOptions, ManagerCoreResult};
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
+use super::{sort::IntoSorted, IntoFiltered, Pull};
+#[cfg(feature = "stream")]
+use super::{AsyncIntoSorted, IntoParamedFilteredStream};
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S> AsyncIntoSorted<MangaSortOrder> for S
 where
     S: Stream<Item = MangaObject> + Send,
@@ -111,6 +116,7 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
     }
 }
 
+#[cfg(feature = "stream")]
 impl<S> IntoParamedFilteredStream<MangaListDataPullFilterParams> for S where
     S: Stream<Item = MangaObject>
 {

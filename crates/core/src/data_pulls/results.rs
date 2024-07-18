@@ -3,6 +3,7 @@ use std::num::TryFromIntError;
 use mangadex_api_schema_rust::v5::Results;
 use mangadex_api_types_rust::{ResponseType, ResultType};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "stream")]
 use tokio_stream::{Stream, StreamExt};
 
 /// The result of [`Paginate::paginate`] or [`AsyncPaginate::paginate`].
@@ -80,6 +81,8 @@ impl<T> Paginate<T> for Vec<T> {
     }
 }
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S, T> AsyncPaginate<T> for S
 where
     S: Stream<Item = T> + Send,

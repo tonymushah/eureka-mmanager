@@ -1,12 +1,13 @@
+use mangadex_api_schema_rust::v5::{CoverData, CoverObject};
+#[cfg(feature = "stream")]
+use std::task::Poll;
 use std::{
     fs::{read_dir, DirEntry, File, ReadDir},
     io::BufReader,
     iter::Flatten,
     path::PathBuf,
-    task::Poll,
 };
-
-use mangadex_api_schema_rust::v5::{CoverData, CoverObject};
+#[cfg(feature = "stream")]
 use tokio_stream::Stream;
 
 use crate::ManagerCoreResult;
@@ -45,6 +46,15 @@ impl CoverListDataPull {
     }
 }
 
+impl Iterator for CoverListDataPull {
+    type Item = ManagerCoreResult<CoverObject>;
+    fn next(&mut self) -> Option<Self::Item> {
+        Some(Self::dir_entry_to_cover(self.read_dir.next()?))
+    }
+}
+
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl Stream for CoverListDataPull {
     type Item = CoverObject;
 
@@ -52,8 +62,8 @@ impl Stream for CoverListDataPull {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> Poll<Option<Self::Item>> {
-        if let Some(entry) = self.read_dir.next() {
-            if let Ok(res) = Self::dir_entry_to_cover(entry) {
+        if let Some(entry) = self.next() {
+            if let Ok(res) = entry {
                 Poll::Ready(Some(res))
             } else {
                 cx.waker().wake_by_ref();

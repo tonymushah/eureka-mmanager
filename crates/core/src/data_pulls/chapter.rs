@@ -11,13 +11,18 @@ use ids::ChapterIdsListDataPull;
 use list::ChapterListDataPull;
 use mangadex_api_schema_rust::v5::{ChapterData, ChapterObject};
 use mangadex_api_types_rust::{ChapterSortOrder, OrderDirection};
+#[cfg(feature = "stream")]
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use crate::{DirsOptions, ManagerCoreResult};
 
-use super::{sort::IntoSorted, AsyncIntoSorted, IntoFiltered, IntoParamedFilteredStream, Pull};
+#[cfg(feature = "stream")]
+use super::{AsyncIntoSorted, IntoParamedFilteredStream};
+use super::{IntoFiltered, IntoSorted, Pull};
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S> AsyncIntoSorted<ChapterSortOrder> for S
 where
     S: Stream<Item = ChapterObject> + Send,
@@ -176,6 +181,8 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
     }
 }
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S> IntoParamedFilteredStream<ChapterListDataPullFilterParams> for S where
     S: Stream<Item = ChapterObject>
 {

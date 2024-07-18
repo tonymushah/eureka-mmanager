@@ -1,4 +1,6 @@
 use rand::random;
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 use tokio_stream::{Stream, StreamExt};
 
 /// Get a random value asynchronously
@@ -20,6 +22,8 @@ impl<T: Clone> Rand for Vec<T> {
     }
 }
 
+#[cfg(feature = "stream")]
+#[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
 impl<S, T> AsyncRand for S
 where
     S: Stream<Item = T> + Send,
