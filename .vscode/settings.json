@@ -3,5 +3,8 @@
     "rust-analyzer.check.command": "clippy",
     "[rust]": {
         "editor.formatOnSave": true
+    },
+    "[toml]": {
+        "editor.formatOnSave": true
     }
 }
