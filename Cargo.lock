@@ -1062,6 +1062,7 @@ dependencies = [
  "mangadex-api-input-types",
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
+ "mangadex-desktop-api2-core",
  "once_cell",
  "rand",
  "regex",

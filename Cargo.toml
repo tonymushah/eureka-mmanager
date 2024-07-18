@@ -11,7 +11,7 @@ resolver = "2"
 [workspace.dependencies]
 id_list_txt_reader = { path = "./crates/misc/id_list_txt_reader" }
 mangadex-desktop-api2 = { path = "./crates/manager" }
-core = { path = "./crates/core", package = "mangadex-desktop-api2-cover" }
+api-core = { path = "./crates/core", package = "mangadex-desktop-api2-core" }
 reqwest = { version = "0.12", features = [
     "cookies",
     "json",
@@ -30,15 +30,12 @@ mangadex-api = { version = "3.3", default-features = false, features = [
 serde_json = { version = "1.0" }
 mangadex-api-schema-rust = { version = "0.9", default-features = false, features = [
     "serialize",
-]}
-mangadex-api-types-rust = { version = "0.9", default-features = false}
-tokio = { version = "1.37", features = [
-    "sync",
-    "rt"
 ] }
+mangadex-api-types-rust = { version = "0.9", default-features = false }
+tokio = { version = "1.37", features = ["sync", "rt"] }
 log = "^0.4.21"
-tokio-stream = { version = "0.1"}
-bytes = { version = "1.6"}
+tokio-stream = { version = "0.1" }
+bytes = { version = "1.6" }
 itertools = "0"
 mangadex-api-input-types = { version = "0.5" }
 actix = "0.13"
