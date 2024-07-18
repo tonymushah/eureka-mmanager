@@ -1080,10 +1080,21 @@ dependencies = [
 name = "mangadex-desktop-api2-core"
 version = "0.1.0"
 dependencies = [
+ "actix",
+ "bytes",
+ "ciborium",
+ "itertools 0.10.5",
+ "log",
+ "mangadex-api-input-types",
+ "mangadex-api-schema-rust",
+ "mangadex-api-types-rust",
+ "rand",
+ "regex",
  "serde",
  "serde_json",
  "thiserror",
  "tokio-stream",
+ "url",
  "uuid",
 ]
 

@@ -9,3 +9,18 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio-stream.workspace = true
 uuid.workspace = true
+rand.workspace = true
+ciborium.workspace = true
+url.workspace = true
+mangadex-api-schema-rust.workspace = true
+mangadex-api-types-rust.workspace = true
+bytes.workspace = true
+itertools.workspace = true
+mangadex-api-input-types.workspace = true
+actix = { workspace = true, optional = true }
+regex.workspace = true
+log = { workspace = true, optional = true }
+
+[features]
+actix = ["dep:actix"]
+log = ["dep:log"]
