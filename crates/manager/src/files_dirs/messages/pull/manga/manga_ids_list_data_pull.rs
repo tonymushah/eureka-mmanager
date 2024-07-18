@@ -37,9 +37,9 @@ impl Handler<MangaIdsListDataPullMessage> for DirsOptions {
         ctx: &mut Self::Context,
     ) -> Self::Result {
         let msg: Vec<Uuid> = msg.into();
-        let pull = MangaIdsListDataPull::new(self.mangas.clone(), msg.clone());
+        let pull = self.pull_mangas_ids(msg.clone());
         let chap_pull = self.handle(ChapterListDataPullMessage, ctx).map(move |p| {
-            p.filter_map(move |chapter| {
+            StreamExt::filter_map(p, move |chapter| {
                 let manga = chapter
                     .find_first_relationships(RelationshipType::Manga)?
                     .id;

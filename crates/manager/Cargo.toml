@@ -28,11 +28,8 @@ tokio-stream.workspace = true
 bytes.workspace = true
 itertools.workspace = true
 mangadex-api-input-types.workspace = true
-regex.workspace = true
 actix.workspace = true
-rand.workspace = true
-ciborium.workspace = true
-api-core.workspace = true
+api-core = { workspace = true, features = ["stream", "actix"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }

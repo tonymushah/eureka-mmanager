@@ -16,6 +16,6 @@ impl Handler<ChapterListDataPullMessage> for DirsOptions {
         _msg: ChapterListDataPullMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
-        ChapterListDataPull::new(self.chapters.clone())
+        self.pull_all_chapter().map_err(|e| e.into())
     }
 }

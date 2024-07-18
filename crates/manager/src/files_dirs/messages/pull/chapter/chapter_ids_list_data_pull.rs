@@ -29,6 +29,6 @@ impl Handler<ChapterIdsListDataPullMessage> for DirsOptions {
         msg: ChapterIdsListDataPullMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
-        ChapterIdsListDataPull::new(self.chapters.clone(), msg.into())
+        self.pull_chapter_ids(msg.into())
     }
 }

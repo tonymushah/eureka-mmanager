@@ -1,4 +1,4 @@
-use std::{fs::read_dir, path::Path};
+use std::{fs::read_dir, ops::Deref, path::Path};
 
 use actix::prelude::*;
 use uuid::Uuid;
@@ -30,8 +30,12 @@ impl Message for ChapterImagesPullMessage {
 
 impl Pull<ChapterImagesData, ChapterImagesPullMessage> for DirsOptions {
     fn pull(&self, id: ChapterImagesPullMessage) -> ManagerCoreResult<ChapterImagesData> {
-        self.pull(Into::<Uuid>::into(id))
+        self.deref()
+            .pull(Into::<Uuid>::into(id))
+            .map_err(|e: api_core::Error| e.into())
     }
+
+    type Error = crate::Error;
 }
 
 fn get_data<P: AsRef<Path>>(p: P) -> Vec<String> {

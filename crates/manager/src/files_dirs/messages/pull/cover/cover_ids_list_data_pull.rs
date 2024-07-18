@@ -29,6 +29,6 @@ impl Handler<CoverIdsListDataPullMessage> for DirsOptions {
         msg: CoverIdsListDataPullMessage,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
-        CoverIdsListDataPull::new(self.mangas.clone(), msg.into())
+        self.pull_covers_ids(msg.into())
     }
 }

@@ -50,8 +50,6 @@ pub enum Error {
     RollBacked(String),
     #[error("An RwLock occured \n Details : {0}")]
     RwLockError(#[from] std::sync::PoisonError<String>),
-    #[error("The {0} doesn't exist")]
-    DirsOptionsVerification(#[from] DirsOptionsVerificationError),
     #[error("We got a {0} mailbox error")]
     MailBox(#[from] actix::MailboxError),
     #[error("the history file for {0} is not found")]
@@ -62,16 +60,6 @@ pub enum Error {
     HistoryBase(#[from] HistoryBaseError),
     #[error("Invalid file entry {0}")]
     InvalidFileName(PathBuf),
-    #[error("Error when deserializing a .cbor file {0}")]
-    CiboriumDeIo(#[from] ciborium::de::Error<std::io::Error>),
-    #[error("Error when serializing a .cbor file {0}")]
-    CiboriumSerIo(#[from] ciborium::ser::Error<std::io::Error>),
-    #[error("Regex error {0}")]
-    Regex(#[from] regex::Error),
-    #[error("Missing Relationship {0:#?}")]
-    MissingRelationships(Vec<RelationshipType>),
-    #[error(transparent)]
-    DeleteChapterImages(#[from] DeleteChapterImagesError),
     #[error(transparent)]
     WatchRecv(#[from] tokio::sync::watch::error::RecvError),
     #[error("The given task was been cancelled")]
@@ -84,6 +72,10 @@ pub enum Error {
     HistoryServiceNotFound,
     #[error("The initial state can't be sent")]
     NotInitialized,
+    #[error(transparent)]
+    ApiCore(#[from] api_core::Error),
+    #[error(transparent)]
+    DeleteChapterImages(#[from] DeleteChapterImagesError),
 }
 
 impl Error {
@@ -136,22 +128,6 @@ impl std::error::Error for OwnedError {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum DirsOptionsVerificationError {
-    #[error("The data dir doesn:t exist")]
-    DataRoot,
-    #[error("The history dir doesn:t exist")]
-    History,
-    #[error("The chapters dir doesn:t exist")]
-    Chapters,
-    #[error("The covers dir doesn:t exist")]
-    Covers,
-    #[error("The covers images dir doesn:t exist")]
-    CoverImages,
-    #[error("The mangas dir doesn't exist")]
-    Mangas,
-}
-
 /// This is just [`Error`] but without the values.
 ///
 /// You can get it by using [`Into::into`] on [`Error`] or use [`Error::into_type`].
@@ -177,23 +153,20 @@ pub enum ErrorType {
     AcquireError,
     RollBacked,
     RwLockError,
-    DirsOptionsVerification,
     MailBox,
     HistoryFileNotFound,
     StdThreadJoin,
     HistoryBase,
     InvalidFileName,
-    CiboriumDeIo,
-    CiboriumSerIo,
-    Regex,
     MissingRelationships,
     DeleteChapterImages,
     WatchRecv,
     TaskCanceled,
     MangaDexClientNotFound,
-    DirsOptionsNotFound,
     HistoryServiceNotFound,
     NotInitialized,
+    ApiCore,
+    DirsOptionsNotFound,
 }
 
 impl From<&Error> for ErrorType {
@@ -215,23 +188,19 @@ impl From<&Error> for ErrorType {
             Error::AcquireError(_) => Self::AcquireError,
             Error::RollBacked(_) => Self::RollBacked,
             Error::RwLockError(_) => Self::RwLockError,
-            Error::DirsOptionsVerification(_) => Self::DirsOptionsVerification,
             Error::MailBox(_) => Self::MailBox,
             Error::HistoryFileNotFound(_) => Self::HistoryFileNotFound,
             Error::StdThreadJoin(_) => Self::StdThreadJoin,
             Error::HistoryBase(_) => Self::HistoryBase,
             Error::InvalidFileName(_) => Self::InvalidFileName,
-            Error::CiboriumDeIo(_) => Self::CiboriumDeIo,
-            Error::CiboriumSerIo(_) => Self::CiboriumSerIo,
-            Error::Regex(_) => Self::Regex,
-            Error::MissingRelationships(_) => Self::MissingRelationships,
-            Error::DeleteChapterImages(_) => Self::DeleteChapterImages,
             Error::WatchRecv(_) => Self::WatchRecv,
             Error::TaskCanceled => Self::TaskCanceled,
             Error::MangaDexClientNotFound => Self::MangaDexClientNotFound,
             Error::DirsOptionsNotFound => Self::DirsOptionsNotFound,
             Error::HistoryServiceNotFound => Self::HistoryServiceNotFound,
             Error::NotInitialized => Self::NotInitialized,
+            Error::ApiCore(_) => Self::ApiCore,
+            Error::DeleteChapterImages(_) => Self::DeleteChapterImages,
         }
     }
 }

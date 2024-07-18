@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use actix::prelude::*;
 use mangadex_api_schema_rust::v5::MangaObject;
 use mangadex_api_types_rust::Language;
@@ -34,7 +36,11 @@ impl Handler<MangaDataPullMessage> for DirsOptions {
     type Result = ResponseFuture<<MangaDataPullMessage as Message>::Result>;
 
     fn handle(&mut self, msg: MangaDataPullMessage, ctx: &mut Self::Context) -> Self::Result {
-        let manga: ManagerCoreResult<MangaObject> = self.pull(msg.into());
+        let manga: ManagerCoreResult<MangaObject> = self
+            .deref()
+            .deref()
+            .pull(msg.into())
+            .map_err(|e: api_core::Error| e.into());
         let chapter_pull = self.handle(ChapterListDataPullMessage, ctx);
         Box::pin(async move {
             let mut manga = manga?;

@@ -2,7 +2,8 @@ use std::{
     ffi::OsStr,
     fs::File,
     io::BufReader,
-    path::{Path, PathBuf},
+    ops::{Deref, DerefMut},
+    path::Path,
 };
 
 use actix::{Actor, Context, Handler, Message};
@@ -12,86 +13,48 @@ use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-mod chapters;
-mod covers;
-mod mangas;
 pub mod messages;
 
 use crate::{
     core::ManagerCoreResult,
     history::{service::messages::is_in::IsInMessage, IsIn},
-    DirsOptionsVerificationError,
 };
+use api_core::{data_push::Push, DirsOptions as DirsOptionsCore};
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct DirsOptions {
-    pub data_dir: PathBuf,
-    pub chapters: PathBuf,
-    pub mangas: PathBuf,
-    pub covers: PathBuf,
-    #[serde(default)]
-    pub init_dirs_if_not_exists: Option<bool>,
+pub struct DirsOptions(DirsOptionsCore);
+
+impl From<DirsOptionsCore> for DirsOptions {
+    fn from(value: DirsOptionsCore) -> Self {
+        Self(value)
+    }
+}
+
+impl From<DirsOptions> for DirsOptionsCore {
+    fn from(value: DirsOptions) -> Self {
+        value.0
+    }
+}
+
+impl Deref for DirsOptions {
+    type Target = DirsOptionsCore;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for DirsOptions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 impl DirsOptions {
     pub fn load_from_path(path: &Path) -> ManagerCoreResult<DirsOptions> {
-        let file = File::open(path)?;
-        let instance: DirsOptions = serde_json::from_reader(BufReader::new(file))?;
-        Ok(instance)
+        Ok(DirsOptionsCore::load_from_path(path).map(Self::from)?)
     }
     pub fn new_from_data_dir<P: AsRef<Path>>(data_dir: P) -> DirsOptions {
-        let data_dir = data_dir.as_ref().to_path_buf();
-        DirsOptions {
-            chapters: data_dir.join("chapters"),
-            mangas: data_dir.join("mangas"),
-            covers: data_dir.join("covers"),
-            init_dirs_if_not_exists: Some(true),
-            data_dir,
-        }
-    }
-    pub fn data_dir_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        self.data_dir.join(path)
-    }
-    pub fn history_add<P: AsRef<Path>>(&self, path: P) -> PathBuf {
-        self.data_dir_add("history").join(path)
-    }
-    pub fn init_dirs(&self) -> ManagerCoreResult<()> {
-        std::fs::create_dir_all(self.data_dir_add(""))?;
-        std::fs::create_dir_all(self.history_add(""))?;
-        std::fs::create_dir_all(self.chapters_add(""))?;
-        std::fs::create_dir_all(self.covers_add(""))?;
-        std::fs::create_dir_all(self.mangas_add(""))?;
-        std::fs::create_dir_all(self.cover_images_add(""))?;
-        Ok(())
-    }
-    pub fn verify(&self) -> Result<(), DirsOptionsVerificationError> {
-        if !self.data_dir.exists() {
-            return Err(DirsOptionsVerificationError::DataRoot);
-        }
-        if !self.history_add("").exists() {
-            return Err(DirsOptionsVerificationError::History);
-        }
-        if !self.chapters.exists() {
-            return Err(DirsOptionsVerificationError::Chapters);
-        }
-        if !self.covers.exists() {
-            return Err(DirsOptionsVerificationError::Covers);
-        }
-        if !self.cover_images_add("").exists() {
-            return Err(DirsOptionsVerificationError::CoverImages);
-        }
-        if !self.mangas.exists() {
-            return Err(DirsOptionsVerificationError::Mangas);
-        }
-        Ok(())
-    }
-    pub fn verify_and_init(&self) -> ManagerCoreResult<()> {
-        if let Ok(()) = self.verify() {
-            Ok(())
-        } else {
-            self.init_dirs()?;
-            Ok(())
-        }
+        Self::from(DirsOptionsCore::new_from_data_dir(data_dir))
     }
 }
 
@@ -175,5 +138,17 @@ impl<P: AsRef<Path>> FileExtension for P {
         }
 
         false
+    }
+}
+
+impl<T> Push<T> for DirsOptions
+where
+    DirsOptionsCore: Push<T>,
+    <DirsOptionsCore as Push<T>>::Error: Into<crate::Error>,
+{
+    type Error = crate::Error;
+
+    fn push(&mut self, data: T) -> Result<(), Self::Error> {
+        self.0.push(data).map_err(|e| e.into())
     }
 }

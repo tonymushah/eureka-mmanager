@@ -57,6 +57,15 @@ impl From<Mode> for DownloadMode {
     }
 }
 
+impl From<DownloadMode> for api_core::data_push::chapter::image::Mode {
+    fn from(value: DownloadMode) -> Self {
+        match value {
+            DownloadMode::Normal => api_core::data_push::chapter::image::Mode::Data,
+            DownloadMode::DataSaver => api_core::data_push::chapter::image::Mode::DataSaver,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ChapterDownloadTask {
     id: Uuid,

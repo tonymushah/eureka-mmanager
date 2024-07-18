@@ -12,6 +12,6 @@ impl Message for CoverListDataPullMessage {
 impl Handler<CoverListDataPullMessage> for DirsOptions {
     type Result = ManagerCoreResult<CoverListDataPull>;
     fn handle(&mut self, _msg: CoverListDataPullMessage, _ctx: &mut Self::Context) -> Self::Result {
-        CoverListDataPull::new(self.covers.clone())
+        self.pull_all_covers().map_err(|e| e.into())
     }
 }

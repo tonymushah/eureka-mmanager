@@ -30,14 +30,16 @@ impl<T> PushDataMessage<T> {
 impl<T> Handler<PushDataMessage<T>> for DirsOptions
 where
     Self: Push<T>,
+    <Self as Push<T>>::Error: Into<crate::Error>,
 {
     type Result = <PushDataMessage<T> as Message>::Result;
     fn handle(&mut self, msg: PushDataMessage<T>, _ctx: &mut Self::Context) -> Self::Result {
-        if msg.verify {
+        let res = if msg.verify {
             self.verify_and_push(msg.data)
         } else {
             self.push(msg.data)
-        }
+        };
+        res.map_err(|e| e.into())
     }
 }
 
