@@ -6,11 +6,10 @@ use itertools::Itertools;
 use mangadex_api_schema_rust::ApiObject;
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::ManagerCoreResult;
-
 pub trait Push<T> {
-    fn push(&mut self, data: T) -> ManagerCoreResult<()>;
-    fn verify_and_push(&mut self, data: T) -> ManagerCoreResult<()> {
+    type Error;
+    fn push(&mut self, data: T) -> Result<(), Self::Error>;
+    fn verify_and_push(&mut self, data: T) -> Result<(), Self::Error> {
         self.push(data)
     }
 }

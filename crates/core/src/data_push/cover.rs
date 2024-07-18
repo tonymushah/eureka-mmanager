@@ -24,6 +24,7 @@ pub fn required_cover_references() -> Vec<ReferenceExpansionResource> {
 }
 
 impl Push<CoverObject> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: CoverObject) -> crate::ManagerCoreResult<()> {
         let cover_path = self.covers_add(format!("{}.json", data.id));
         let mut file = BufWriter::new(File::create(cover_path)?);
@@ -58,6 +59,7 @@ impl Push<CoverObject> for DirsOptions {
 }
 
 impl Push<(CoverObject, Bytes)> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, (data, image): (CoverObject, Bytes)) -> crate::ManagerCoreResult<()> {
         let cover_image_path = self.cover_images_add(&data.attributes.file_name);
         self.push(data)?;
@@ -80,6 +82,7 @@ impl Push<(CoverObject, Bytes)> for DirsOptions {
 }
 
 impl Push<Vec<CoverObject>> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: Vec<CoverObject>) -> crate::ManagerCoreResult<()> {
         for cover in data {
             self.push(cover)?;
@@ -95,6 +98,7 @@ impl Push<Vec<CoverObject>> for DirsOptions {
 }
 
 impl Push<Vec<(CoverObject, Bytes)>> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: Vec<(CoverObject, Bytes)>) -> crate::ManagerCoreResult<()> {
         for cover_n_image in data {
             self.push(cover_n_image)?;

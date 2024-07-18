@@ -67,6 +67,7 @@ impl From<ChapterRequiredRelationship> for RelationshipType {
 }
 
 impl Push<ChapterObject> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: ChapterObject) -> crate::ManagerCoreResult<()> {
         let chapter_path = self.chapters_id_add(data.id);
         create_dir_all(&chapter_path)?;
@@ -102,6 +103,7 @@ impl Push<ChapterObject> for DirsOptions {
 }
 
 impl Push<Vec<ChapterObject>> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: Vec<ChapterObject>) -> ManagerCoreResult<()> {
         for item in data {
             self.push(item)?;

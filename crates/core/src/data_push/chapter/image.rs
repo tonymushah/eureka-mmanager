@@ -65,6 +65,7 @@ impl ChapterImagePushEntry {
 }
 
 impl Push<ChapterImagePushEntry> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: ChapterImagePushEntry) -> crate::ManagerCoreResult<()> {
         let mut file = match data.mode {
             Mode::Data => BufWriter::new(File::create(
@@ -81,6 +82,7 @@ impl Push<ChapterImagePushEntry> for DirsOptions {
 }
 
 impl Push<Vec<ChapterImagePushEntry>> for DirsOptions {
+    type Error = crate::Error;
     fn push(&mut self, data: Vec<ChapterImagePushEntry>) -> crate::ManagerCoreResult<()> {
         for image in data {
             self.push(image)?;
