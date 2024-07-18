@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::ManagerCoreResult;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "actix", actix::MessageResponse)]
+#[cfg_attr(feature = "actix", derive(actix::MessageResponse))]
 pub struct MangaIdsListDataPull {
     available_langs: HashMap<Uuid, Vec<Language>>,
     manga_path: PathBuf,

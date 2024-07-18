@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::ManagerCoreResult;
 
 #[derive(Debug)]
-#[cfg_attr(feature = "actix", actix::MessageResponse)]
+#[cfg_attr(feature = "actix", derive(actix::MessageResponse))]
 pub struct CoverIdsListDataPull {
     cover_path: PathBuf,
     iter: IntoIter<Uuid>,

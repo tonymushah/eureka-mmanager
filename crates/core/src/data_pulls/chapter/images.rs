@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
 
 #[derive(Debug, Clone, Hash, Default)]
-#[cfg_attr(feature = "actix", actix::MessageResponse)]
+#[cfg_attr(feature = "actix", derive(actix::MessageResponse))]
 pub struct ChapterImagesData {
     pub data: Vec<String>,
     pub data_saver: Vec<String>,
