@@ -521,10 +521,13 @@ name = "edmx"
 version = "0.1.0"
 dependencies = [
  "ciborium",
+ "mangadex-api-schema-rust",
+ "mangadex-api-types-rust",
  "mangadex-desktop-api2-core",
  "serde",
  "tar",
  "thiserror",
+ "uuid",
  "zstd",
 ]
 
