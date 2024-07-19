@@ -1081,7 +1081,7 @@ dependencies = [
  "actix",
  "bytes",
  "ciborium",
- "itertools 0.10.5",
+ "itertools 0.13.0",
  "log",
  "mangadex-api-input-types",
  "mangadex-api-schema-rust",
