@@ -48,9 +48,9 @@ pub struct PackageContents {
     pub data: HashMap<Uuid, PMangaObject>,
 }
 
-impl TryFrom<DirsOptions> for PackageContents {
+impl TryFrom<&DirsOptions> for PackageContents {
     type Error = api_core::Error;
-    fn try_from(value: DirsOptions) -> Result<Self, Self::Error> {
+    fn try_from(value: &DirsOptions) -> Result<Self, Self::Error> {
         let mut _covers = value.pull_all_covers()?.flatten().fold(
             HashMap::<Uuid, Vec<Uuid>>::new(),
             |mut acc, current| {
