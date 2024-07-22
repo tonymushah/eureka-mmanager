@@ -9,7 +9,7 @@ use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PChapterObject {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub data: Vec<String>,
@@ -35,13 +35,13 @@ impl From<ChapterImagesData> for PChapterObject {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct PMangaObject {
     pub covers: Vec<Uuid>,
     pub chapters: HashMap<Uuid, PChapterObject>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct PackageContents {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub options: Option<DirsOptions>,
