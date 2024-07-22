@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    ops::{Add, AddAssign},
+};
 
 use api_core::{
     data_pulls::{chapter::images::ChapterImagesData, Pull},
@@ -94,5 +97,28 @@ impl TryFrom<&DirsOptions> for PackageContents {
             options: None,
             data,
         })
+    }
+}
+
+impl Add for PackageContents {
+    type Output = PackageContents;
+    fn add(mut self, rhs: Self) -> Self::Output {
+        for (manga_id, mut manga_data) in rhs.data {
+            let insert_manga_data_here = self.data.entry(manga_id).or_default();
+            insert_manga_data_here.covers.append(&mut manga_data.covers);
+            insert_manga_data_here.covers.dedup();
+            for (chapter_id, chapter_data) in manga_data.chapters {
+                insert_manga_data_here
+                    .chapters
+                    .insert(chapter_id, chapter_data);
+            }
+        }
+        self
+    }
+}
+
+impl AddAssign for PackageContents {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = self.clone() + rhs
     }
 }
