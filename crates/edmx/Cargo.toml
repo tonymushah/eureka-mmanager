@@ -13,3 +13,4 @@ thiserror.workspace = true
 uuid.workspace = true
 mangadex-api-schema-rust.workspace = true
 mangadex-api-types-rust.workspace = true
+tempfile = "3"

@@ -526,6 +526,7 @@ dependencies = [
  "mangadex-desktop-api2-core",
  "serde",
  "tar",
+ "tempfile",
  "thiserror",
  "uuid",
  "zstd",
