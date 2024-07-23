@@ -315,7 +315,7 @@ where
     W: Write,
 {
     fn new(builder: Builder, writer: W) -> io::Result<Self> {
-        let workdir = TempDir::new_in("target")?;
+        let workdir = tempdir()?;
         let tar = TarBuilder::new(Encoder::new(writer, COMPRESSION_LEVEL)?.auto_finish());
         Ok(Self {
             workdir,
@@ -415,7 +415,7 @@ where
             .create(true)
             .truncate(true)
             .open(content_files_path)?;
-        println!("pulling cover content");
+        //println!("pulling cover content");
         let cover = {
             let cover_data: CoverObject = self.dir_options.pull(id)?;
             let mut writer = BufWriter::new(&mut content_files);
@@ -424,7 +424,7 @@ where
             cover_data
         };
         content_files.rewind()?;
-        println!("writing cover image");
+        //println!("writing cover image");
         self.tar.append_file(
             self.default_dir_options
                 .cover_images_add(&cover.attributes.file_name),
@@ -435,8 +435,8 @@ where
                 File::open(image_path)?
             },
         )?;
-        println!("{:#?}", content_files.metadata()?);
-        println!("writing cover data");
+        //println!("{:#?}", content_files.metadata()?);
+        //println!("writing cover data");
         self.tar.append_file(
             self.default_dir_options.covers_add(format!("{id}.txr")),
             &mut content_files,
@@ -468,24 +468,24 @@ where
 
     fn build(&mut self) -> ThisResult<()> {
         for (manga_id, manga_data) in self.package_content.data.clone() {
-            println!("writing {manga_id}");
+            // println!("writing {manga_id}");
             for cover_id in &manga_data.covers {
-                println!("writing cover {cover_id}");
+                //println!("writing cover {cover_id}");
                 self.build_cover(*cover_id)?;
-                println!("builded cover");
+                //println!("builded cover");
             }
-            println!("writing {manga_id} manga data");
+            //println!("writing {manga_id} manga data");
             self.build_manga(manga_id)?;
-            println!("writing {manga_id}");
+            //println!("writing {manga_id}");
             for chapter in manga_data.chapters.keys() {
-                println!("writing {chapter} chapter");
+                //println!("writing {chapter} chapter");
                 self.build_chapter(*chapter)?;
-                println!("writed {chapter} chapter");
+                //println!("writed {chapter} chapter");
             }
         }
-        println!("writing contents");
+        //println!("writing contents");
         self.build_contents()?;
-        println!("writed");
+        //println!("writed");
         Ok(())
     }
 }
