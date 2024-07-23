@@ -20,7 +20,7 @@ pub struct ChapterListDataPullFilterParams {
     pub groups: Vec<Uuid>,
     pub uploaders: Vec<Uuid>,
     pub volumes: Vec<String>,
-    pub manga_id: Option<Uuid>,
+    pub manga_ids: Vec<Uuid>,
     /// Chapter number in the series or volume.
     pub chapters: Vec<String>,
     pub translated_languages: Vec<Language>,
@@ -55,7 +55,11 @@ impl From<ChapterListParams> for ChapterListDataPullFilterParams {
             created_at_since: value.created_at_since,
             updated_at_since: value.updated_at_since,
             publish_at_since: value.publish_at_since,
-            manga_id: value.manga_id,
+            manga_ids: if let Some(manga_id) = value.manga_id {
+                vec![manga_id]
+            } else {
+                Default::default()
+            },
         }
     }
 }
@@ -63,7 +67,7 @@ impl From<ChapterListParams> for ChapterListDataPullFilterParams {
 impl From<MangaAggregateParam> for ChapterListDataPullFilterParams {
     fn from(value: MangaAggregateParam) -> Self {
         Self {
-            manga_id: Some(value.manga_id),
+            manga_ids: vec![value.manga_id],
             translated_languages: value.translated_language,
             groups: value.groups,
             ..Default::default()
@@ -237,7 +241,10 @@ impl ChapterListDataPullFilterParams {
         )
     }
     fn validate_manga_id(&self, input: &ChapterObject) -> Option<bool> {
-        let tl = &self.manga_id?;
+        let tl = &self.manga_ids;
+        if tl.is_empty() {
+            return None;
+        }
         let input_tl = {
             let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
                 .find_first_relationships(RelationshipType::Manga)?
@@ -246,7 +253,7 @@ impl ChapterListDataPullFilterParams {
                 .ok());
             manga.id
         };
-        Some(input_tl.cmp(tl).is_eq())
+        Some(tl.contains(&input_tl))
     }
 }
 

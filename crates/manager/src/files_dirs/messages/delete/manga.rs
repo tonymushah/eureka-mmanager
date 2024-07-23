@@ -51,7 +51,7 @@ impl Handler<DeleteMangaMessage> for DirsOptions {
                 Ok::<_, crate::Error>(
                     self.handle(ChapterListDataPullMessage, ctx)?
                         .to_filtered(ChapterListDataPullFilterParams {
-                            manga_id: Some(msg.0),
+                            manga_ids: vec![msg.0],
                             ..Default::default()
                         })
                         .map(|c| c.id)

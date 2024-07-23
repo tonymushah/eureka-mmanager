@@ -47,7 +47,7 @@ impl Handler<MangaDataPullMessage> for DirsOptions {
             if let Ok(pull) = chapter_pull {
                 let langs = pull
                     .to_filtered(ChapterListDataPullFilterParams {
-                        manga_id: Some(manga.id),
+                        manga_ids: vec![manga.id],
                         ..Default::default()
                     })
                     .fold(Vec::<Language>::new(), |mut acc, chapter| {
