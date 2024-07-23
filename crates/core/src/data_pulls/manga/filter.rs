@@ -11,6 +11,7 @@ use crate::{data_pulls::Validate, option_bool_match};
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct MangaListDataPullFilterParams {
+    pub title: Option<String>,
     pub author_or_artist: Option<Uuid>,
     pub authors: Vec<Uuid>,
     pub artists: Vec<Uuid>,
@@ -32,6 +33,7 @@ pub struct MangaListDataPullFilterParams {
 impl From<MangaListParams> for MangaListDataPullFilterParams {
     fn from(value: MangaListParams) -> Self {
         Self {
+            title: value.title,
             author_or_artist: value.author_or_artist,
             authors: value.authors,
             artists: value.artists,
@@ -197,11 +199,27 @@ impl MangaListDataPullFilterParams {
                 < option_bool_match!(input.attributes.updated_at.as_ref().map(|d| d.as_ref())),
         )
     }
+    fn validate_title(&self, input: &MangaObject) -> Option<bool> {
+        let title = self.title.as_ref()?;
+        let title_regex = regex::Regex::new(title).ok()?;
+        Some(
+            input
+                .attributes
+                .title
+                .values()
+                .any(|title_item| title_regex.is_match(title_item))
+                || input.attributes.alt_titles.iter().any(|item| {
+                    item.values()
+                        .any(|title_item| title_regex.is_match(title_item))
+                }),
+        )
+    }
 }
 
 impl Validate<MangaObject> for MangaListDataPullFilterParams {
     fn is_valid(&self, input: &MangaObject) -> bool {
         let validations = vec![
+            self.validate_title(input),
             self.validate_artists(input),
             self.validate_author_or_artist(input),
             self.validate_authors(input),
