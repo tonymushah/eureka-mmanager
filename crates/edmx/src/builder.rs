@@ -1,5 +1,5 @@
 use std::{
-    fs::{create_dir_all, File},
+    fs::{create_dir_all, File, OpenOptions},
     io::{self, BufWriter, Seek, Write},
     ops::Deref,
 };
@@ -293,7 +293,9 @@ impl Builder {
     }
 
     pub fn build<W: Write>(self, writer: W) -> ThisResult<()> {
-        BuilderInner::new(self, writer)?.build()
+        let mut builder = BuilderInner::new(self, writer)?;
+        builder.build()?;
+        Ok(())
     }
 }
 
@@ -313,7 +315,7 @@ where
     W: Write,
 {
     fn new(builder: Builder, writer: W) -> io::Result<Self> {
-        let workdir = tempdir()?;
+        let workdir = TempDir::new_in("target")?;
         let tar = TarBuilder::new(Encoder::new(writer, COMPRESSION_LEVEL)?.auto_finish());
         Ok(Self {
             workdir,
@@ -324,7 +326,12 @@ where
         })
     }
     fn build_contents(&mut self) -> ThisResult<()> {
-        let mut contents_file = File::create(self.workdir.path().join(CONTENTS_FILENAME))?;
+        let mut contents_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(self.workdir.path().join(CONTENTS_FILENAME))?;
         {
             let mut file_buf_writer = BufWriter::new(&mut contents_file);
             ciborium::into_writer(&self.package_content, &mut file_buf_writer)?;
@@ -337,8 +344,12 @@ where
     }
     fn build_chapter(&mut self, id: Uuid) -> ThisResult<()> {
         create_dir_all(self.workdir.path().join("chapters"))?;
-        let mut content_files =
-            File::create(self.workdir.path().join(format!("chapters/{id}.cbor")))?;
+        let mut content_files = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(self.workdir.path().join(format!("chapters/{id}.cbor")))?;
         {
             let chapter_data: ChapterObject = self.dir_options.pull(id)?;
             let mut writer = BufWriter::new(&mut content_files);
@@ -397,8 +408,14 @@ where
     }
     fn build_cover(&mut self, id: Uuid) -> ThisResult<()> {
         create_dir_all(self.workdir.path().join("covers"))?;
-        let mut content_files =
-            File::create(self.workdir.path().join(format!("covers/{id}.cbor")))?;
+        let content_files_path = self.workdir.path().join(format!("covers/{id}.txt"));
+        let mut content_files = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(content_files_path)?;
+        println!("pulling cover content");
         let cover = {
             let cover_data: CoverObject = self.dir_options.pull(id)?;
             let mut writer = BufWriter::new(&mut content_files);
@@ -407,6 +424,7 @@ where
             cover_data
         };
         content_files.rewind()?;
+        println!("writing cover image");
         self.tar.append_file(
             self.default_dir_options
                 .cover_images_add(&cover.attributes.file_name),
@@ -417,16 +435,22 @@ where
                 File::open(image_path)?
             },
         )?;
+        println!("{:#?}", content_files.metadata()?);
+        println!("writing cover data");
         self.tar.append_file(
-            self.default_dir_options.covers_add(format!("{id}.cbor")),
+            self.default_dir_options.covers_add(format!("{id}.txr")),
             &mut content_files,
         )?;
         Ok(())
     }
     fn build_manga(&mut self, id: Uuid) -> ThisResult<()> {
         create_dir_all(self.workdir.path().join("mangas"))?;
-        let mut content_files =
-            File::create(self.workdir.path().join(format!("mangas/{id}.cbor")))?;
+        let mut content_files = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(self.workdir.path().join(format!("mangas/{id}.cbor")))?;
         let _ = {
             let manga_data: MangaObject = self.dir_options.pull(id)?;
             let mut writer = BufWriter::new(&mut content_files);
@@ -444,15 +468,24 @@ where
 
     fn build(&mut self) -> ThisResult<()> {
         for (manga_id, manga_data) in self.package_content.data.clone() {
+            println!("writing {manga_id}");
             for cover_id in &manga_data.covers {
+                println!("writing cover {cover_id}");
                 self.build_cover(*cover_id)?;
+                println!("builded cover");
             }
+            println!("writing {manga_id} manga data");
             self.build_manga(manga_id)?;
+            println!("writing {manga_id}");
             for chapter in manga_data.chapters.keys() {
+                println!("writing {chapter} chapter");
                 self.build_chapter(*chapter)?;
+                println!("writed {chapter} chapter");
             }
         }
+        println!("writing contents");
         self.build_contents()?;
+        println!("writed");
         Ok(())
     }
 }
