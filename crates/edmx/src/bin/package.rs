@@ -43,11 +43,13 @@ fn main() {
             .collect::<Vec<_>>()
     };
     let pull_time = Instant::now() - start;
+    println!("Pulling Time: {} ms", pull_time.as_millis());
     let start = Instant::now();
     for chapter_id in chapters {
         builder.add_chapter(chapter_id, Default::default()).unwrap();
     }
     let add_time = Instant::now() - start;
+    println!("Adding Time: {} ms", add_time.as_millis());
     let start = Instant::now();
     let mut output_file = File::create("target/fuufu-ijou-v8-v9-en.tar.zstd").unwrap();
     let mut output_file_buf_writer = BufWriter::new(&mut output_file);
@@ -55,7 +57,5 @@ fn main() {
     output_file_buf_writer.flush().unwrap();
     let build_time = Instant::now() - start;
     println!("Done!");
-    println!("Pulling Time: {} ms", pull_time.as_millis());
-    println!("Adding Time: {} ms", add_time.as_millis());
     println!("Build Time: {} ms", build_time.as_millis());
 }
