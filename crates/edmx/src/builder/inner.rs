@@ -1,13 +1,13 @@
 use std::{
     fs::{create_dir_all, File, OpenOptions},
-    io::{self, BufWriter, Seek, Write},
+    io::{self, BufReader, BufWriter, Seek, Write},
     path::Path,
 };
 
 use api_core::{data_pulls::Pull, DirsOptions};
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use serde::Serialize;
-use tar::Builder as TarBuilder;
+use tar::{Builder as TarBuilder, Header};
 use tempfile::{tempdir, TempDir};
 use uuid::Uuid;
 use zstd::{stream::AutoFinishEncoder, Encoder};
@@ -44,6 +44,12 @@ where
             default_dir_options: Default::default(),
         })
     }
+    fn append_file<P: AsRef<Path>>(&mut self, path: P, file: &mut File) -> io::Result<()> {
+        let mut buf_reader = BufReader::new(file);
+        let mut header = Header::new_gnu();
+        self.tar.append_data(&mut header, path, &mut buf_reader)?;
+        Ok(())
+    }
     fn create_workdir_file<P: AsRef<Path>>(&self, path: P) -> io::Result<File> {
         OpenOptions::new()
             .read(true)
@@ -62,8 +68,7 @@ where
         let mut contents_file = self.create_workdir_file(CONTENTS_FILENAME)?;
         self.write_cbor_to_file(&mut contents_file, &self.package_content)?;
         contents_file.rewind()?;
-        self.tar
-            .append_file(CONTENTS_FILENAME, &mut contents_file)?;
+        self.append_file(CONTENTS_FILENAME, &mut contents_file)?;
         Ok(())
     }
     fn create_dir_all<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
@@ -86,16 +91,18 @@ where
                 io::ErrorKind::NotFound,
             )))
     }
+
     fn append_chapter_images_data(
         &mut self,
         (id, images): (Uuid, &PChapterObject),
     ) -> io::Result<()> {
-        for (filename, path) in images
+        let data = images
             .data
             .iter()
             .map(|image| (image, self.dir_options.chapters_id_data_add(id).join(image)))
-        {
-            self.tar.append_file(
+            .collect::<Vec<_>>();
+        for (filename, path) in data {
+            self.append_file(
                 self.default_dir_options
                     .chapters_id_data_add(id)
                     .join(filename),
@@ -108,13 +115,18 @@ where
         &mut self,
         (id, images): (Uuid, &PChapterObject),
     ) -> io::Result<()> {
-        for (filename, path) in images.data_saver.iter().map(|image| {
-            (
-                image,
-                self.dir_options.chapters_id_data_saver_add(id).join(image),
-            )
-        }) {
-            self.tar.append_file(
+        let datas = images
+            .data_saver
+            .iter()
+            .map(|image| {
+                (
+                    image,
+                    self.dir_options.chapters_id_data_saver_add(id).join(image),
+                )
+            })
+            .collect::<Vec<_>>();
+        for (filename, path) in datas {
+            self.append_file(
                 self.default_dir_options
                     .chapters_id_data_saver_add(id)
                     .join(filename),
@@ -144,7 +156,7 @@ where
         content_files.rewind()?;
         let images = self.get_package_content_chapter_images(id)?;
         self.append_chapter_images((id, &images))?;
-        self.tar.append_file(
+        self.append_file(
             self.default_dir_options
                 .chapters_id_add(id)
                 .join(CHAPTER_CONTENT_FILE),
@@ -153,7 +165,7 @@ where
         Ok(())
     }
     fn append_cover_image(&mut self, cover: &CoverObject) -> io::Result<()> {
-        self.tar.append_file(
+        self.append_file(
             self.default_dir_options
                 .cover_images_add(&cover.attributes.file_name),
             &mut {
@@ -174,7 +186,7 @@ where
         self.append_cover_image(&cover)?;
         //println!("{:#?}", content_files.metadata()?);
         //println!("writing cover data");
-        self.tar.append_file(
+        self.append_file(
             self.default_dir_options.covers_add(format!("{id}.cbor")),
             &mut content_files,
         )?;
@@ -185,7 +197,7 @@ where
         let mut content_files = self.create_workdir_file(format!("mangas/{id}.cbor"))?;
         self.pull_and_write_to_cbor::<MangaObject>(id, &mut content_files)?;
         content_files.rewind()?;
-        self.tar.append_file(
+        self.append_file(
             self.default_dir_options.mangas_add(format!("{id}.cbor")),
             &mut content_files,
         )?;
