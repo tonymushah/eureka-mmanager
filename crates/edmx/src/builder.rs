@@ -285,7 +285,18 @@ impl Builder {
             Err(RemoveChapterError::NotFound(id))
         }
     }
-
+    pub fn zstd_compressed_images(&mut self, compressed_images: bool) {
+        self.contents
+            .options
+            .get_or_insert_with(Default::default)
+            .zstd_compressed_images = compressed_images;
+    }
+    pub fn zstd_compressed_metadata(&mut self, compressed_metadata: bool) {
+        self.contents
+            .options
+            .get_or_insert_with(Default::default)
+            .zstd_compressed_metadata = compressed_metadata;
+    }
     pub fn build<W: Write>(self, writer: W) -> ThisResult<PackageContents> {
         BuilderInner::new(self, writer)?.build()
     }

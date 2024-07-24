@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct PackageContentsOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub directories: Option<DirsOptions>,
-    pub compressed_images: bool,
-    pub compressed_metadata: bool,
+    pub zstd_compressed_images: bool,
+    pub zstd_compressed_metadata: bool,
 }
 
 impl From<DirsOptions> for PackageContentsOptions {

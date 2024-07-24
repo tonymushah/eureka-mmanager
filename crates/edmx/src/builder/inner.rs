@@ -7,7 +7,7 @@ use std::{
 use api_core::{data_pulls::Pull, DirsOptions};
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use serde::Serialize;
-use tar::{Builder as TarBuilder, Header};
+use tar::Builder as TarBuilder;
 use tempfile::{tempdir, TempDir};
 use uuid::Uuid;
 use zstd::{stream::AutoFinishEncoder, Encoder};
@@ -16,6 +16,35 @@ use crate::{
     constants::{CHAPTER_CONTENT_FILE, COMPRESSION_LEVEL, CONTENTS_FILENAME},
     PChapterObject, PackageContents,
 };
+
+enum BuilderInnerWriter<'a, W: Write> {
+    Default(W),
+    Encoder(AutoFinishEncoder<'a, W>),
+}
+
+impl<'a, W: Write> BuilderInnerWriter<'a, W> {
+    fn encoder(writer: W) -> io::Result<Self> {
+        Ok(Self::Encoder(
+            Encoder::new(writer, COMPRESSION_LEVEL)?.auto_finish(),
+        ))
+    }
+}
+
+impl<'a, W: Write> Write for BuilderInnerWriter<'a, W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        match self {
+            BuilderInnerWriter::Default(w) => w.write(buf),
+            BuilderInnerWriter::Encoder(e) => e.write(buf),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self {
+            BuilderInnerWriter::Default(w) => w.flush(),
+            BuilderInnerWriter::Encoder(e) => e.flush(),
+        }
+    }
+}
 
 use super::{Builder, ThisResult};
 pub struct BuilderInner<'a, W>
@@ -45,9 +74,7 @@ where
         })
     }
     fn append_file<P: AsRef<Path>>(&mut self, path: P, file: &mut File) -> io::Result<()> {
-        let mut buf_reader = BufReader::new(file);
-        let mut header = Header::new_gnu();
-        self.tar.append_data(&mut header, path, &mut buf_reader)?;
+        self.tar.append_file(path, file)?;
         Ok(())
     }
     fn create_workdir_file<P: AsRef<Path>>(&self, path: P) -> io::Result<File> {
@@ -58,7 +85,28 @@ where
             .truncate(true)
             .open(self.workdir.path().join(path))
     }
-    fn write_cbor_to_file<C: Serialize>(&self, file: &mut File, content: &C) -> ThisResult<()> {
+    fn write_cbor_to_file<'b, C: Serialize>(
+        &self,
+        file: &'b mut File,
+        content: &C,
+    ) -> ThisResult<()> {
+        let writer: BuilderInnerWriter<'b, &'b mut File> = if !self
+            .package_content
+            .options
+            .as_ref()
+            .map(|e| e.zstd_compressed_metadata)
+            .unwrap_or_default()
+        {
+            BuilderInnerWriter::Default(file)
+        } else {
+            BuilderInnerWriter::encoder(file)?
+        };
+        let mut file_buf_writer = BufWriter::new(writer);
+        ciborium::into_writer(content, &mut file_buf_writer)?;
+        file_buf_writer.flush()?;
+        Ok(())
+    }
+    fn wctf<C: Serialize>(&self, file: &mut File, content: &C) -> ThisResult<()> {
         let mut file_buf_writer = BufWriter::new(file);
         ciborium::into_writer(content, &mut file_buf_writer)?;
         file_buf_writer.flush()?;
@@ -66,7 +114,7 @@ where
     }
     fn build_contents(&mut self) -> ThisResult<()> {
         let mut contents_file = self.create_workdir_file(CONTENTS_FILENAME)?;
-        self.write_cbor_to_file(&mut contents_file, &self.package_content)?;
+        self.wctf(&mut contents_file, &self.package_content)?;
         contents_file.rewind()?;
         self.append_file(CONTENTS_FILENAME, &mut contents_file)?;
         Ok(())
@@ -91,7 +139,34 @@ where
                 io::ErrorKind::NotFound,
             )))
     }
+    fn append_image_file<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        mut file: &mut File,
+    ) -> io::Result<()> {
+        if self
+            .package_content
+            .options
+            .as_ref()
+            .map(|e| e.zstd_compressed_images)
+            .unwrap_or_default()
+        {
+            let mut temp = tempfile::tempfile()?;
+            {
+                let mut reader = BufReader::new(&mut file);
+                let mut writer =
+                    BufWriter::new(Encoder::new(&mut temp, COMPRESSION_LEVEL)?.auto_finish());
 
+                io::copy(&mut reader, &mut writer)?;
+            }
+            file.rewind()?;
+            temp.rewind()?;
+            self.append_file(path, &mut temp)?;
+        } else {
+            self.append_file(path, file)?;
+        }
+        Ok(())
+    }
     fn append_chapter_images_data(
         &mut self,
         (id, images): (Uuid, &PChapterObject),
@@ -102,7 +177,7 @@ where
             .map(|image| (image, self.dir_options.chapters_id_data_add(id).join(image)))
             .collect::<Vec<_>>();
         for (filename, path) in data {
-            self.append_file(
+            self.append_image_file(
                 self.default_dir_options
                     .chapters_id_data_add(id)
                     .join(filename),
@@ -126,7 +201,7 @@ where
             })
             .collect::<Vec<_>>();
         for (filename, path) in datas {
-            self.append_file(
+            self.append_image_file(
                 self.default_dir_options
                     .chapters_id_data_saver_add(id)
                     .join(filename),
@@ -165,7 +240,7 @@ where
         Ok(())
     }
     fn append_cover_image(&mut self, cover: &CoverObject) -> io::Result<()> {
-        self.append_file(
+        self.append_image_file(
             self.default_dir_options
                 .cover_images_add(&cover.attributes.file_name),
             &mut {
