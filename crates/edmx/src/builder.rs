@@ -20,10 +20,11 @@ use crate::{PMangaObject, PackageContents};
 
 type ThisResult<T, E = api_core::Error> = Result<T, E>;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Builder {
     initial_dir_options: DirsOptions,
     contents: PackageContents,
+    compression_level: i32,
 }
 
 impl TryFrom<DirsOptions> for Builder {
@@ -32,6 +33,7 @@ impl TryFrom<DirsOptions> for Builder {
         Ok(Self {
             contents: (&value).try_into()?,
             initial_dir_options: value,
+            ..Default::default()
         })
     }
 }
@@ -290,6 +292,12 @@ impl Builder {
             .options
             .get_or_insert_with(Default::default)
             .zstd_compressed_images = compressed_images;
+    }
+    pub fn set_compression_level(&mut self, compression_level: i32) {
+        self.compression_level = compression_level;
+    }
+    pub fn get_compression_level(&self) -> i32 {
+        self.compression_level
     }
     pub fn zstd_compressed_metadata(&mut self, compressed_metadata: bool) {
         self.contents

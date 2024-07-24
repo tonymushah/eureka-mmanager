@@ -13,7 +13,7 @@ use uuid::Uuid;
 use zstd::{stream::AutoFinishEncoder, Encoder};
 
 use crate::{
-    constants::{CHAPTER_CONTENT_FILE, COMPRESSION_LEVEL, CONTENTS_FILENAME},
+    constants::{CHAPTER_CONTENT_FILE, CONTENTS_FILENAME},
     PChapterObject, PackageContents,
 };
 
@@ -23,9 +23,9 @@ enum BuilderInnerWriter<'a, W: Write> {
 }
 
 impl<'a, W: Write> BuilderInnerWriter<'a, W> {
-    fn encoder(writer: W) -> io::Result<Self> {
+    fn encoder(writer: W, compression_level: i32) -> io::Result<Self> {
         Ok(Self::Encoder(
-            Encoder::new(writer, COMPRESSION_LEVEL)?.auto_finish(),
+            Encoder::new(writer, compression_level)?.auto_finish(),
         ))
     }
 }
@@ -56,6 +56,7 @@ where
     tar: TarBuilder<AutoFinishEncoder<'a, W>>,
     dir_options: DirsOptions,
     default_dir_options: DirsOptions,
+    compression_level: i32,
 }
 
 impl<'a, W> BuilderInner<'a, W>
@@ -64,8 +65,9 @@ where
 {
     pub fn new(builder: Builder, writer: W) -> io::Result<Self> {
         let workdir = tempdir()?;
-        let tar = TarBuilder::new(Encoder::new(writer, COMPRESSION_LEVEL)?.auto_finish());
+        let tar = TarBuilder::new(Encoder::new(writer, builder.compression_level)?.auto_finish());
         Ok(Self {
+            compression_level: builder.compression_level,
             workdir,
             tar,
             dir_options: builder.initial_dir_options,
@@ -99,7 +101,7 @@ where
         {
             BuilderInnerWriter::Default(file)
         } else {
-            BuilderInnerWriter::encoder(file)?
+            BuilderInnerWriter::encoder(file, self.compression_level)?
         };
         let mut file_buf_writer = BufWriter::new(writer);
         ciborium::into_writer(content, &mut file_buf_writer)?;
@@ -155,7 +157,7 @@ where
             {
                 let mut reader = BufReader::new(&mut file);
                 let mut writer =
-                    BufWriter::new(Encoder::new(&mut temp, COMPRESSION_LEVEL)?.auto_finish());
+                    BufWriter::new(Encoder::new(&mut temp, self.compression_level)?.auto_finish());
 
                 io::copy(&mut reader, &mut writer)?;
             }
