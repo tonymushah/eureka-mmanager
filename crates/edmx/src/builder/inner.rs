@@ -6,6 +6,7 @@ use std::{
 
 use api_core::{data_pulls::Pull, DirsOptions};
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
+use serde::Serialize;
 use tar::Builder as TarBuilder;
 use tempfile::{tempdir, TempDir};
 use uuid::Uuid;
@@ -13,7 +14,7 @@ use zstd::{stream::AutoFinishEncoder, Encoder};
 
 use crate::{
     constants::{CHAPTER_CONTENT_FILE, COMPRESSION_LEVEL, CONTENTS_FILENAME},
-    PackageContents,
+    PChapterObject, PackageContents,
 };
 
 use super::{Builder, ThisResult};
@@ -51,41 +52,31 @@ where
             .truncate(true)
             .open(self.workdir.path().join(path))
     }
+    fn write_cbor_to_file<C: Serialize>(&self, file: &mut File, content: &C) -> ThisResult<()> {
+        let mut file_buf_writer = BufWriter::new(file);
+        ciborium::into_writer(content, &mut file_buf_writer)?;
+        file_buf_writer.flush()?;
+        Ok(())
+    }
     fn build_contents(&mut self) -> ThisResult<()> {
         let mut contents_file = self.create_workdir_file(CONTENTS_FILENAME)?;
-        {
-            let mut file_buf_writer = BufWriter::new(&mut contents_file);
-            ciborium::into_writer(&self.package_content, &mut file_buf_writer)?;
-            file_buf_writer.flush()?;
-        }
+        self.write_cbor_to_file(&mut contents_file, &self.package_content)?;
         contents_file.rewind()?;
         self.tar
             .append_file(CONTENTS_FILENAME, &mut contents_file)?;
         Ok(())
     }
-    fn build_chapter(&mut self, id: Uuid) -> ThisResult<()> {
-        create_dir_all(self.workdir.path().join("chapters"))?;
-        let mut content_files = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(self.workdir.path().join(format!("chapters/{id}.cbor")))?;
-        {
-            let chapter_data: ChapterObject = self.dir_options.pull(id)?;
-            let mut writer = BufWriter::new(&mut content_files);
-            ciborium::into_writer(&chapter_data, &mut writer)?;
-            writer.flush()?;
-        }
-        content_files.rewind()?;
-        let images = self
-            .package_content
+    fn create_dir_all<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        create_dir_all(self.workdir.path().join(path))
+    }
+    fn get_package_content_chapter_images(&self, chapter: Uuid) -> ThisResult<PChapterObject> {
+        self.package_content
             .data
             .iter()
             .find_map(|(_, manga_data)| {
                 manga_data.chapters.iter().find_map(|(chapter_id, images)| {
-                    if *chapter_id == id {
-                        Some(images)
+                    if *chapter_id == chapter {
+                        Some(images.clone())
                     } else {
                         None
                     }
@@ -93,7 +84,12 @@ where
             })
             .ok_or(api_core::Error::Io(io::Error::from(
                 io::ErrorKind::NotFound,
-            )))?;
+            )))
+    }
+    fn append_chapter_images_data(
+        &mut self,
+        (id, images): (Uuid, &PChapterObject),
+    ) -> io::Result<()> {
         for (filename, path) in images
             .data
             .iter()
@@ -106,6 +102,12 @@ where
                 &mut File::open(path)?,
             )?;
         }
+        Ok(())
+    }
+    fn append_chapter_images_data_saver(
+        &mut self,
+        (id, images): (Uuid, &PChapterObject),
+    ) -> io::Result<()> {
         for (filename, path) in images.data_saver.iter().map(|image| {
             (
                 image,
@@ -119,6 +121,29 @@ where
                 &mut File::open(path)?,
             )?;
         }
+        Ok(())
+    }
+    fn pull_and_write_to_cbor<D: Serialize>(&mut self, id: Uuid, file: &mut File) -> ThisResult<D>
+    where
+        DirsOptions: Pull<D, Uuid, Error: Into<api_core::Error>>,
+    {
+        let data: D = self.dir_options.pull(id).map_err(|e| e.into())?;
+        self.write_cbor_to_file(file, &data)?;
+        Ok(data)
+    }
+    fn append_chapter_images(&mut self, data: (Uuid, &PChapterObject)) -> io::Result<()> {
+        self.append_chapter_images_data(data)?;
+
+        self.append_chapter_images_data_saver(data)?;
+        Ok(())
+    }
+    fn build_chapter(&mut self, id: Uuid) -> ThisResult<()> {
+        self.create_dir_all("chapters")?;
+        let mut content_files = self.create_workdir_file(format!("chapters/{id}.cbor"))?;
+        self.pull_and_write_to_cbor::<ChapterObject>(id, &mut content_files)?;
+        content_files.rewind()?;
+        let images = self.get_package_content_chapter_images(id)?;
+        self.append_chapter_images((id, &images))?;
         self.tar.append_file(
             self.default_dir_options
                 .chapters_id_add(id)
@@ -127,25 +152,7 @@ where
         )?;
         Ok(())
     }
-    fn build_cover(&mut self, id: Uuid) -> ThisResult<()> {
-        create_dir_all(self.workdir.path().join("covers"))?;
-        let content_files_path = self.workdir.path().join(format!("covers/{id}.txt"));
-        let mut content_files = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(content_files_path)?;
-        //println!("pulling cover content");
-        let cover = {
-            let cover_data: CoverObject = self.dir_options.pull(id)?;
-            let mut writer = BufWriter::new(&mut content_files);
-            ciborium::into_writer(&cover_data, &mut writer)?;
-            writer.flush()?;
-            cover_data
-        };
-        content_files.rewind()?;
-        //println!("writing cover image");
+    fn append_cover_image(&mut self, cover: &CoverObject) -> io::Result<()> {
         self.tar.append_file(
             self.default_dir_options
                 .cover_images_add(&cover.attributes.file_name),
@@ -155,30 +162,28 @@ where
                     .cover_images_add(&cover.attributes.file_name);
                 File::open(image_path)?
             },
-        )?;
+        )
+    }
+    fn build_cover(&mut self, id: Uuid) -> ThisResult<()> {
+        self.create_dir_all("covers")?;
+        let mut content_files = self.create_workdir_file(format!("covers/{id}.cbor"))?;
+        //println!("pulling cover content");
+        let cover = self.pull_and_write_to_cbor::<CoverObject>(id, &mut content_files)?;
+        content_files.rewind()?;
+        //println!("writing cover image");
+        self.append_cover_image(&cover)?;
         //println!("{:#?}", content_files.metadata()?);
         //println!("writing cover data");
         self.tar.append_file(
-            self.default_dir_options.covers_add(format!("{id}.txr")),
+            self.default_dir_options.covers_add(format!("{id}.cbor")),
             &mut content_files,
         )?;
         Ok(())
     }
     fn build_manga(&mut self, id: Uuid) -> ThisResult<()> {
-        create_dir_all(self.workdir.path().join("mangas"))?;
-        let mut content_files = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(self.workdir.path().join(format!("mangas/{id}.cbor")))?;
-        let _ = {
-            let manga_data: MangaObject = self.dir_options.pull(id)?;
-            let mut writer = BufWriter::new(&mut content_files);
-            ciborium::into_writer(&manga_data, &mut writer)?;
-            writer.flush()?;
-            manga_data
-        };
+        self.create_dir_all("mangas")?;
+        let mut content_files = self.create_workdir_file(format!("mangas/{id}.cbor"))?;
+        self.pull_and_write_to_cbor::<MangaObject>(id, &mut content_files)?;
         content_files.rewind()?;
         self.tar.append_file(
             self.default_dir_options.mangas_add(format!("{id}.cbor")),
