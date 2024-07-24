@@ -117,7 +117,7 @@ fn main() {
     for chapter_id in chapters {
         builder.add_chapter(chapter_id, Default::default()).unwrap();
     }
-    builder.set_compression_level(22);
+    builder.set_compression_level(3);
     let add_time = Instant::now() - start;
     println!("Adding Time: {} ms", add_time.as_millis());
     let bn = builder.clone();
