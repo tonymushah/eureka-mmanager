@@ -1,4 +1,8 @@
-use std::{fs::File, io::BufWriter, time::Instant};
+use std::{
+    fs::File,
+    io::{BufWriter, Write},
+    time::Instant,
+};
 
 use api_core::{
     data_pulls::{
@@ -46,7 +50,9 @@ fn main() {
     let add_time = Instant::now() - start;
     let start = Instant::now();
     let mut output_file = File::create("target/fuufu-ijou-v8-v9-en.tar.zstd").unwrap();
-    let _ = builder.build(BufWriter::new(&mut output_file)).unwrap();
+    let mut output_file_buf_writer = BufWriter::new(&mut output_file);
+    let _ = builder.build(&mut output_file_buf_writer).unwrap();
+    output_file_buf_writer.flush().unwrap();
     let build_time = Instant::now() - start;
     println!("Done!");
     println!("Pulling Time: {} ms", pull_time.as_millis());
