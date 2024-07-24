@@ -57,5 +57,5 @@ fn main() {
     output_file_buf_writer.flush().unwrap();
     let build_time = Instant::now() - start;
     println!("Done!");
-    println!("Build Time: {} ms", build_time.as_millis());
+    println!("Build Time: {} s", build_time.as_secs_f64());
 }
