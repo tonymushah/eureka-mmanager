@@ -15,6 +15,18 @@ use api_core::{
 use edmx::PackageBuilder;
 use mangadex_api_types_rust::Language;
 
+fn dict(builder: &PackageBuilder) {
+    let start = Instant::now();
+    let mut output_file = File::create("target/fuufu-ijou-v8-v9-en.zstd.dict").unwrap();
+    let mut output_file_buf_writer = BufWriter::new(&mut output_file);
+    output_file_buf_writer
+        .write_all(&builder.create_dict(16_000_000).unwrap())
+        .unwrap();
+    output_file_buf_writer.flush().unwrap();
+    let build_time = Instant::now() - start;
+    println!("Dict Build Time: {} s", build_time.as_secs_f64());
+}
+
 fn normal(builder: PackageBuilder) {
     let start = Instant::now();
     let mut output_file = File::create("target/fuufu-ijou-v8-v9-en.tar.zstd").unwrap();
@@ -120,6 +132,7 @@ fn main() {
     builder.set_compression_level(3);
     let add_time = Instant::now() - start;
     println!("Adding Time: {} ms", add_time.as_millis());
+    dict(&builder);
     let bn = builder.clone();
     let bzi = builder.clone();
     let bzm = builder.clone();

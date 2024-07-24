@@ -1,6 +1,10 @@
 mod inner;
 
-use std::{io::Write, ops::Deref};
+use std::{
+    io::{self, Write},
+    ops::Deref,
+    path::PathBuf,
+};
 
 use api_core::{
     data_pulls::{
@@ -307,5 +311,53 @@ impl Builder {
     }
     pub fn build<W: Write>(self, writer: W) -> ThisResult<PackageContents> {
         BuilderInner::new(self, writer)?.build()
+    }
+    fn get_to_use_paths(&self) -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        for (manga_id, manga_data) in &self.contents.data {
+            paths.push(
+                self.initial_dir_options
+                    .mangas_add(format!("{manga_id}.json")),
+            );
+            for cover_id in &manga_data.covers {
+                paths.push(
+                    self.initial_dir_options
+                        .covers_add(format!("{cover_id}.json")),
+                );
+                if let Ok(cover_data) =
+                    Pull::<CoverObject, Uuid>::pull(&self.initial_dir_options, *cover_id)
+                {
+                    paths.push(
+                        self.initial_dir_options
+                            .cover_images_add(cover_data.attributes.file_name),
+                    );
+                }
+            }
+            for (chapter_id, chapter_data) in &manga_data.chapters {
+                paths.push(
+                    self.initial_dir_options
+                        .chapters_id_add(*chapter_id)
+                        .join("data.json"),
+                );
+                for filename in &chapter_data.data {
+                    paths.push(
+                        self.initial_dir_options
+                            .chapters_id_data_add(*chapter_id)
+                            .join(filename),
+                    );
+                }
+                for filename in &chapter_data.data_saver {
+                    paths.push(
+                        self.initial_dir_options
+                            .chapters_id_data_saver_add(*chapter_id)
+                            .join(filename),
+                    );
+                }
+            }
+        }
+        paths
+    }
+    pub fn create_dict(&self, max_size: usize) -> io::Result<Vec<u8>> {
+        zstd::dict::from_files(self.get_to_use_paths(), max_size)
     }
 }
