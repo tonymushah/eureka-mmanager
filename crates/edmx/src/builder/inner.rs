@@ -192,7 +192,7 @@ where
         Ok(())
     }
 
-    pub fn build(&mut self) -> ThisResult<()> {
+    pub fn build(mut self) -> ThisResult<PackageContents> {
         for (manga_id, manga_data) in self.package_content.data.clone() {
             // println!("writing {manga_id}");
             for cover_id in &manga_data.covers {
@@ -212,6 +212,6 @@ where
         //println!("writing contents");
         self.build_contents()?;
         //println!("writed");
-        Ok(())
+        Ok(self.package_content)
     }
 }

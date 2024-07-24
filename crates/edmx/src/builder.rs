@@ -286,9 +286,7 @@ impl Builder {
         }
     }
 
-    pub fn build<W: Write>(self, writer: W) -> ThisResult<()> {
-        let mut builder = BuilderInner::new(self, writer)?;
-        builder.build()?;
-        Ok(())
+    pub fn build<W: Write>(self, writer: W) -> ThisResult<PackageContents> {
+        BuilderInner::new(self, writer)?.build()
     }
 }
