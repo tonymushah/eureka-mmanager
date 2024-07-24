@@ -1,3 +1,5 @@
+pub mod options;
+
 use std::{
     collections::HashMap,
     ops::{Add, AddAssign},
@@ -9,6 +11,7 @@ use api_core::{
 };
 use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::RelationshipType;
+use options::PackageContentsOptions;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -47,7 +50,7 @@ pub struct PMangaObject {
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct PackageContents {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub options: Option<DirsOptions>,
+    pub options: Option<PackageContentsOptions>,
     pub data: HashMap<Uuid, PMangaObject>,
 }
 
