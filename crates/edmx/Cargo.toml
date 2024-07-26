@@ -14,3 +14,4 @@ uuid.workspace = true
 mangadex-api-schema-rust.workspace = true
 mangadex-api-types-rust.workspace = true
 tempfile = "3"
+image = "0.25.2"
