@@ -98,7 +98,7 @@ fn zstd_all(builder: PackageBuilder) {
 fn main() {
     let start = Instant::now();
     let options = DirsOptions::new_from_data_dir("data");
-    let mut builder = PackageBuilder::new(options.clone());
+    let mut builder = PackageBuilder::new(options.clone()).set_compress_image_to_jpeg(true);
     let chapters = {
         let manga = options
             .pull_all_mangas()
