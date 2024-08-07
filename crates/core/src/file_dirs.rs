@@ -85,3 +85,9 @@ impl DirsOptions {
         }
     }
 }
+
+impl Default for DirsOptions {
+    fn default() -> Self {
+        Self::new_from_data_dir("")
+    }
+}

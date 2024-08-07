@@ -1,0 +1,21 @@
+[package]
+name = "emdx"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+api-core = { workspace = true }
+tar.workspace = true
+zstd.workspace = true
+serde.workspace = true
+ciborium.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+mangadex-api-schema-rust.workspace = true
+mangadex-api-types-rust.workspace = true
+tempfile = "3"
+image = { version = "0.25.2", features = [
+    "jpeg",
+    "png",
+    "gif",
+], default-features = false }

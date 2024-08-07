@@ -4,6 +4,7 @@ members = [
     "./crates/core/",
     "./crates/manager",
     "crates/core",
+    "crates/emdx",
 ]
 default-members = ["./crates/manager"]
 resolver = "2"
@@ -42,3 +43,5 @@ actix = "0.13"
 regex = "1"
 rand = { version = "0" }
 ciborium = { version = "0" }
+zstd = "0.13.2"
+tar = "0.4.41"
