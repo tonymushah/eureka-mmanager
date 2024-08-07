@@ -3,7 +3,8 @@ members = [
     "./crates/misc/*",
     "./crates/core/",
     "./crates/manager",
-    "crates/core", "crates/edmx",
+    "crates/core",
+    "crates/emdx",
 ]
 default-members = ["./crates/manager"]
 resolver = "2"

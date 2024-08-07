@@ -12,7 +12,7 @@ use api_core::{
     },
     DirsOptions,
 };
-use edmx::PackageBuilder;
+use emdx::PackageBuilder;
 use mangadex_api_types_rust::Language;
 
 fn dict(builder: &PackageBuilder) {

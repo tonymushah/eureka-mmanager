@@ -5,6 +5,7 @@ use std::{
 };
 
 use api_core::{data_pulls::Pull, DirsOptions};
+use image::{ImageFormat, ImageResult};
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use serde::Serialize;
 use tar::Builder as TarBuilder;
@@ -57,6 +58,7 @@ where
     dir_options: DirsOptions,
     default_dir_options: DirsOptions,
     compression_level: i32,
+    compress_image_to_jpeg: bool,
 }
 
 impl<'a, W> BuilderInner<'a, W>
@@ -73,6 +75,7 @@ where
             dir_options: builder.initial_dir_options,
             package_content: builder.contents,
             default_dir_options: Default::default(),
+            compress_image_to_jpeg: builder.compress_image_to_jpeg,
         })
     }
     fn append_file<P: AsRef<Path>>(&mut self, path: P, file: &mut File) -> io::Result<()> {
@@ -169,6 +172,37 @@ where
         }
         Ok(())
     }
+    fn convert_image_to_jpeg<P>(&self, path: P) -> ImageResult<(String, File)>
+    where
+        P: AsRef<Path>,
+    {
+        let current_format = ImageFormat::from_path(&path)?;
+        let filename = path
+            .as_ref()
+            .file_name()
+            .and_then(|e| e.to_str())
+            .map(String::from)
+            .ok_or(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "Filename transport not found",
+            ))?;
+        let image = image::open(path)?;
+        if current_format != ImageFormat::Gif {
+            let new_filename = format!("{filename}.{}", ImageFormat::Jpeg.extensions_str()[0]);
+            let mut file_output_path = self.create_workdir_file(&new_filename)?;
+            {
+                let mut file_out_buf = BufWriter::new(&mut file_output_path);
+                image.write_to(&mut file_out_buf, ImageFormat::Jpeg)?;
+            }
+            file_output_path.rewind()?;
+            Ok((new_filename, file_output_path))
+        } else {
+            Err(image::ImageError::IoError(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "Gif can't be transformed into JPEG",
+            )))
+        }
+    }
     fn append_chapter_images_data(
         &mut self,
         (id, images): (Uuid, &mut PChapterObject),
@@ -181,13 +215,33 @@ where
                 (image, path)
             })
             .collect::<Vec<_>>();
+
         for (filename, path) in data {
-            self.append_image_file(
-                self.default_dir_options
-                    .chapters_id_data_add(id)
-                    .join(filename),
-                &mut File::open(path)?,
-            )?;
+            if self.compress_image_to_jpeg {
+                if let Ok((new_filename, mut file)) = self.convert_image_to_jpeg(&path) {
+                    *filename = new_filename;
+                    self.append_image_file(
+                        self.default_dir_options
+                            .chapters_id_data_add(id)
+                            .join(filename),
+                        &mut file,
+                    )?;
+                } else {
+                    self.append_image_file(
+                        self.default_dir_options
+                            .chapters_id_data_add(id)
+                            .join(filename),
+                        &mut File::open(&path)?,
+                    )?;
+                }
+            } else {
+                self.append_image_file(
+                    self.default_dir_options
+                        .chapters_id_data_add(id)
+                        .join(filename),
+                    &mut File::open(&path)?,
+                )?;
+            }
         }
         Ok(())
     }
@@ -207,12 +261,31 @@ where
             })
             .collect::<Vec<_>>();
         for (filename, path) in datas {
-            self.append_image_file(
-                self.default_dir_options
-                    .chapters_id_data_saver_add(id)
-                    .join(filename),
-                &mut File::open(path)?,
-            )?;
+            if self.compress_image_to_jpeg {
+                if let Ok((new_filename, mut file)) = self.convert_image_to_jpeg(&path) {
+                    *filename = new_filename;
+                    self.append_image_file(
+                        self.default_dir_options
+                            .chapters_id_data_saver_add(id)
+                            .join(filename),
+                        &mut file,
+                    )?;
+                } else {
+                    self.append_image_file(
+                        self.default_dir_options
+                            .chapters_id_data_saver_add(id)
+                            .join(filename),
+                        &mut File::open(&path)?,
+                    )?;
+                }
+            } else {
+                self.append_image_file(
+                    self.default_dir_options
+                        .chapters_id_data_saver_add(id)
+                        .join(filename),
+                    &mut File::open(&path)?,
+                )?;
+            }
         }
         Ok(())
     }
@@ -248,26 +321,39 @@ where
         )?;
         Ok(())
     }
-    fn append_cover_image(&mut self, cover: &CoverObject) -> io::Result<()> {
-        self.append_image_file(
-            self.default_dir_options
-                .cover_images_add(&cover.attributes.file_name),
-            &mut {
-                let image_path = self
-                    .dir_options
-                    .cover_images_add(&cover.attributes.file_name);
-                File::open(image_path)?
-            },
-        )
+    fn append_cover_image(&mut self, cover: &mut CoverObject) -> io::Result<()> {
+        let filename = &mut cover.attributes.file_name;
+        let image_path = self.dir_options.cover_images_add(&*filename);
+        if self.compress_image_to_jpeg {
+            if let Ok((new_filename, mut file)) = self.convert_image_to_jpeg(&image_path) {
+                *filename = new_filename;
+                self.append_image_file(
+                    self.default_dir_options.cover_images_add(filename),
+                    &mut file,
+                )?;
+            } else {
+                self.append_image_file(
+                    self.default_dir_options.cover_images_add(filename),
+                    &mut File::open(image_path)?,
+                )?;
+            }
+        } else {
+            self.append_image_file(
+                self.default_dir_options.cover_images_add(filename),
+                &mut File::open(image_path)?,
+            )?;
+        }
+        Ok(())
     }
     fn build_cover(&mut self, id: Uuid) -> ThisResult<()> {
         self.create_dir_all("covers")?;
         let mut content_files = self.create_workdir_file(format!("covers/{id}.cbor"))?;
         //println!("pulling cover content");
-        let cover = self.pull_and_write_to_cbor::<CoverObject>(id, &mut content_files)?;
+        let mut cover: CoverObject = self.dir_options.pull(id)?;
         content_files.rewind()?;
         //println!("writing cover image");
-        self.append_cover_image(&cover)?;
+        self.append_cover_image(&mut cover)?;
+        self.write_cbor_to_file(&mut content_files, &cover)?;
         //println!("{:#?}", content_files.metadata()?);
         //println!("writing cover data");
         self.append_file(

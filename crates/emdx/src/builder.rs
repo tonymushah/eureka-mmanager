@@ -29,6 +29,7 @@ pub struct Builder {
     initial_dir_options: DirsOptions,
     contents: PackageContents,
     compression_level: i32,
+    compress_image_to_jpeg: bool,
 }
 
 impl TryFrom<DirsOptions> for Builder {
@@ -74,6 +75,10 @@ impl Builder {
             initial_dir_options: dirs,
             ..Default::default()
         }
+    }
+    pub fn set_compress_image_to_jpeg(mut self, compress_image_to_jpeg: bool) -> Self {
+        self.compress_image_to_jpeg = compress_image_to_jpeg;
+        self
     }
     pub fn set_content(mut self, content: PackageContents) -> Self {
         self.contents = content;
