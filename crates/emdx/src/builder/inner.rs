@@ -352,10 +352,10 @@ where
         let mut content_files = self.create_workdir_file(format!("covers/{id}.cbor"))?;
         //println!("pulling cover content");
         let mut cover: CoverObject = self.dir_options.pull(id)?;
-        content_files.rewind()?;
         //println!("writing cover image");
         self.append_cover_image(&mut cover)?;
         self.write_cbor_to_file(&mut content_files, &cover)?;
+        content_files.rewind()?;
         //println!("{:#?}", content_files.metadata()?);
         //println!("writing cover data");
         self.append_file(
