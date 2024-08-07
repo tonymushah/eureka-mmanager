@@ -163,6 +163,7 @@ where
                     BufWriter::new(Encoder::new(&mut temp, self.compression_level)?.auto_finish());
 
                 io::copy(&mut reader, &mut writer)?;
+                writer.flush()?;
             }
             file.rewind()?;
             temp.rewind()?;
@@ -193,6 +194,7 @@ where
             {
                 let mut file_out_buf = BufWriter::new(&mut file_output_path);
                 image.write_to(&mut file_out_buf, ImageFormat::Jpeg)?;
+                file_out_buf.flush()?;
             }
             file_output_path.rewind()?;
             Ok((new_filename, file_output_path))
