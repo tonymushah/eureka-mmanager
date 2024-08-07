@@ -171,12 +171,15 @@ where
     }
     fn append_chapter_images_data(
         &mut self,
-        (id, images): (Uuid, &PChapterObject),
+        (id, images): (Uuid, &mut PChapterObject),
     ) -> io::Result<()> {
         let data = images
             .data
-            .iter()
-            .map(|image| (image, self.dir_options.chapters_id_data_add(id).join(image)))
+            .iter_mut()
+            .map(|image| {
+                let path = self.dir_options.chapters_id_data_add(id).join(&*image);
+                (image, path)
+            })
             .collect::<Vec<_>>();
         for (filename, path) in data {
             self.append_image_file(
@@ -190,16 +193,17 @@ where
     }
     fn append_chapter_images_data_saver(
         &mut self,
-        (id, images): (Uuid, &PChapterObject),
+        (id, images): (Uuid, &mut PChapterObject),
     ) -> io::Result<()> {
         let datas = images
             .data_saver
-            .iter()
+            .iter_mut()
             .map(|image| {
-                (
-                    image,
-                    self.dir_options.chapters_id_data_saver_add(id).join(image),
-                )
+                let path = self
+                    .dir_options
+                    .chapters_id_data_saver_add(id)
+                    .join(&*image);
+                (image, path)
             })
             .collect::<Vec<_>>();
         for (filename, path) in datas {
@@ -220,10 +224,13 @@ where
         self.write_cbor_to_file(file, &data)?;
         Ok(data)
     }
-    fn append_chapter_images(&mut self, data: (Uuid, &PChapterObject)) -> io::Result<()> {
-        self.append_chapter_images_data(data)?;
+    fn append_chapter_images(
+        &mut self,
+        (id, images): (Uuid, &mut PChapterObject),
+    ) -> io::Result<()> {
+        self.append_chapter_images_data((id, images))?;
 
-        self.append_chapter_images_data_saver(data)?;
+        self.append_chapter_images_data_saver((id, images))?;
         Ok(())
     }
     fn build_chapter(&mut self, id: Uuid) -> ThisResult<()> {
@@ -231,8 +238,8 @@ where
         let mut content_files = self.create_workdir_file(format!("chapters/{id}.cbor"))?;
         self.pull_and_write_to_cbor::<ChapterObject>(id, &mut content_files)?;
         content_files.rewind()?;
-        let images = self.get_package_content_chapter_images(id)?;
-        self.append_chapter_images((id, &images))?;
+        let mut images = self.get_package_content_chapter_images(id)?;
+        self.append_chapter_images((id, &mut images))?;
         self.append_file(
             self.default_dir_options
                 .chapters_id_add(id)
