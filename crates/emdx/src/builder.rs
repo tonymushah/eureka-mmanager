@@ -20,9 +20,7 @@ use mangadex_api_types_rust::RelationshipType;
 
 use uuid::Uuid;
 
-use crate::{PMangaObject, PackageContents};
-
-type ThisResult<T, E = api_core::Error> = Result<T, E>;
+use crate::{PMangaObject, PackageContents, ThisResult};
 
 #[derive(Debug, Default, Clone)]
 pub struct Builder {
