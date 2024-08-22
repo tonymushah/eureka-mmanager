@@ -3,6 +3,7 @@ pub mod builder;
 pub mod constants;
 pub mod contents;
 
+pub use archive::Archive;
 pub use builder::Builder as PackageBuilder;
 pub use contents::{PChapterObject, PMangaObject, PackageContents};
 
