@@ -1,3 +1,5 @@
+pub(crate) mod utils;
+
 pub mod archive;
 pub mod builder;
 pub mod constants;
