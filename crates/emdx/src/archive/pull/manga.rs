@@ -31,10 +31,10 @@ where
             .map(|id| dir_options.mangas_add(format!("{id}.cbor")))
             .any(|path| {
                 let Ok(entry_path) = entry.path() else {
-                    eprintln!("invalid path");
+                    // eprintln!("invalid path");
                     return false;
                 };
-                println!("{entry_path:?}");
+                // println!("{entry_path:?}");
                 entry_path.as_ref() == AsRef::<Path>::as_ref(&path)
             })
         {
@@ -60,7 +60,7 @@ where
 {
     type Item = ThisResult<MangaObject>;
     fn next(&mut self) -> Option<Self::Item> {
-        println!("Pulling");
+        //println!("Pulling");
         let next = self.entries.next()?;
         match next {
             Ok(entry) => Some(self.archive_entry_to_manga(entry)),
