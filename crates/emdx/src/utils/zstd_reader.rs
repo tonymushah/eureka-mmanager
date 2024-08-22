@@ -13,12 +13,13 @@ pub struct Reader<R, D> {
     reader: R,
     operation: D,
 
-    state: State,
+    pub state: State,
 
     single_frame: bool,
     finished_frame: bool,
 }
 
+#[derive(PartialEq, Eq)]
 pub enum State {
     // Still actively reading from the inner `Read`
     Reading,
@@ -40,9 +41,6 @@ impl<R, D> Reader<R, D> {
             single_frame: false,
             finished_frame: false,
         }
-    }
-    pub fn set_state(&mut self, state: State) {
-        self.state = state
     }
     /// Sets `self` to stop after the first decoded frame.
     pub fn set_single_frame(&mut self) {
