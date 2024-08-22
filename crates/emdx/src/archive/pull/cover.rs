@@ -27,7 +27,8 @@ where
         if self
             .package_contents
             .data
-            .keys()
+            .values()
+            .flat_map(|manga| &manga.covers)
             .map(|id| dir_options.covers_add(format!("{id}.cbor")))
             .any(|path| {
                 let Ok(entry_path) = entry.path() else {
