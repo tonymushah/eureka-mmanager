@@ -65,7 +65,7 @@ where
         match next {
             Ok(entry) => Some(self.archive_entry_to_manga(entry)),
             Err(err) => {
-                eprintln!("{err}");
+                // eprintln!("{err}");
                 Some(Err(err.into()))
             }
         }
