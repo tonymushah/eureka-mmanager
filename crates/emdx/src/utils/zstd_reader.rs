@@ -2,25 +2,21 @@ use std::io::{self, BufRead, Read};
 
 use zstd::stream::raw::{InBuffer, Operation, OutBuffer};
 
-// [ reader -> zstd ] -> output
-/// Implements the [`Read`] API around an [`Operation`].
+/// A Simple Copy Paste of [`Reader`](zstd::stream::zio::Reader)
 ///
-/// This can be used to wrap a raw in-memory operation in a read-focused API.
-///
-/// It can wrap either a compression or decompression operation, and pulls
-/// input data from a wrapped `Read`.
+/// It's internally used in [`Archive`](crate::Archive) for easily [`Seek`](std::io::Seek)-ing the underlying `Reader`
 pub struct Reader<R, D> {
     reader: R,
     operation: D,
 
-    pub state: State,
+    pub(crate) state: State,
 
     single_frame: bool,
     finished_frame: bool,
 }
 
 #[derive(PartialEq, Eq)]
-pub enum State {
+pub(crate) enum State {
     // Still actively reading from the inner `Read`
     Reading,
     // We reached EOF from the inner `Read`, now flushing.
@@ -46,7 +42,16 @@ impl<R, D> Reader<R, D> {
     pub fn set_single_frame(&mut self) {
         self.single_frame = true;
     }
-
+    pub(crate) fn reset(&mut self) -> io::Result<()>
+    where
+        D: Operation,
+    {
+        self.operation_mut().reinit()?;
+        self.state = State::Reading;
+        self.single_frame = false;
+        self.finished_frame = false;
+        Ok(())
+    }
     /// Returns a mutable reference to the underlying operation.
     pub fn operation_mut(&mut self) -> &mut D {
         &mut self.operation

@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::utils::zstd_reader::{Reader, State};
+use crate::utils::zstd_reader::Reader;
 use pull::manga::ArchiveMangaPull;
 
 use zstd::stream::raw::Decoder;
@@ -60,9 +60,7 @@ where
             .ok_or_else(tar_archive_not_found_error)?;
         let mut decoder = archive.into_inner();
         let res = decoder.reader_mut().seek(pos)?;
-        if decoder.state == State::Finished {
-            decoder.state = State::Reading;
-        }
+        decoder.reset()?;
         self.tar_archive.replace(tar::Archive::new(decoder));
         Ok(res)
     }
