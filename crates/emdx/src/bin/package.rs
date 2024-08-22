@@ -123,16 +123,20 @@ mod package {
 }
 
 mod archive {
-    use std::io::BufReader;
-
     use emdx::Archive;
 
     use super::*;
     fn normal() {
         let file = File::open(package::NORMAL_FILE).unwrap();
         let mut archive = Archive::from_reader(file).unwrap();
-        let manga_pull = archive.manga_pull(true).unwrap();
-        assert_eq!(manga_pull.flatten().count(), 1usize);
+        {
+            let manga_pull = archive.manga_pull(true).unwrap();
+            assert_eq!(manga_pull.flatten().count(), 1usize);
+        }
+        {
+            let cover_pull = archive.cover_pull(true).unwrap();
+            assert_eq!(cover_pull.flatten().count(), 1usize);
+        }
     }
     pub fn main(_builder: &PackageBuilder) {
         normal();
