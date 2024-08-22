@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::utils::zstd_reader::Reader;
-use pull::{manga::ArchiveMangaPull, ArchiveCoverPull};
+use pull::{chapter::ArchiveChapterPull, manga::ArchiveMangaPull, ArchiveCoverPull};
 
 use zstd::stream::raw::Decoder;
 
@@ -151,6 +151,18 @@ where
         let archive = self.get_archive(rewind)?;
         let entries = archive.entries()?;
         Ok(ArchiveCoverPull {
+            entries,
+            package_contents,
+        })
+    }
+    pub fn chapter_pull(
+        &mut self,
+        rewind: bool,
+    ) -> ThisResult<ArchiveChapterPull<DecoderInner<'a, R>>> {
+        let package_contents = self.get_package_contents().cloned()?;
+        let archive = self.get_archive(rewind)?;
+        let entries = archive.entries()?;
+        Ok(ArchiveChapterPull {
             entries,
             package_contents,
         })
