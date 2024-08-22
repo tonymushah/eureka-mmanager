@@ -122,6 +122,23 @@ mod package {
     }
 }
 
+mod archive {
+    use std::io::BufReader;
+
+    use emdx::Archive;
+
+    use super::*;
+    fn normal() {
+        let file = File::open(package::NORMAL_FILE).unwrap();
+        let mut archive = Archive::from_reader(BufReader::new(file)).unwrap();
+        let manga_pull = archive.manga_pull(true).unwrap();
+        assert_eq!(manga_pull.flatten().count(), 1usize);
+    }
+    pub fn main(_builder: &PackageBuilder) {
+        normal();
+    }
+}
+
 fn main() {
     let start = Instant::now();
     let options = DirsOptions::new_from_data_dir("data");
@@ -160,5 +177,6 @@ fn main() {
     let add_time = Instant::now() - start;
     println!("Adding Time: {} ms", add_time.as_millis());
     package::main(&builder);
+    archive::main(&builder);
     println!("Done!");
 }
