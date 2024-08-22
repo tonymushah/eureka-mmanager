@@ -130,7 +130,7 @@ mod archive {
     use super::*;
     fn normal() {
         let file = File::open(package::NORMAL_FILE).unwrap();
-        let mut archive = Archive::from_reader(BufReader::new(file)).unwrap();
+        let mut archive = Archive::from_reader(file).unwrap();
         let manga_pull = archive.manga_pull(true).unwrap();
         assert_eq!(manga_pull.flatten().count(), 1usize);
     }
@@ -176,7 +176,7 @@ fn main() {
     builder.set_compression_level(3);
     let add_time = Instant::now() - start;
     println!("Adding Time: {} ms", add_time.as_millis());
-    package::main(&builder);
+    //package::main(&builder);
     archive::main(&builder);
     println!("Done!");
 }
