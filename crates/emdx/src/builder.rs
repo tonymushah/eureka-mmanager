@@ -363,4 +363,7 @@ impl Builder {
     pub fn create_dict(&self, max_size: usize) -> io::Result<Vec<u8>> {
         zstd::dict::from_files(self.get_to_use_paths(), max_size)
     }
+    pub fn get_package_contents(&self) -> &PackageContents {
+        &self.contents
+    }
 }
