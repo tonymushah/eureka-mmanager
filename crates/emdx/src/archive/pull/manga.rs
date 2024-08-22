@@ -1,5 +1,5 @@
 use std::{
-    io::{self, BufRead, Read, Seek},
+    io::{self, Read},
     path::Path,
 };
 
@@ -11,7 +11,7 @@ use crate::{PackageContents, ThisResult};
 
 pub struct ArchiveMangaPull<'a, R>
 where
-    R: 'a + Read,
+    R: Read,
 {
     pub(crate) entries: tar::Entries<'a, R>,
     pub(crate) package_contents: PackageContents,
@@ -54,7 +54,7 @@ where
 // Test if this fucking works
 impl<'a, R> Iterator for ArchiveMangaPull<'a, R>
 where
-    R: Seek + BufRead,
+    R: Read,
 {
     type Item = ThisResult<MangaObject>;
     fn next(&mut self) -> Option<Self::Item> {

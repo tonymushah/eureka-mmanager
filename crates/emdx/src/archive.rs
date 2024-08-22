@@ -60,6 +60,17 @@ where
         Ok(res)
     }
 }
+
+impl<R> Archive<'static, BufReader<R>>
+where
+    R: Seek + Read,
+{
+    pub fn from_reader(reader: R) -> ThisResult<Self> {
+        let decoder = Decoder::new(reader)?;
+        Self::new(decoder)
+    }
+}
+
 impl<'a, R> Archive<'a, R>
 where
     R: Seek + BufRead,
@@ -96,10 +107,7 @@ where
         self.contents.replace(contents);
         Ok(())
     }
-    pub fn new<RD>(decoder: Decoder<'_, RD>) -> ThisResult<Archive<'_, RD>>
-    where
-        RD: BufRead + Seek,
-    {
+    pub fn new(decoder: Decoder<'_, R>) -> ThisResult<Archive<'_, R>> {
         let mut new_self = Archive {
             tar_archive: Some(tar::Archive::new(decoder)),
             contents: None,
@@ -107,10 +115,7 @@ where
         new_self.seed_contents()?;
         Ok(new_self)
     }
-    pub fn from_reader<RD: Read + Seek>(reader: RD) -> ThisResult<Archive<'static, BufReader<RD>>> {
-        let decoder = Decoder::new(reader)?;
-        Self::new(decoder)
-    }
+
     pub fn from_buf_read(buf_reader: R) -> ThisResult<Archive<'static, R>> {
         let decoder = Decoder::with_buffer(buf_reader)?;
         Self::new(decoder)
