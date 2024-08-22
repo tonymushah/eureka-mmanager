@@ -7,8 +7,11 @@ use std::{
 };
 
 use crate::utils::zstd_reader::Reader;
+use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use pull::{chapter::ArchiveChapterPull, manga::ArchiveMangaPull, ArchiveCoverPull};
 
+use serde::de::DeserializeOwned;
+use uuid::Uuid;
 use zstd::stream::raw::Decoder;
 
 use crate::{constants::CONTENTS_FILENAME, PackageContents, ThisResult};
@@ -165,6 +168,114 @@ where
         Ok(ArchiveChapterPull {
             entries,
             package_contents,
+        })
+    }
+    fn pull_data<O, F>(&mut self, rewind: bool, mut find: F) -> ThisResult<O>
+    where
+        O: DeserializeOwned,
+        F: FnMut(&tar::Entry<DecoderInner<'a, R>>, &PackageContents) -> bool,
+    {
+        let package_contents = self.get_package_contents().cloned()?;
+        self.use_tar_archive(rewind, |archive| {
+            let options = package_contents.options.clone().unwrap_or_default();
+            let entry = archive
+                .entries()?
+                .flatten()
+                .find(|entry| find(entry, &package_contents))
+                .ok_or(io::Error::new(
+                    io::ErrorKind::NotFound,
+                    "the manga/chapter/cover is not found in the archive",
+                ))?;
+            if options.zstd_compressed_metadata {
+                Ok(ciborium::from_reader(zstd::stream::Decoder::new(entry)?)?)
+            } else {
+                Ok(ciborium::from_reader(entry)?)
+            }
+        })?
+    }
+    pub fn get_manga(&mut self, id: Uuid, rewind: bool) -> ThisResult<MangaObject> {
+        self.pull_data(rewind, |entry, package_contents| {
+            let dirs_options = package_contents
+                .options
+                .clone()
+                .unwrap_or_default()
+                .directories
+                .unwrap_or_default();
+            let Ok(path) = entry.path() else {
+                return false;
+            };
+            path.as_ref() == AsRef::<Path>::as_ref(&dirs_options.mangas_add(format!("{id}.cbor")))
+        })
+        .map_err(|err| {
+            let api_core::Error::Io(io_err) = err else {
+                return err;
+            };
+            if io_err.kind() == io::ErrorKind::NotFound {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("the manga {id} is not found in the package"),
+                )
+                .into()
+            } else {
+                io_err.into()
+            }
+        })
+    }
+    pub fn get_cover(&mut self, id: Uuid, rewind: bool) -> ThisResult<CoverObject> {
+        self.pull_data(rewind, |entry, package_contents| {
+            let dirs_options = package_contents
+                .options
+                .clone()
+                .unwrap_or_default()
+                .directories
+                .unwrap_or_default();
+            let Ok(path) = entry.path() else {
+                return false;
+            };
+            path.as_ref() == AsRef::<Path>::as_ref(&dirs_options.covers_add(format!("{id}.cbor")))
+        })
+        .map_err(|err| {
+            let api_core::Error::Io(io_err) = err else {
+                return err;
+            };
+            if io_err.kind() == io::ErrorKind::NotFound {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("the cover {id} is not found in the package"),
+                )
+                .into()
+            } else {
+                io_err.into()
+            }
+        })
+    }
+    pub fn get_chapter(&mut self, id: Uuid, rewind: bool) -> ThisResult<ChapterObject> {
+        self.pull_data(rewind, |entry, package_contents| {
+            let dirs_options = package_contents
+                .options
+                .clone()
+                .unwrap_or_default()
+                .directories
+                .unwrap_or_default();
+            let Ok(path) = entry.path() else {
+                return false;
+            };
+            path.as_ref()
+                == AsRef::<Path>::as_ref(&dirs_options.chapters_add(format!("{id}/data.cbor")))
+        })
+        .map_err(|err| {
+            let api_core::Error::Io(io_err) = err else {
+                return err;
+            };
+            if io_err.kind() == io::ErrorKind::NotFound {
+                io::Error::new(
+                    io::ErrorKind::NotFound,
+                    format!("the chapter {id} is not found in the package"),
+                )
+                .into()
+            } else {
+                io_err.into()
+            }
         })
     }
 }
