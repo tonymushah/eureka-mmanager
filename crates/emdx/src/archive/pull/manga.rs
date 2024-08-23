@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     io::{self, Read},
     path::Path,
 };
@@ -22,8 +23,17 @@ where
     R: Read,
 {
     fn archive_entry_to_manga(&self, entry: Entry<'a, R>) -> ThisResult<MangaObject> {
-        let options = self.package_contents.options.clone().unwrap_or_default();
-        let dir_options = options.directories.unwrap_or_default();
+        let options = self
+            .package_contents
+            .options
+            .as_ref()
+            .map(Cow::Borrowed)
+            .unwrap_or_default();
+        let dir_options = options
+            .directories
+            .as_ref()
+            .map(Cow::Borrowed)
+            .unwrap_or_default();
         if self
             .package_contents
             .data
