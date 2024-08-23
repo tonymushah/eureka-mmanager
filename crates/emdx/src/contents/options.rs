@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use api_core::DirsOptions;
 use serde::{Deserialize, Serialize};
 
@@ -7,6 +9,15 @@ pub struct PackageContentsOptions {
     pub directories: Option<DirsOptions>,
     pub zstd_compressed_images: bool,
     pub zstd_compressed_metadata: bool,
+}
+
+impl PackageContentsOptions {
+    pub fn get_dirs(&self) -> Cow<'_, DirsOptions> {
+        self.directories
+            .as_ref()
+            .map(Cow::Borrowed)
+            .unwrap_or_default()
+    }
 }
 
 impl From<DirsOptions> for PackageContentsOptions {
