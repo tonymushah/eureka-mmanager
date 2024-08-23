@@ -123,23 +123,74 @@ mod package {
 }
 
 mod archive {
+    use std::path::Path;
+
     use emdx::Archive;
 
     use super::*;
-    fn normal() {
-        let file = File::open(package::NORMAL_FILE).unwrap();
-        let mut archive = Archive::from_reader(file).unwrap();
+
+    fn read_file<P: AsRef<Path>>(path: P, builder: &PackageBuilder) -> File {
+        let initial_contents = builder.get_package_contents();
+        let mut file = File::open(path).unwrap();
         {
-            let manga_pull = archive.manga_pull(true).unwrap();
-            assert_eq!(manga_pull.flatten().count(), 1usize);
+            let mut archive = Archive::from_reader(&mut file).unwrap();
+            {
+                let manga_pull = archive.manga_pull(true).unwrap();
+                assert_eq!(manga_pull.flatten().count(), initial_contents.data.len());
+            }
+            {
+                let cover_pull = archive.cover_pull(true).unwrap();
+                assert_eq!(
+                    cover_pull.flatten().count(),
+                    initial_contents
+                        .data
+                        .values()
+                        .fold(0, |acc, manga| { acc + manga.covers.len() })
+                );
+            }
+            {
+                let chapter_pull = archive.chapter_pull(true).unwrap();
+                assert_eq!(
+                    chapter_pull.flatten().count(),
+                    initial_contents
+                        .data
+                        .values()
+                        .fold(0, |acc, manga| { acc + manga.chapters.len() })
+                );
+            }
         }
-        {
-            let cover_pull = archive.cover_pull(true).unwrap();
-            assert_eq!(cover_pull.flatten().count(), 1usize);
-        }
+        file
     }
-    pub fn main(_builder: &PackageBuilder) {
-        normal();
+
+    fn normal(builder: &PackageBuilder) {
+        let start = Instant::now();
+        read_file(package::NORMAL_FILE, builder);
+        let pull_time = Instant::now() - start;
+        println!("normal bench Time: {} ms", pull_time.as_millis());
+    }
+    fn zstd_metadata(builder: &PackageBuilder) {
+        let start = Instant::now();
+        read_file(package::ZSTD_METADATA_FILE, builder);
+        let pull_time = Instant::now() - start;
+        println!("zstd metadata bench Time: {} ms", pull_time.as_millis());
+    }
+    fn zstd_images(builder: &PackageBuilder) {
+        let start = Instant::now();
+        read_file(package::ZSTD_IMAGES_FILE, builder);
+        let pull_time = Instant::now() - start;
+        println!("zstd images bench Time: {} ms", pull_time.as_millis());
+    }
+    fn zstd_all(builder: &PackageBuilder) {
+        let start = Instant::now();
+        read_file(package::ZSTD_ALL_FILE, builder);
+        let pull_time = Instant::now() - start;
+        println!("zstd metadata bench Time: {} ms", pull_time.as_millis());
+    }
+    pub fn main(builder: &PackageBuilder) {
+        normal(builder);
+        zstd_metadata(builder);
+        zstd_images(builder);
+        zstd_all(builder);
     }
 }
 
