@@ -231,7 +231,7 @@ fn main() {
     builder.set_compression_level(3);
     let add_time = Instant::now() - start;
     println!("Adding Time: {} ms", add_time.as_millis());
-    //package::main(&builder);
+    package::main(&builder);
     archive::main(&builder);
     println!("Done!");
 }
