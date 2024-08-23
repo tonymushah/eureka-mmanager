@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     io::{self, Read},
     path::Path,
 };
@@ -23,17 +22,8 @@ where
     R: Read,
 {
     fn archive_entry_to_chapter(&self, entry: Entry<'a, R>) -> ThisResult<ChapterObject> {
-        let options = self
-            .package_contents
-            .options
-            .as_ref()
-            .map(Cow::Borrowed)
-            .unwrap_or_default();
-        let dir_options = options
-            .directories
-            .as_ref()
-            .map(Cow::Borrowed)
-            .unwrap_or_default();
+        let options = self.package_contents.get_options();
+        let dir_options = options.get_dirs();
         if self
             .package_contents
             .data
