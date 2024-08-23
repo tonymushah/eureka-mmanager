@@ -4,7 +4,7 @@ use std::{
 };
 
 use actix::prelude::*;
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use mangadex_api_schema_rust::v5::ChapterObject as Object;
 use mangadex_api_types_rust::RelationshipType;
 use tokio_stream::StreamExt;
@@ -160,8 +160,12 @@ impl Download for Task {
                                 Ok(b) => {
                                     if let Err(e) = manager
                                         .push(
-                                            ChapterImagePushEntry::new(id, filename.clone(), b)
-                                                .mode(mode),
+                                            ChapterImagePushEntry::new(
+                                                id,
+                                                filename.clone(),
+                                                b.reader(),
+                                            )
+                                            .mode(mode),
                                         )
                                         .await
                                     {
@@ -181,7 +185,7 @@ impl Download for Task {
                                                 ChapterImagePushEntry::new(
                                                     id,
                                                     filename.clone(),
-                                                    Bytes::new(),
+                                                    Bytes::new().reader(),
                                                 )
                                                 .mode(mode),
                                             )

@@ -1,9 +1,7 @@
 use std::{
     fs::File,
-    io::{BufWriter, Write},
+    io::{self, BufWriter, Read, Write},
 };
-
-use bytes::Bytes;
 
 use uuid::Uuid;
 
@@ -22,18 +20,18 @@ impl Default for Mode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ChapterImagePushEntry {
+pub struct ChapterImagePushEntry<R> {
     filename: String,
-    bytes: Bytes,
+    reader: R,
     id: Uuid,
     mode: Mode,
 }
 
-impl ChapterImagePushEntry {
-    pub fn new(id: Uuid, filename: String, bytes: Bytes) -> Self {
+impl<R> ChapterImagePushEntry<R> {
+    pub fn new(id: Uuid, filename: String, reader: R) -> Self {
         Self {
             filename,
-            bytes,
+            reader,
             id,
             mode: Default::default(),
         }
@@ -50,11 +48,8 @@ impl ChapterImagePushEntry {
             ..self
         }
     }
-    pub fn bytes<B: Into<Bytes>>(self, bytes: B) -> Self {
-        Self {
-            bytes: bytes.into(),
-            ..self
-        }
+    pub fn reader(self, reader: R) -> Self {
+        Self { reader, ..self }
     }
     pub fn mode<M: Into<Mode>>(self, mode: M) -> Self {
         Self {
@@ -64,9 +59,12 @@ impl ChapterImagePushEntry {
     }
 }
 
-impl Push<ChapterImagePushEntry> for DirsOptions {
+impl<R> Push<ChapterImagePushEntry<R>> for DirsOptions
+where
+    R: Read,
+{
     type Error = crate::Error;
-    fn push(&mut self, data: ChapterImagePushEntry) -> crate::ManagerCoreResult<()> {
+    fn push(&mut self, mut data: ChapterImagePushEntry<R>) -> crate::ManagerCoreResult<()> {
         let mut file = match data.mode {
             Mode::Data => BufWriter::new(File::create(
                 self.chapters_id_data_add(data.id).join(data.filename),
@@ -75,15 +73,20 @@ impl Push<ChapterImagePushEntry> for DirsOptions {
                 self.chapters_id_data_saver_add(data.id).join(data.filename),
             )?),
         };
-        file.write_all(&data.bytes)?;
+        {
+            io::copy(&mut data.reader, &mut file)?;
+        }
         file.flush()?;
         Ok(())
     }
 }
 
-impl Push<Vec<ChapterImagePushEntry>> for DirsOptions {
+impl<R> Push<Vec<ChapterImagePushEntry<R>>> for DirsOptions
+where
+    R: Read,
+{
     type Error = crate::Error;
-    fn push(&mut self, data: Vec<ChapterImagePushEntry>) -> crate::ManagerCoreResult<()> {
+    fn push(&mut self, data: Vec<ChapterImagePushEntry<R>>) -> crate::ManagerCoreResult<()> {
         for image in data {
             self.push(image)?;
         }
