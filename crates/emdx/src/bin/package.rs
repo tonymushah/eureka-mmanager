@@ -158,6 +158,39 @@ mod archive {
                         .fold(0, |acc, manga| { acc + manga.chapters.len() })
                 );
             }
+            {
+                let any_pull = archive.any_pull(true).unwrap();
+                for data in any_pull.flatten() {
+                    match data {
+                        emdx::archive::pull::any::PossibleEntryData::Manga(d) => {
+                            println!("Manga => {}", d.id);
+                        }
+                        emdx::archive::pull::any::PossibleEntryData::Chapter(d) => {
+                            println!("Chapter => {}", d.id);
+                        }
+                        emdx::archive::pull::any::PossibleEntryData::Cover(d) => {
+                            println!("Cover => {}", d.id);
+                        }
+                        emdx::archive::pull::any::PossibleEntryData::CoverImage {
+                            filename,
+                            file: _,
+                        } => {
+                            println!("CoverImage => {}", filename);
+                        }
+                        emdx::archive::pull::any::PossibleEntryData::ChapterImage {
+                            filename,
+                            file: _,
+                            chapter,
+                            mode,
+                        } => {
+                            println!("ChapterImage({chapter} - {mode:?}) => {}", filename);
+                        }
+                        emdx::archive::pull::any::PossibleEntryData::Any { tar_path, file: _ } => {
+                            print!("Any => {tar_path:?}");
+                        }
+                    }
+                }
+            }
         }
         file
     }
