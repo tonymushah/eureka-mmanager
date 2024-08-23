@@ -8,7 +8,9 @@ use std::{
 
 use crate::utils::zstd_reader::Reader;
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
-use pull::{chapter::ArchiveChapterPull, manga::ArchiveMangaPull, ArchiveCoverPull};
+use pull::{
+    chapter::ArchiveChapterPull, manga::ArchiveMangaPull, ArchiveAnyPull, ArchiveCoverPull,
+};
 
 use serde::de::DeserializeOwned;
 use uuid::Uuid;
@@ -277,5 +279,11 @@ where
                 io_err.into()
             }
         })
+    }
+    pub fn any_pull(&mut self, rewind: bool) -> ThisResult<ArchiveAnyPull<DecoderInner<'a, R>>> {
+        let package_contents = self.get_package_contents().cloned()?;
+        let archive = self.get_archive(rewind)?;
+        let entries = archive.entries()?;
+        Ok(ArchiveAnyPull::new(entries, package_contents)?)
     }
 }
