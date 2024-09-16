@@ -123,8 +123,9 @@ mod package {
 }
 
 mod archive {
-    use std::path::Path;
+    use std::{io::BufReader, path::Path};
 
+    use api_core::data_push::Push;
     use emdx::Archive;
 
     use super::*;
@@ -133,7 +134,7 @@ mod archive {
         let initial_contents = builder.get_package_contents();
         let mut file = File::open(path).unwrap();
         {
-            let mut archive = Archive::from_reader(&mut file).unwrap();
+            let mut archive = Archive::from_reader(BufReader::new(&mut file)).unwrap();
             {
                 let manga_pull = archive.manga_pull(true).unwrap();
                 assert_eq!(manga_pull.flatten().count(), initial_contents.data.len());
@@ -186,7 +187,7 @@ mod archive {
                             println!("ChapterImage({chapter} - {mode:?}) => {}", filename);
                         }
                         emdx::archive::pull::any::PossibleEntryData::Any { tar_path, file: _ } => {
-                            print!("Any => {tar_path:?}");
+                            println!("Any => {tar_path:?}");
                         }
                     }
                 }
@@ -194,30 +195,72 @@ mod archive {
         }
         file
     }
-
+    fn push_archive<P: AsRef<Path>>(path: P) -> File {
+        let mut dir_options = DirsOptions::new_from_data_dir(format!(
+            "{}.dir-options",
+            path.as_ref().to_str().unwrap()
+        ));
+        let _ = dir_options.verify_and_init();
+        let mut file = File::open(&path).unwrap();
+        {
+            let archive = Archive::from_reader(&mut file).unwrap();
+            dir_options.push(archive).unwrap();
+        }
+        file
+    }
     fn normal(builder: &PackageBuilder) {
-        let start = Instant::now();
-        read_file(package::NORMAL_FILE, builder);
-        let pull_time = Instant::now() - start;
-        println!("normal bench Time: {} ms", pull_time.as_millis());
+        {
+            let start = Instant::now();
+            read_file(package::NORMAL_FILE, builder);
+            let pull_time = Instant::now() - start;
+            println!("normal bench Time: {} ms", pull_time.as_millis());
+        }
+        {
+            let start = Instant::now();
+            push_archive(package::NORMAL_FILE);
+            let pull_time = Instant::now() - start;
+            println!("normal push Time: {} ms", pull_time.as_millis());
+        }
     }
     fn zstd_metadata(builder: &PackageBuilder) {
-        let start = Instant::now();
-        read_file(package::ZSTD_METADATA_FILE, builder);
-        let pull_time = Instant::now() - start;
-        println!("zstd metadata bench Time: {} ms", pull_time.as_millis());
+        {
+            let start = Instant::now();
+            read_file(package::ZSTD_METADATA_FILE, builder);
+            let pull_time = Instant::now() - start;
+            println!("zstd metadata bench Time: {} ms", pull_time.as_millis());
+        }
+        {
+            let start = Instant::now();
+            push_archive(package::ZSTD_METADATA_FILE);
+            let pull_time = Instant::now() - start;
+            println!("zstd metadata push Time: {} ms", pull_time.as_millis());
+        }
     }
     fn zstd_images(builder: &PackageBuilder) {
+        {
+            let start = Instant::now();
+            read_file(package::ZSTD_IMAGES_FILE, builder);
+            let pull_time = Instant::now() - start;
+            println!("zstd images bench Time: {} ms", pull_time.as_millis());
+        }
         let start = Instant::now();
-        read_file(package::ZSTD_IMAGES_FILE, builder);
+        push_archive(package::ZSTD_IMAGES_FILE);
         let pull_time = Instant::now() - start;
-        println!("zstd images bench Time: {} ms", pull_time.as_millis());
+        println!("zstd images push Time: {} ms", pull_time.as_millis());
     }
     fn zstd_all(builder: &PackageBuilder) {
-        let start = Instant::now();
-        read_file(package::ZSTD_ALL_FILE, builder);
-        let pull_time = Instant::now() - start;
-        println!("zstd metadata bench Time: {} ms", pull_time.as_millis());
+        {
+            let start = Instant::now();
+            read_file(package::ZSTD_ALL_FILE, builder);
+            let pull_time = Instant::now() - start;
+            println!("zstd metadata bench Time: {} ms", pull_time.as_millis());
+        }
+        {
+            let start = Instant::now();
+            push_archive(package::ZSTD_ALL_FILE);
+            let pull_time = Instant::now() - start;
+            println!("zstd metadata push Time: {} ms", pull_time.as_millis());
+        }
     }
     pub fn main(builder: &PackageBuilder) {
         normal(builder);
