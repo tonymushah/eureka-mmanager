@@ -44,8 +44,8 @@ where
 }
 
 pub trait PushActorAddr<T: Send>: Sync {
-    fn push(&self, data: T) -> impl Future<Output = ManagerCoreResult<()>>;
-    fn verify_and_push(&self, data: T) -> impl Future<Output = ManagerCoreResult<()>>;
+    fn push(&self, data: T) -> impl Future<Output = ManagerCoreResult<()>> + Send;
+    fn verify_and_push(&self, data: T) -> impl Future<Output = ManagerCoreResult<()>> + Send;
 }
 
 impl<T> PushActorAddr<T> for Addr<DirsOptions>

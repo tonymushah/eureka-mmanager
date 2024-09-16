@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use bytes::Buf;
 use mangadex_api_schema_rust::v5::CoverObject;
 use mangadex_api_types_rust::RelationshipType;
 
@@ -51,7 +52,7 @@ impl Download for Task {
                             .build()?
                             .via_cover_api_object(res.data.clone())
                             .await;
-                        manager.push((res.data.clone(), image?)).await?;
+                        manager.push((res.data.clone(), image?.reader())).await?;
                         history.remove_and_commit(entry).await?;
                         Ok(res.data)
                     }

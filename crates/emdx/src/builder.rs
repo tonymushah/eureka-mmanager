@@ -18,18 +18,30 @@ use inner::BuilderInner;
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use mangadex_api_types_rust::RelationshipType;
 
+use tar::HeaderMode;
 use uuid::Uuid;
 
-use crate::{PMangaObject, PackageContents};
+use crate::{PMangaObject, PackageContents, ThisResult};
 
-type ThisResult<T, E = api_core::Error> = Result<T, E>;
-
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Builder {
     initial_dir_options: DirsOptions,
     contents: PackageContents,
     compression_level: i32,
     compress_image_to_jpeg: bool,
+    header_mode: HeaderMode,
+}
+
+impl Default for Builder {
+    fn default() -> Self {
+        Self {
+            initial_dir_options: Default::default(),
+            contents: Default::default(),
+            compression_level: Default::default(),
+            compress_image_to_jpeg: Default::default(),
+            header_mode: HeaderMode::Complete,
+        }
+    }
 }
 
 impl TryFrom<DirsOptions> for Builder {
@@ -78,6 +90,10 @@ impl Builder {
     }
     pub fn set_compress_image_to_jpeg(mut self, compress_image_to_jpeg: bool) -> Self {
         self.compress_image_to_jpeg = compress_image_to_jpeg;
+        self
+    }
+    pub fn set_tar_header_mode(mut self, mode: HeaderMode) -> Self {
+        self.header_mode = mode;
         self
     }
     pub fn set_content(mut self, content: PackageContents) -> Self {
@@ -364,5 +380,8 @@ impl Builder {
     }
     pub fn create_dict(&self, max_size: usize) -> io::Result<Vec<u8>> {
         zstd::dict::from_files(self.get_to_use_paths(), max_size)
+    }
+    pub fn get_package_contents(&self) -> &PackageContents {
+        &self.contents
     }
 }

@@ -1,6 +1,7 @@
 pub mod options;
 
 use std::{
+    borrow::Cow,
     collections::HashMap,
     ops::{Add, AddAssign},
 };
@@ -52,6 +53,12 @@ pub struct PackageContents {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub options: Option<PackageContentsOptions>,
     pub data: HashMap<Uuid, PMangaObject>,
+}
+
+impl PackageContents {
+    pub fn get_options(&self) -> Cow<'_, PackageContentsOptions> {
+        self.options.as_ref().map(Cow::Borrowed).unwrap_or_default()
+    }
 }
 
 impl TryFrom<&DirsOptions> for PackageContents {

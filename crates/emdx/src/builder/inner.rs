@@ -8,7 +8,7 @@ use api_core::{data_pulls::Pull, DirsOptions};
 use image::{ImageFormat, ImageResult};
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use serde::Serialize;
-use tar::Builder as TarBuilder;
+use tar::{Builder as TarBuilder, Header, HeaderMode};
 use tempfile::{tempdir, TempDir};
 use uuid::Uuid;
 use zstd::{stream::AutoFinishEncoder, Encoder};
@@ -59,6 +59,7 @@ where
     default_dir_options: DirsOptions,
     compression_level: i32,
     compress_image_to_jpeg: bool,
+    header_mode: HeaderMode,
 }
 
 impl<'a, W> BuilderInner<'a, W>
@@ -67,7 +68,9 @@ where
 {
     pub fn new(builder: Builder, writer: W) -> io::Result<Self> {
         let workdir = tempdir()?;
-        let tar = TarBuilder::new(Encoder::new(writer, builder.compression_level)?.auto_finish());
+        let mut tar =
+            TarBuilder::new(Encoder::new(writer, builder.compression_level)?.auto_finish());
+        tar.mode(builder.header_mode);
         Ok(Self {
             compression_level: builder.compression_level,
             workdir,
@@ -76,10 +79,16 @@ where
             package_content: builder.contents,
             default_dir_options: Default::default(),
             compress_image_to_jpeg: builder.compress_image_to_jpeg,
+            header_mode: builder.header_mode,
         })
     }
     fn append_file<P: AsRef<Path>>(&mut self, path: P, file: &mut File) -> io::Result<()> {
-        self.tar.append_file(path, file)?;
+        let mode = self.header_mode;
+        let metadata = file.metadata()?;
+        let mut header = Header::new_gnu();
+        header.set_metadata_in_mode(&metadata, mode);
+        let file_buffer = BufReader::new(file);
+        self.tar.append_data(&mut header, path, file_buffer)?;
         Ok(())
     }
     fn create_workdir_file<P: AsRef<Path>>(&self, path: P) -> io::Result<File> {
