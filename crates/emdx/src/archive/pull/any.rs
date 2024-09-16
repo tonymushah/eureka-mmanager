@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     fs::File,
-    io::{self, BufWriter, Read, Write},
+    io::{self, BufWriter, Read, Seek, Write},
     path::PathBuf,
 };
 
@@ -237,6 +237,7 @@ where
             }
             temp_buf.flush()?;
         }
+        temp.rewind()?;
         Ok(temp)
     }
     fn extract_file(&self, mut entry: Entry<'a, R>) -> ThisResult<File> {
@@ -246,6 +247,7 @@ where
             io::copy(&mut entry, &mut temp_buf)?;
             temp_buf.flush()?;
         }
+        temp.rewind()?;
         Ok(temp)
     }
     fn entry_to_any(&self, entry: Entry<'a, R>) -> ThisResult<PossibleEntryData> {
