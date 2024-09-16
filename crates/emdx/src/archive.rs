@@ -1,12 +1,18 @@
 pub mod pull;
 
 use std::{
+    collections::HashMap,
     fmt::Debug,
+    fs::File,
     io::{self, BufRead, BufReader, Read, Seek},
     path::Path,
 };
 
 use crate::utils::zstd_reader::Reader;
+use api_core::{
+    data_push::{chapter::image::ChapterImagePushEntry, Push},
+    DirsOptions,
+};
 use mangadex_api_schema_rust::v5::{ChapterObject, CoverObject, MangaObject};
 use pull::{
     chapter::ArchiveChapterPull, manga::ArchiveMangaPull, ArchiveAnyPull, ArchiveCoverPull,
@@ -285,5 +291,57 @@ where
         let archive = self.get_archive(rewind)?;
         let entries = archive.entries()?;
         Ok(ArchiveAnyPull::new(entries, package_contents)?)
+    }
+}
+
+impl<'a, R: BufRead + Seek> Push<Archive<'a, R>> for DirsOptions {
+    type Error = api_core::Error;
+    fn push(&mut self, mut data: Archive<'a, R>) -> Result<(), Self::Error> {
+        let pull = data.any_pull(true)?;
+        let mut cover_acc = HashMap::<String, CoverObject>::new();
+        let mut cover_image_acc = HashMap::<String, File>::new();
+        for entry in pull.flatten() {
+            match entry {
+                pull::any::PossibleEntryData::Manga(manga) => {
+                    self.push(manga)?;
+                }
+                pull::any::PossibleEntryData::Chapter(chapter) => {
+                    self.push(chapter)?;
+                }
+                pull::any::PossibleEntryData::Cover(cover) => {
+                    cover_acc.insert(cover.attributes.file_name.clone(), cover);
+                }
+                pull::any::PossibleEntryData::CoverImage { filename, file } => {
+                    cover_image_acc.insert(filename, file);
+                }
+                pull::any::PossibleEntryData::ChapterImage {
+                    filename,
+                    file,
+                    chapter,
+                    mode,
+                } => {
+                    self.push(
+                        ChapterImagePushEntry::new(chapter, filename, BufReader::new(file))
+                            .mode(mode),
+                    )?;
+                }
+                pull::any::PossibleEntryData::Any { .. } => {}
+            }
+        }
+        let covers = cover_acc
+            .into_iter()
+            .fold(
+                HashMap::<String, (CoverObject, BufReader<File>)>::new(),
+                |mut acc, (filename, cover)| {
+                    if let Some(file) = cover_image_acc.remove(&filename) {
+                        acc.insert(filename, (cover, BufReader::new(file)));
+                    }
+                    acc
+                },
+            )
+            .into_values()
+            .collect::<Vec<_>>();
+        self.push(covers)?;
+        Ok(())
     }
 }
