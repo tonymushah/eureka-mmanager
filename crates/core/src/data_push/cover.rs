@@ -1,9 +1,8 @@
 use std::{
     fs::File,
-    io::{BufWriter, Write},
+    io::{self, BufWriter, Read, Write},
 };
 
-use bytes::Bytes;
 use mangadex_api_schema_rust::{
     v5::{CoverObject, RelatedAttributes},
     ApiData,
@@ -58,24 +57,24 @@ impl Push<CoverObject> for DirsOptions {
     }
 }
 
-impl Push<(CoverObject, Bytes)> for DirsOptions {
+impl<R: Read> Push<(CoverObject, R)> for DirsOptions {
     type Error = crate::Error;
-    fn push(&mut self, (data, image): (CoverObject, Bytes)) -> crate::ManagerCoreResult<()> {
+    fn push(&mut self, (data, mut image): (CoverObject, R)) -> crate::ManagerCoreResult<()> {
         let cover_image_path = self.cover_images_add(&data.attributes.file_name);
         self.push(data)?;
         let mut file = BufWriter::new(File::create(cover_image_path)?);
-        file.write_all(&image)?;
+        io::copy(&mut image, &mut file)?;
         file.flush()?;
         Ok(())
     }
     fn verify_and_push(
         &mut self,
-        (data, image): (CoverObject, Bytes),
+        (data, mut image): (CoverObject, R),
     ) -> crate::ManagerCoreResult<()> {
         let cover_image_path = self.cover_images_add(&data.attributes.file_name);
         self.verify_and_push(data)?;
         let mut file = BufWriter::new(File::create(cover_image_path)?);
-        file.write_all(&image)?;
+        io::copy(&mut image, &mut file)?;
         file.flush()?;
         Ok(())
     }
@@ -97,15 +96,15 @@ impl Push<Vec<CoverObject>> for DirsOptions {
     }
 }
 
-impl Push<Vec<(CoverObject, Bytes)>> for DirsOptions {
+impl<R: Read> Push<Vec<(CoverObject, R)>> for DirsOptions {
     type Error = crate::Error;
-    fn push(&mut self, data: Vec<(CoverObject, Bytes)>) -> crate::ManagerCoreResult<()> {
+    fn push(&mut self, data: Vec<(CoverObject, R)>) -> crate::ManagerCoreResult<()> {
         for cover_n_image in data {
             self.push(cover_n_image)?;
         }
         Ok(())
     }
-    fn verify_and_push(&mut self, data: Vec<(CoverObject, Bytes)>) -> crate::ManagerCoreResult<()> {
+    fn verify_and_push(&mut self, data: Vec<(CoverObject, R)>) -> crate::ManagerCoreResult<()> {
         for cover_n_image in data {
             self.verify_and_push(cover_n_image)?;
         }
