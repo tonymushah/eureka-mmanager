@@ -12,7 +12,7 @@ use self::task::ChapterDownloadTask;
 
 use super::{
     messages::{DropSingleTaskMessage, StartDownload},
-    state::{DownloadManagerState, DownloadMessageState, TaskState},
+    state::{DownloadManagerState, DownloadMessageState},
     traits::{managers::TaskManager, task::AsyncState},
 };
 
@@ -94,17 +94,20 @@ impl TaskManager for ChapterDownloadManager {
         self.notify.notify_waiters();
 
         if let DownloadMessageState::Downloading = msg.state {
-            let fut = async move { re_task.state().await.map(|s| (s, re_task)) }
-                .into_actor(self)
-                .map_ok(move |(s, re_task), _this, _ctx| {
-                    if s != TaskState::Loading {
-                        re_task.do_send(msg.mode);
-                        re_task.do_send(StartDownload);
-                    }
-                })
-                .map(|s, _, _| {
-                    let _ = s;
-                });
+            let fut = async move {
+                let state = re_task.state().await?;
+                if !state.is_loading() {
+                    re_task.send(msg.mode).await?;
+                    re_task.send(StartDownload).await?;
+                }
+                Ok::<_, actix::MailboxError>(())
+            }
+            .into_actor(self)
+            .map(|s, _, _| {
+                if let Err(err) = s {
+                    log::error!("{err}");
+                }
+            });
             ctx.wait(fut)
         }
         task
