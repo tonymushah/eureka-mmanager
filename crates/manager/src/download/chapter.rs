@@ -3,7 +3,7 @@ pub mod task;
 
 use std::{collections::HashMap, sync::Arc};
 
-use actix::prelude::*;
+use actix::{prelude::*, WeakAddr};
 use task::DownloadMode;
 use tokio::sync::Notify;
 use uuid::Uuid;
@@ -19,7 +19,7 @@ use super::{
 #[derive(Debug)]
 pub struct ChapterDownloadManager {
     state: Addr<DownloadManagerState>,
-    tasks: HashMap<Uuid, Addr<ChapterDownloadTask>>,
+    tasks: HashMap<Uuid, WeakAddr<ChapterDownloadTask>>,
     notify: Arc<Notify>,
 }
 
@@ -75,21 +75,48 @@ impl TaskManager for ChapterDownloadManager {
         self.notify.clone()
     }
     fn tasks(&self) -> Vec<Addr<Self::Task>> {
-        self.tasks.values().cloned().collect()
+        self.tasks
+            .values()
+            .flat_map(|task| task.upgrade())
+            .collect()
     }
     fn tasks_id(&self) -> Vec<Uuid> {
-        self.tasks.keys().copied().collect()
+        self.tasks
+            .iter()
+            .flat_map(|(id, tasks)| {
+                if tasks.upgrade().is_some() {
+                    Some(id)
+                } else {
+                    None
+                }
+            })
+            .copied()
+            .collect()
     }
     fn new_task(
         &mut self,
         msg: Self::DownloadMessage,
         ctx: &mut Self::Context,
     ) -> Addr<Self::Task> {
-        let task = self
-            .tasks
-            .entry(msg.id)
-            .or_insert_with(|| Self::Task::new(msg.id, msg.mode, ctx.address()).start())
-            .clone();
+        let task = {
+            match self.tasks.entry(msg.id) {
+                std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+                    let weak = occupied_entry.get_mut();
+                    if let Some(tsk) = weak.upgrade() {
+                        tsk
+                    } else {
+                        let tsk = Self::Task::new(msg.id, msg.mode, ctx.address()).start();
+                        let _weak = std::mem::replace(weak, tsk.downgrade());
+                        tsk
+                    }
+                }
+                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    let tsk = Self::Task::new(msg.id, msg.mode, ctx.address()).start();
+                    vacant_entry.insert(tsk.downgrade());
+                    tsk
+                }
+            }
+        };
         let re_task = task.clone();
         self.notify.notify_waiters();
 
