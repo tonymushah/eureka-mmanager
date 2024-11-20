@@ -89,6 +89,11 @@ impl Actor for ChapterDownloadTask {
             }
         }));
     }
+    /*
+    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
+
+    }
+    */
 }
 
 impl ChapterDownloadTask {
