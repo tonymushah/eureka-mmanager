@@ -3,7 +3,7 @@ pub mod task;
 
 use std::{collections::HashMap, sync::Arc};
 
-use actix::prelude::*;
+use actix::{prelude::*, WeakAddr};
 use tokio::sync::Notify;
 use uuid::Uuid;
 
@@ -18,7 +18,7 @@ use super::{
 #[derive(Debug)]
 pub struct MangaDownloadManager {
     state: Addr<DownloadManagerState>,
-    tasks: HashMap<Uuid, Addr<MangaDownloadTask>>,
+    tasks: HashMap<Uuid, WeakAddr<MangaDownloadTask>>,
     notify: Arc<Notify>,
 }
 
@@ -84,14 +84,23 @@ impl TaskManager for MangaDownloadManager {
     fn notify(&self) -> Arc<Notify> {
         self.notify.clone()
     }
-    fn tasks_id(&self) -> Vec<Uuid> {
-        self.tasks.keys().copied().collect()
-    }
-
     fn tasks(&self) -> Vec<Addr<Self::Task>> {
         self.tasks
-            .values() /* .filter(|v| v.connected())*/
-            .cloned()
+            .values()
+            .flat_map(|task| task.upgrade())
+            .collect()
+    }
+    fn tasks_id(&self) -> Vec<Uuid> {
+        self.tasks
+            .iter()
+            .flat_map(|(id, tasks)| {
+                if tasks.upgrade().is_some() {
+                    Some(id)
+                } else {
+                    None
+                }
+            })
+            .copied()
             .collect()
     }
     fn new_task(
@@ -99,11 +108,25 @@ impl TaskManager for MangaDownloadManager {
         msg: Self::DownloadMessage,
         ctx: &mut Self::Context,
     ) -> Addr<Self::Task> {
-        let task = self
-            .tasks
-            .entry(msg.id)
-            .or_insert_with(|| MangaDownloadTask::new(msg.id, ctx.address()).start())
-            .clone();
+        let task = {
+            match self.tasks.entry(msg.id) {
+                std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+                    let weak = occupied_entry.get_mut();
+                    if let Some(tsk) = weak.upgrade() {
+                        tsk
+                    } else {
+                        let tsk = Self::Task::new(msg.id, ctx.address()).start();
+                        let _weak = std::mem::replace(weak, tsk.downgrade());
+                        tsk
+                    }
+                }
+                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    let tsk = Self::Task::new(msg.id, ctx.address()).start();
+                    vacant_entry.insert(tsk.downgrade());
+                    tsk
+                }
+            }
+        };
         let re_task = task.clone();
         self.notify.notify_waiters();
 
