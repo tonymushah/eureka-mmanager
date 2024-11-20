@@ -1,13 +1,8 @@
 use actix::prelude::*;
 use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
 use mangadex_desktop_api2::{
-    data_pulls::{
-        cover::filter::CoverListDataPullFilterParams, AsyncIntoSorted, IntoParamedFilteredStream,
-        Paginate,
-    },
     files_dirs::messages::pull::cover::CoverListDataPullMessage,
-    history::service::HistoryActorService,
-    DirsOptions,
+    history::service::HistoryActorService, prelude::*, DirsOptions,
 };
 use uuid::Uuid;
 
@@ -17,9 +12,7 @@ fn main() -> anyhow::Result<()> {
         let options = DirsOptions::new_from_data_dir("data");
         options.verify_and_init()?;
         let options_actor = options.start();
-        let _history = HistoryActorService::new(options_actor.clone())
-            .await
-            .start();
+        let _history = HistoryActorService::new(options_actor.clone()).start();
         let data_pull = options_actor
             .send(CoverListDataPullMessage)
             .await??

@@ -24,7 +24,6 @@ use mangadex_desktop_api2::{
     history::{service::messages::is_in::IsInMessage, HistoryEntry},
     DirsOptions,
 };
-use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use log::{Level, Metadata, Record};
@@ -54,8 +53,16 @@ pub fn init() -> Result<(), SetLoggerError> {
 
 fn main() -> anyhow::Result<()> {
     init().map_err(anyhow::Error::msg)?;
-    let run = System::new();
+    let run = System::with_tokio_rt(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+    });
     run.block_on(async {
+        if tokio::runtime::Handle::try_current().is_ok() {
+            println!("Has a tokio handle! :D");
+        }
         let chapter_ids = [
             "48ab312a-5cb9-46e9-8061-5eca0dae32e3",
             "8a1906ae-08d3-40ab-8d8f-127cbc940ff1",
@@ -71,7 +78,7 @@ fn main() -> anyhow::Result<()> {
                 o.verify_and_init()?;
                 o.start()
             };
-            DownloadManager::new(options, client).await.start()
+            DownloadManager::new(options, client).start()
         };
         let options = dowload_manager
             .send(GetManagerStateMessage)
@@ -156,20 +163,20 @@ fn main() -> anyhow::Result<()> {
         let chapter_count = options
             .send(ChapterIdsListDataPullMessage(chapter_ids.clone()))
             .await?
-            .fold(0_usize, |acc, _x| acc + 1)
-            .await;
+            .flatten()
+            .fold(0_usize, |acc, _x| acc + 1);
         assert_eq!(chapter_count, chapter_ids.len());
         let covers = options
             .send(CoverListDataPullMessage)
             .await??
-            .fold(0_usize, |acc, _x| acc + 1)
-            .await;
+            .flatten()
+            .fold(0_usize, |acc, _x| acc + 1);
         assert_eq!(covers, 1);
         let mangas = options
             .send(MangaListDataPullMessage)
             .await??
-            .fold(0_usize, |acc, _x| acc + 1)
-            .await;
+            .flatten()
+            .fold(0_usize, |acc, _x| acc + 1);
         assert_eq!(mangas, 1);
         Ok::<(), anyhow::Error>(())
     })?;

@@ -37,3 +37,4 @@ once_cell = "1.19"
 # moka = { version = "0.12", features = ["future"]}
 toml = "0.8"
 anyhow = "1.0"
+ciborium.workspace = true

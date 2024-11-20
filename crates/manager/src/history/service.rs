@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::read_dir};
 use actix::prelude::*;
 use mangadex_api_types_rust::RelationshipType;
 
-use crate::{prelude::JoinPathAsyncTraits, DirsOptions, ManagerCoreResult};
+use crate::{files_dirs::messages::join::JoinHistoryMessage, DirsOptions, ManagerCoreResult};
 
 use super::{HistoryEntry, HistoryWFile, Remove};
 
@@ -21,35 +21,11 @@ pub struct HistoryActorService {
 }
 
 impl HistoryActorService {
-    pub fn new_blocking(dirs: Addr<DirsOptions>) -> Self {
+    pub fn new(dirs: Addr<DirsOptions>) -> Self {
         Self {
             dirs,
             files: Default::default(),
         }
-    }
-    pub async fn load_files(&mut self) {
-        self.files = self
-            .dirs
-            .join_history("")
-            .await
-            .map(|p| {
-                read_dir(p)
-                    .map(|dir| {
-                        dir.flatten()
-                            .flat_map(|f| HistoryWFile::from_file(f.path()))
-                            .collect::<Vec<HistoryWFile>>()
-                    })
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default()
-            .into_iter()
-            .map(|file| (*file.get_history().get_data_type(), file))
-            .collect();
-    }
-    pub async fn new(dirs: Addr<DirsOptions>) -> Self {
-        let mut this = Self::new_blocking(dirs);
-        this.load_files().await;
-        this
     }
     fn get_history(&self, rel: RelationshipType) -> Option<&HistoryWFile> {
         self.files.get(&rel)
@@ -115,6 +91,30 @@ impl AutoCommitRollbackRemove<HistoryEntry> for HistoryActorService {
 
 impl Actor for HistoryActorService {
     type Context = Context<Self>;
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let dirs = self.dirs.clone();
+        dirs.send(JoinHistoryMessage(""))
+            .into_actor(self)
+            .map_ok(|res, this, _ctx| {
+                this.files = read_dir(res)
+                    .map(|dir| {
+                        dir.flatten()
+                            .flat_map(|f| HistoryWFile::from_file(f.path()))
+                            .collect::<Vec<HistoryWFile>>()
+                    })
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|file| (*file.get_history().get_data_type(), file))
+                    .collect();
+            })
+            .map_err(|e, _, _| {
+                log::error!("failed to send message to dir_options {e}");
+            })
+            .map(|res, _, _| {
+                let _ = res;
+            })
+            .wait(ctx);
+    }
     fn stopped(&mut self, _ctx: &mut Self::Context) {
         let _ = self.commit();
     }

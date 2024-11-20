@@ -8,9 +8,7 @@ fn main() -> anyhow::Result<()> {
         let options = DirsOptions::new_from_data_dir("data");
         options.verify_and_init()?;
         let options_actor = options.start();
-        let history = HistoryActorService::new(options_actor.clone())
-            .await
-            .start();
+        let history = HistoryActorService::new(options_actor.clone()).start();
         let params = MangaListDataPullFilterParams {
             ..Default::default()
         };

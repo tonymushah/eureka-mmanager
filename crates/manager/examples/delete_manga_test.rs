@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<()> {
         // Get all the manga chapter
         let chapters: Vec<Uuid> = {
             let params = ChapterListDataPullFilterParams {
-                manga_id: Some(manga_id),
+                manga_ids: vec![manga_id],
                 ..Default::default()
             };
             options_actor

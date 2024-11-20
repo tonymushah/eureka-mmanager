@@ -2,9 +2,7 @@ use actix::prelude::*;
 use mangadex_api_input_types::manga::aggregate::MangaAggregateParam;
 use mangadex_api_types_rust::Language;
 use mangadex_desktop_api2::{
-    data_pulls::manga::aggregate::AsyncIntoMangaAggreagate,
-    files_dirs::messages::pull::chapter::ChapterListDataPullMessage,
-    history::service::HistoryActorService, DirsOptions,
+    files_dirs::messages::pull::chapter::ChapterListDataPullMessage, prelude::*,
 };
 use uuid::Uuid;
 
@@ -14,9 +12,7 @@ fn main() -> anyhow::Result<()> {
         let options = DirsOptions::new_from_data_dir("data");
         options.verify_and_init()?;
         let options_actor = options.start();
-        let _history = HistoryActorService::new(options_actor.clone())
-            .await
-            .start();
+        let _history = HistoryActorService::new(options_actor.clone()).start();
         let aggregate = options_actor
             .send(ChapterListDataPullMessage)
             .await??
