@@ -11,7 +11,7 @@ use self::task::MangaDownloadTask;
 
 use super::{
     messages::{DropSingleTaskMessage, StartDownload},
-    state::{DownloadManagerState, DownloadMessageState, TaskState},
+    state::{DownloadManagerState, DownloadMessageState},
     traits::{managers::TaskManager, task::AsyncState},
 };
 
@@ -108,16 +108,19 @@ impl TaskManager for MangaDownloadManager {
         self.notify.notify_waiters();
 
         if let DownloadMessageState::Downloading = msg.state {
-            let fut = async move { re_task.state().await.map(|s| (s, re_task)) }
-                .into_actor(self)
-                .map_ok(move |(s, re_task), _this, _ctx| {
-                    if s != TaskState::Loading {
-                        re_task.do_send(StartDownload);
-                    }
-                })
-                .map(|s, _, _| {
-                    let _ = s;
-                });
+            let fut = async move {
+                let s = re_task.state().await?;
+                if !s.is_loading() {
+                    re_task.send(StartDownload).await?;
+                }
+                Ok::<_, actix::MailboxError>(())
+            }
+            .into_actor(self)
+            .map(|s, _, _| {
+                if let Err(er) = s {
+                    log::error!("{er}");
+                }
+            });
             ctx.wait(fut)
         }
         task
