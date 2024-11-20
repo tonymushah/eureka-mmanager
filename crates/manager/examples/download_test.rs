@@ -24,6 +24,7 @@ use mangadex_desktop_api2::{
     history::{service::messages::is_in::IsInMessage, HistoryEntry},
     DirsOptions,
 };
+use tokio::task::JoinSet;
 use uuid::Uuid;
 
 use log::{Level, Metadata, Record};
@@ -48,7 +49,7 @@ impl log::Log for SimpleLogger {
 static LOGGER: SimpleLogger = SimpleLogger;
 
 pub fn init() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info))
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace))
 }
 
 fn main() -> anyhow::Result<()> {
@@ -85,80 +86,91 @@ fn main() -> anyhow::Result<()> {
             .await?
             .send(GetDirsOptionsMessage)
             .await?;
-        for id in &chapter_ids {
-            let chapter = dowload_manager
-                .send(GetChapterDownloadManagerMessage)
-                .await?
-                .send(
-                    ChapterDownloadMessage::new(*id)
-                        .mode(DownloadMode::DataSaver)
-                        .state(DownloadMessageState::Downloading),
-                )
-                .await?
-                .wait()
-                .await?
-                .await?;
-            println!("downloaded chapter [{}]", chapter.id);
-
-            let manga_base: HistoryEntry = chapter
-                .find_first_relationships(RelationshipType::Manga)
-                .ok_or(anyhow::Error::msg(String::from("Manga not found")))?
-                .into();
-            if !options.send(IsInMessage(manga_base)).await? {
-                let manga = dowload_manager
-                    .send(GetMangaDownloadManagerMessage)
+        let mut join_set = JoinSet::<Result<(), anyhow::Error>>::new();
+        for id in chapter_ids.iter().cloned() {
+            let dw_mangr = dowload_manager.clone();
+            let options = options.clone();
+            join_set.spawn(async move {
+                log::info!("task spawned!");
+                let chapter = dw_mangr
+                    .send(GetChapterDownloadManagerMessage)
                     .await?
                     .send(
-                        MangaDownloadMessage::new(manga_base.get_id())
+                        ChapterDownloadMessage::new(id)
+                            .mode(DownloadMode::DataSaver)
                             .state(DownloadMessageState::Downloading),
                     )
                     .await?
                     .wait()
                     .await?
                     .await?;
-                println!("downloaded manga [{}]", manga.id);
-                let cover_base: HistoryEntry = manga
-                    .find_first_relationships(RelationshipType::CoverArt)
-                    .ok_or(anyhow::Error::msg(String::from("CoverArt not found")))?
+                println!("downloaded chapter [{}]", chapter.id);
+
+                let manga_base: HistoryEntry = chapter
+                    .find_first_relationships(RelationshipType::Manga)
+                    .ok_or(anyhow::Error::msg(String::from("Manga not found")))?
                     .into();
-                if !options.send(IsInMessage(cover_base)).await? {
-                    println!("fetching cover");
-                    let cover = dowload_manager
-                        .send(GetCoverDownloadManagerMessage)
+                if !options.send(IsInMessage(manga_base)).await? {
+                    let manga = dw_mangr
+                        .send(GetMangaDownloadManagerMessage)
                         .await?
                         .send(
-                            CoverDownloadMessage::new(cover_base.get_id())
+                            MangaDownloadMessage::new(manga_base.get_id())
                                 .state(DownloadMessageState::Downloading),
                         )
                         .await?
                         .wait()
                         .await?
                         .await?;
-                    println!("download cover [{}]", cover.id);
+                    println!("downloaded manga [{}]", manga.id);
+                    let cover_base: HistoryEntry = manga
+                        .find_first_relationships(RelationshipType::CoverArt)
+                        .ok_or(anyhow::Error::msg(String::from("CoverArt not found")))?
+                        .into();
+                    if !options.send(IsInMessage(cover_base)).await? {
+                        println!("fetching cover");
+                        let cover = dw_mangr
+                            .send(GetCoverDownloadManagerMessage)
+                            .await?
+                            .send(
+                                CoverDownloadMessage::new(cover_base.get_id())
+                                    .state(DownloadMessageState::Downloading),
+                            )
+                            .await?
+                            .wait()
+                            .await?
+                            .await?;
+                        println!("download cover [{}]", cover.id);
+                    }
+                } else {
+                    let cover_base: HistoryEntry = options
+                        .send(MangaDataPullMessage(manga_base.get_id()))
+                        .await??
+                        .find_first_relationships(RelationshipType::CoverArt)
+                        .ok_or(anyhow::Error::msg(String::from("CoverArt not found")))?
+                        .into();
+                    if !options.send(IsInMessage(cover_base)).await? {
+                        println!("fetching cover");
+                        let cover = dw_mangr
+                            .send(GetCoverDownloadManagerMessage)
+                            .await?
+                            .send(
+                                CoverDownloadMessage::new(cover_base.get_id())
+                                    .state(DownloadMessageState::Downloading),
+                            )
+                            .await?
+                            .wait()
+                            .await?
+                            .await?;
+                        println!("download cover [{}]", cover.id);
+                    }
                 }
-            } else {
-                let cover_base: HistoryEntry = options
-                    .send(MangaDataPullMessage(manga_base.get_id()))
-                    .await??
-                    .find_first_relationships(RelationshipType::CoverArt)
-                    .ok_or(anyhow::Error::msg(String::from("CoverArt not found")))?
-                    .into();
-                if !options.send(IsInMessage(cover_base)).await? {
-                    println!("fetching cover");
-                    let cover = dowload_manager
-                        .send(GetCoverDownloadManagerMessage)
-                        .await?
-                        .send(
-                            CoverDownloadMessage::new(cover_base.get_id())
-                                .state(DownloadMessageState::Downloading),
-                        )
-                        .await?
-                        .wait()
-                        .await?
-                        .await?;
-                    println!("download cover [{}]", cover.id);
-                }
-            }
+                log::info!("task done!");
+                Ok(())
+            });
+        }
+        while let Some(res) = join_set.join_next().await {
+            res??;
         }
         let chapter_count = options
             .send(ChapterIdsListDataPullMessage(chapter_ids.clone()))
