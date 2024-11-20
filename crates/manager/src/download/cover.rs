@@ -3,22 +3,24 @@ pub mod task;
 
 use std::{collections::HashMap, sync::Arc};
 
-use actix::prelude::*;
+use actix::{prelude::*, WeakAddr};
 use tokio::sync::Notify;
 use uuid::Uuid;
+
+use crate::prelude::AsyncState;
 
 use self::task::CoverDownloadTask;
 
 use super::{
     messages::{DropSingleTaskMessage, StartDownload},
     state::{DownloadManagerState, DownloadMessageState},
-    traits::{managers::TaskManager, task::AsyncState},
+    traits::managers::TaskManager,
 };
 
 #[derive(Debug)]
 pub struct CoverDownloadManager {
     state: Addr<DownloadManagerState>,
-    tasks: HashMap<Uuid, Addr<CoverDownloadTask>>,
+    tasks: HashMap<Uuid, WeakAddr<CoverDownloadTask>>,
     notify: Arc<Notify>,
 }
 
@@ -82,14 +84,23 @@ impl TaskManager for CoverDownloadManager {
         self.notify.clone()
     }
 
-    fn tasks_id(&self) -> Vec<Uuid> {
-        self.tasks.keys().copied().collect()
-    }
-
     fn tasks(&self) -> Vec<Addr<Self::Task>> {
         self.tasks
-            .values() /* .filter(|v| v.connected())*/
-            .cloned()
+            .values()
+            .flat_map(|task| task.upgrade())
+            .collect()
+    }
+    fn tasks_id(&self) -> Vec<Uuid> {
+        self.tasks
+            .iter()
+            .flat_map(|(id, tasks)| {
+                if tasks.upgrade().is_some() {
+                    Some(id)
+                } else {
+                    None
+                }
+            })
+            .copied()
             .collect()
     }
 
@@ -98,11 +109,25 @@ impl TaskManager for CoverDownloadManager {
         msg: Self::DownloadMessage,
         ctx: &mut Self::Context,
     ) -> Addr<Self::Task> {
-        let task = self
-            .tasks
-            .entry(msg.id)
-            .or_insert_with(|| CoverDownloadTask::new(msg.id, ctx.address()).start())
-            .clone();
+        let task = {
+            match self.tasks.entry(msg.id) {
+                std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+                    let weak = occupied_entry.get_mut();
+                    if let Some(tsk) = weak.upgrade() {
+                        tsk
+                    } else {
+                        let tsk = Self::Task::new(msg.id, ctx.address()).start();
+                        let _weak = std::mem::replace(weak, tsk.downgrade());
+                        tsk
+                    }
+                }
+                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    let tsk = Self::Task::new(msg.id, ctx.address()).start();
+                    vacant_entry.insert(tsk.downgrade());
+                    tsk
+                }
+            }
+        };
         let re_task = task.clone();
         self.notify.notify_waiters();
 
