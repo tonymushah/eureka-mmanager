@@ -418,7 +418,7 @@ dependencies = [
  "criterion-plot",
  "futures",
  "is-terminal",
- "itertools 0.10.5",
+ "itertools",
  "num-traits",
  "once_cell",
  "oorandom",
@@ -440,7 +440,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
 dependencies = [
  "cast",
- "itertools 0.10.5",
+ "itertools",
 ]
 
 [[package]]
@@ -590,10 +590,10 @@ name = "emdx"
 version = "0.1.0"
 dependencies = [
  "ciborium",
+ "eureka-mmanager-core",
  "image",
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
- "mangadex-desktop-api2-core",
  "regex",
  "serde",
  "tar",
@@ -638,6 +638,28 @@ dependencies = [
  "fern",
  "id_list_txt_reader",
  "mangadex-desktop-api2",
+]
+
+[[package]]
+name = "eureka-mmanager-core"
+version = "0.1.0"
+dependencies = [
+ "actix",
+ "bytes",
+ "ciborium",
+ "itertools",
+ "log",
+ "mangadex-api-input-types",
+ "mangadex-api-schema-rust",
+ "mangadex-api-types-rust",
+ "rand",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio-stream",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1195,15 +1217,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1350,20 +1363,20 @@ dependencies = [
 
 [[package]]
 name = "mangadex-desktop-api2"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 dependencies = [
  "actix",
  "anyhow",
  "bytes",
  "ciborium",
  "criterion",
- "itertools 0.13.0",
+ "eureka-mmanager-core",
+ "itertools",
  "log",
  "mangadex-api",
  "mangadex-api-input-types",
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
- "mangadex-desktop-api2-core",
  "once_cell",
  "reqwest",
  "serde",
@@ -1372,28 +1385,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "toml",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "mangadex-desktop-api2-core"
-version = "0.1.0"
-dependencies = [
- "actix",
- "bytes",
- "ciborium",
- "itertools 0.13.0",
- "log",
- "mangadex-api-input-types",
- "mangadex-api-schema-rust",
- "mangadex-api-types-rust",
- "rand",
- "regex",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio-stream",
  "url",
  "uuid",
 ]

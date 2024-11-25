@@ -12,7 +12,7 @@ resolver = "2"
 [workspace.dependencies]
 id_list_txt_reader = { path = "./crates/misc/id_list_txt_reader" }
 mangadex-desktop-api2 = { path = "./crates/manager" }
-api-core = { path = "./crates/core", package = "mangadex-desktop-api2-core" }
+api-core = { path = "./crates/core", package = "eureka-mmanager-core" }
 reqwest = { version = "0.12", features = [
     "cookies",
     "json",
