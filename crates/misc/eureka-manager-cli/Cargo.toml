@@ -6,7 +6,10 @@ edition = "2021"
 [dependencies]
 actix.workspace = true
 anyhow = "1.0.86"
-mangadex-desktop-api2 = {package = "api", workspace = true  }
-clap = { version = "4.5.4", features = ["derive"] }
+mangadex-desktop-api2 = { package = "api", workspace = true }
+clap.workspace = true
 fern = "0.6.2"
 id_list_txt_reader = { workspace = true, package = "file_listing" }
+
+[dev-dependencies]
+clap = { workspace = true, features = ["unstable-doc"] }
