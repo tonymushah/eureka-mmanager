@@ -23,22 +23,22 @@ serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 uuid = { version = "1.8", features = ["serde", "v4"] }
 url = { version = "2.5", features = ["serde"] }
-mangadex-api = { version = "3.3", default-features = false, features = [
+mangadex-api = { version = ">= 3.3, < 4", default-features = false, features = [
     "rw-multi-thread",
     "utils",
     "serialize",
 ] }
 serde_json = { version = "1.0" }
-mangadex-api-schema-rust = { version = "0.9", default-features = false, features = [
+mangadex-api-schema-rust = { version = ">= 0.9, < 1", default-features = false, features = [
     "serialize",
 ] }
-mangadex-api-types-rust = { version = "0.9", default-features = false }
-tokio = { version = "1.37", features = ["sync", "rt"] }
+mangadex-api-types-rust = { version = ">= 0.9, < 1", default-features = false }
+tokio = { version = "1", features = ["sync", "rt"] }
 log = "^0.4.21"
 tokio-stream = { version = "0.1" }
 bytes = { version = "1.6" }
 itertools = "0"
-mangadex-api-input-types = { version = "0.5" }
+mangadex-api-input-types = { version = ">= 0.5, < 1" }
 actix = "0.13"
 regex = "1"
 rand = { version = "0" }
