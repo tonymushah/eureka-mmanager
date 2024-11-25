@@ -17,10 +17,10 @@ Every `emdx` package should follow these rules:
 
 - The `.emdx` should be a readable `.tar.zstd` file
 - The file must contain an `content.cbor` entry
-- The `content.cbor` file must contain all manga/cover/chapter/chapter-images registered in package. Other chapter/chapter-images/manga/cover data must be ignored
+- The `contents.cbor` file must contain all manga/cover/chapter/chapter-images registered in package. Other chapter/chapter-images/manga/cover data must be ignored
 - Chapter/Manga/Cover metadata must be written in `cbor`
 
-#### the `content.cbor` file
+#### the `contents.cbor` file
 
 You can say that it is the hearth of a `.emdx` package.
 It contains what is inside of the package: the file structure configuration, the manga/cover/chapter/chapter-images that is inside and many other options.
@@ -92,14 +92,43 @@ emdx = "0.1"
 
 ### Examples
 
-## Quick FAQ
+#### Getting chapter from an archive
 
-1- Why [`cbor`][cbor] instead of `json`?
+```rust
+use std::fs::File;
 
-Mostly for personal choices but [`cbor`][cbor] has a lot of advantages compared to its `json`.
-It's disk efficient and mostly stable.
+use emdx::Archive;
 
-2- Why [`zstd`][zstd] instead of a plain zip?
+fn main() -> anyhow::Result<()> {
+    let mut archive = File::open("your_package.emdx")?;
+    let mut emdx_package = Archive::from_reader(&mut archive)?;
+    for chapter in emdx_package.chapter_pull(true)?.flatten() {
+        println!("has chapter {}", chapter.id);
+    }
+    Ok(())
+}
+```
 
-[cbor]: https://cbor.io/
-[zstd]: https://github.com/facebook/zstd
+### Making a emdx package
+
+```rust
+use eureka_mmanager_core::{data_push::chapter::image::Mode, DirsOptions};
+use emdx::PackageBuilder;
+use uuid::Uuid;
+
+use std::{fs::File, io::BufWriter};
+
+fn main() -> anyhow::Result<()> {
+    let dir_options = DirsOptions::default();
+    let mut builder = PackageBuilder::new(dir_options);
+    // add chapters data with the image saving mode
+    builder.add_chapter(Uuid::new_v4(), Mode::DataSaver)?;
+    // add manga data
+    builder.add_manga(Uuid::new_v4())?;
+    // add cover with it:s images
+    builder.add_cover(Uuid::new_v4())?;
+    let mut package = File::create("my-package.emdx")?;
+    builder.build(BufWriter::new(&mut package))?;
+    Ok(())
+}
+```
