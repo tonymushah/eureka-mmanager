@@ -46,3 +46,4 @@ ciborium = { version = "0" }
 zstd = "0.13.2"
 tar = "0.4.41"
 clap = { version = "4", features = ["derive"] }
+anyhow = "1"
