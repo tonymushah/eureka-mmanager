@@ -18,9 +18,9 @@ use crate::{contents::options::PackageContentsOptions, PackageContents, ThisResu
 
 #[derive(Debug)]
 pub enum PossibleEntryData {
-    Manga(MangaObject),
-    Chapter(ChapterObject),
-    Cover(CoverObject),
+    Manga(Box<MangaObject>),
+    Chapter(Box<ChapterObject>),
+    Cover(Box<CoverObject>),
     CoverImage {
         filename: String,
         file: File,
