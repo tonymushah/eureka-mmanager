@@ -1,3 +1,9 @@
+//! # eureka-mmanager-core
+//!
+//! ## This library is still in developpement and not yet documented. Use it at your risk
+
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 pub mod data_pulls;
 pub mod data_push;
 pub mod error;
