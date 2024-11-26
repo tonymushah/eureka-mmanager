@@ -646,6 +646,7 @@ name = "eureka-mmanager-core"
 version = "0.1.0"
 dependencies = [
  "actix",
+ "anyhow",
  "bytes",
  "ciborium",
  "itertools",

@@ -21,6 +21,9 @@ actix = { workspace = true, optional = true }
 regex.workspace = true
 log = { workspace = true, optional = true }
 
+[dev-dependencies]
+anyhow.workspace = true
+
 [features]
 actix = ["dep:actix"]
 log = ["dep:log"]
