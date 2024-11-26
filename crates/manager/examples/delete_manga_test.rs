@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use actix::prelude::*;
-use mangadex_desktop_api2::prelude::*;
+use eureka_mmanager::prelude::*;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 

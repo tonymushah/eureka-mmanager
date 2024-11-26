@@ -1,9 +1,9 @@
 use actix::prelude::*;
-use mangadex_api_input_types::manga::aggregate::MangaAggregateParam;
-use mangadex_api_types_rust::Language;
-use mangadex_desktop_api2::{
+use eureka_mmanager::{
     files_dirs::messages::pull::chapter::ChapterListDataPullMessage, prelude::*,
 };
+use mangadex_api_input_types::manga::aggregate::MangaAggregateParam;
+use mangadex_api_types_rust::Language;
 use uuid::Uuid;
 
 fn main() -> anyhow::Result<()> {

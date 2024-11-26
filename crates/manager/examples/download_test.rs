@@ -3,7 +3,7 @@ use std::str::FromStr;
 use actix::prelude::*;
 use mangadex_api::MangaDexClient;
 use mangadex_api_types_rust::RelationshipType;
-use mangadex_desktop_api2::{
+use eureka_mmanager::{
     download::{
         chapter::{task::DownloadMode, ChapterDownloadMessage},
         cover::CoverDownloadMessage,

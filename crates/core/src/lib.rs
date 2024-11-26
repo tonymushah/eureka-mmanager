@@ -1,4 +1,4 @@
-//! # eureka-mmanager-core
+//! # eureka_mmanager-core
 //!
 //! ## This library is still in developpement and not yet documented. Use it at your risk
 

@@ -4,7 +4,7 @@ use std::{
 };
 
 use actix::prelude::*;
-use mangadex_desktop_api2::{
+use eureka_mmanager::{
     files_dirs::messages::pull::manga::MangaListDataPullMessage, DirsOptions,
 };
 use tokio_stream::StreamExt;

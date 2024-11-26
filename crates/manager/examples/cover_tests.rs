@@ -1,6 +1,6 @@
 use actix::prelude::*;
 use mangadex_api_types_rust::{CoverSortOrder, OrderDirection};
-use mangadex_desktop_api2::{
+use eureka_mmanager::{
     files_dirs::messages::pull::cover::CoverListDataPullMessage,
     history::service::HistoryActorService, prelude::*, DirsOptions,
 };

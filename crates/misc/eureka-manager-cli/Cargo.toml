@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+eureka-mmanager.workspace = true
 actix.workspace = true
 anyhow = "1.0.86"
-mangadex-desktop-api2 = { package = "api", workspace = true }
 clap.workspace = true
 fern = "0.6.2"
 id_list_txt_reader = { workspace = true, package = "file_listing" }

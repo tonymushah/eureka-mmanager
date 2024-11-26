@@ -1,6 +1,6 @@
 use actix::prelude::*;
 use mangadex_api_types_rust::{ChapterSortOrder, Language, OrderDirection};
-use mangadex_desktop_api2::{
+use eureka_mmanager::{
     files_dirs::messages::pull::chapter::ChapterListDataPullMessage,
     history::service::HistoryActorService, prelude::*, DirsOptions,
 };

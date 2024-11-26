@@ -636,9 +636,37 @@ dependencies = [
  "actix",
  "anyhow",
  "clap",
+ "eureka-mmanager",
  "fern",
  "id_list_txt_reader",
- "mangadex-desktop-api2",
+]
+
+[[package]]
+name = "eureka-mmanager"
+version = "1.0.0-alpha.1"
+dependencies = [
+ "actix",
+ "anyhow",
+ "bytes",
+ "ciborium",
+ "criterion",
+ "eureka-mmanager-core",
+ "itertools",
+ "log",
+ "mangadex-api",
+ "mangadex-api-input-types",
+ "mangadex-api-schema-rust",
+ "mangadex-api-types-rust",
+ "once_cell",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+ "toml",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -1359,34 +1387,6 @@ dependencies = [
  "serde",
  "thiserror 1.0.69",
  "time",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "mangadex-desktop-api2"
-version = "1.0.0-alpha.2"
-dependencies = [
- "actix",
- "anyhow",
- "bytes",
- "ciborium",
- "criterion",
- "eureka-mmanager-core",
- "itertools",
- "log",
- "mangadex-api",
- "mangadex-api-input-types",
- "mangadex-api-schema-rust",
- "mangadex-api-types-rust",
- "once_cell",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tokio-stream",
- "toml",
  "url",
  "uuid",
 ]
