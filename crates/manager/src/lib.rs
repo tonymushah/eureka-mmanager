@@ -75,5 +75,6 @@ pub mod prelude {
             IntoSorted, Paginate, Rand,
         },
         data_push::Push,
+        file_dirs::DirsOptions as DirsOptionsCore,
     };
 }
