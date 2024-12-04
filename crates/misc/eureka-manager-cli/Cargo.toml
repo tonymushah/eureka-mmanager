@@ -15,5 +15,7 @@ humantime = "2.1.0"
 mangadex-api.workspace = true
 reqwest.workspace = true
 emdx.workspace = true
+uuid.workspace = true
+log.workspace = true
 
 [dev-dependencies]

@@ -641,9 +641,11 @@ dependencies = [
  "fern",
  "humantime",
  "id_list_txt_reader",
+ "log",
  "mangadex-api",
  "reqwest",
  "time",
+ "uuid",
 ]
 
 [[package]]
