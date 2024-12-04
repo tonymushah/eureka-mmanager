@@ -1,16 +1,25 @@
+pub mod commands;
+
 use std::{path::PathBuf, time::SystemTime};
 
 use clap::{Args, Parser};
+use commands::Commands;
 use eureka_mmanager::prelude::DirsOptionsCore;
 
 #[derive(Debug, Args)]
 pub struct DirsOptionsArgs {
+    /// data directory path
+    ///
+    /// Default: "output"
     #[arg(long)]
     pub data_dir: Option<PathBuf>,
+    /// chapter directory relative to `data_dir` (you can put an absolute path if you wanted to)
     #[arg(long)]
     pub chapters: Option<PathBuf>,
+    /// manga directory relative to `data_dir` (you can put an absolute path if you wanted to)
     #[arg(long)]
     pub mangas: Option<PathBuf>,
+    /// covers directory relative to `data_dir` (you can put an absolute path if you wanted to)
     #[arg(long)]
     pub covers: Option<PathBuf>,
 }
@@ -40,6 +49,8 @@ pub struct Cli {
     verbose: bool,
     #[command(flatten)]
     pub options: DirsOptionsArgs,
+    #[command(subcommand)]
+    pub commands: Commands,
 }
 
 impl Cli {
