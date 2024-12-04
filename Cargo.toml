@@ -10,6 +10,7 @@ default-members = ["./crates/manager"]
 resolver = "2"
 
 [workspace.dependencies]
+emdx = { path = "crates/emdx" }
 id_list_txt_reader = { path = "./crates/misc/id_list_txt_reader" }
 eureka-mmanager = { path = "./crates/manager" }
 api-core = { path = "./crates/core", package = "eureka-mmanager-core" }
