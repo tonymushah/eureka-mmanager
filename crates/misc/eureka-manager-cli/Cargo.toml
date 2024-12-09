@@ -17,5 +17,7 @@ reqwest.workspace = true
 emdx.workspace = true
 uuid.workspace = true
 log.workspace = true
+tokio.workspace = true
+mangadex-api-types-rust.workspace = true
 
 [dev-dependencies]

@@ -643,8 +643,10 @@ dependencies = [
  "id_list_txt_reader",
  "log",
  "mangadex-api",
+ "mangadex-api-types-rust",
  "reqwest",
  "time",
+ "tokio",
  "uuid",
 ]
 
