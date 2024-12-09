@@ -20,3 +20,11 @@ pub trait AsyncRun: Sync {
         manager: Addr<DownloadManager>,
     ) -> impl Future<Output = anyhow::Result<()>> + Send;
 }
+
+impl AsyncRun for Commands {
+    async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
+        match self {
+            Self::Download(d) => d.run(manager).await,
+        }
+    }
+}
