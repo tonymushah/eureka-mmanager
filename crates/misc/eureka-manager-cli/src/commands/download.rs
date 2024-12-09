@@ -7,9 +7,9 @@ use super::AsyncRun;
 
 #[derive(Debug, Subcommand)]
 pub enum DownloadSubCommands {
-    // Download a Manga subcommand
+    /// Download a Manga subcommand
     Manga(manga::MangaDownloadArgs),
-    // Download a Cover subcommand
+    /// Download a Cover subcommand
     Cover(cover::CoverDownloadArgs),
 }
 
