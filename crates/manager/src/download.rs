@@ -24,6 +24,7 @@ pub mod messages;
 pub mod state;
 pub mod traits;
 
+#[derive(Debug)]
 pub struct DownloadManager {
     state: Addr<DownloadManagerState>,
     manga: Addr<MangaDownloadManager>,
