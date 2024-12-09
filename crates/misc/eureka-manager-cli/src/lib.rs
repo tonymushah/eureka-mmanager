@@ -72,3 +72,15 @@ impl Cli {
         Ok(())
     }
 }
+
+#[cfg(test)]
+
+mod tests {
+    use clap::CommandFactory;
+
+    use crate::Cli;
+    #[test]
+    fn verify_app() {
+        Cli::command().debug_assert();
+    }
+}
