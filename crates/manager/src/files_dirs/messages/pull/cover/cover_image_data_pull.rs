@@ -1,10 +1,6 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-};
+use std::fs::File;
 
 use actix::prelude::*;
-use bytes::Bytes;
 use uuid::Uuid;
 
 use crate::{DirsOptions, ManagerCoreResult};
@@ -27,7 +23,7 @@ impl From<CoverImageDataPullMessage> for Uuid {
 }
 
 impl Message for CoverImageDataPullMessage {
-    type Result = ManagerCoreResult<Bytes>;
+    type Result = ManagerCoreResult<File>;
 }
 
 impl Handler<CoverImageDataPullMessage> for DirsOptions {
@@ -37,9 +33,6 @@ impl Handler<CoverImageDataPullMessage> for DirsOptions {
             .handle(CoverDataPullMessage(msg.0), ctx)?
             .attributes
             .file_name;
-        let mut file = BufReader::new(File::open(self.cover_images_add(filename))?);
-        let mut buf = Vec::<u8>::new();
-        file.read_to_end(&mut buf)?;
-        Ok(buf.into())
+        Ok(File::open(self.cover_images_add(filename))?)
     }
 }
