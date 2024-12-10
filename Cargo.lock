@@ -645,6 +645,7 @@ dependencies = [
  "mangadex-api",
  "mangadex-api-types-rust",
  "reqwest",
+ "serde",
  "time",
  "tokio",
  "uuid",
