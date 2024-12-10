@@ -13,7 +13,7 @@ pub enum Commands {
     /// Download subcommands
     #[command(subcommand)]
     Download(DownloadSubCommands),
-    Count(count::CountArgs),
+    Count(Box<count::CountArgs>),
 }
 
 pub trait AsyncRun: Sync {
