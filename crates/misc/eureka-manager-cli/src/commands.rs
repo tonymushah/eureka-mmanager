@@ -18,7 +18,7 @@ pub enum Commands {
     Count(Box<count::CountArgs>),
     #[command(subcommand)]
     Remove(delete::DeleteSubcommands),
-    Transfer(transfer::TransferCommand),
+    Transfert(transfer::TransferCommand),
 }
 
 pub trait AsyncRun: Sync {
@@ -34,7 +34,7 @@ impl AsyncRun for Commands {
             Commands::Download(download_sub_commands) => download_sub_commands.run(manager).await,
             Commands::Count(count_args) => count_args.run(manager).await,
             Commands::Remove(delete_subcommands) => delete_subcommands.run(manager).await,
-            Commands::Transfer(transfer_command) => transfer_command.run(manager).await,
+            Commands::Transfert(transfer_command) => transfer_command.run(manager).await,
         }
     }
 }
