@@ -74,7 +74,7 @@ pub mod prelude {
             AsyncIntoSorted, AsyncPaginate, AsyncRand, IntoFiltered, IntoParamedFilteredStream,
             IntoSorted, Paginate, Rand,
         },
-        data_push::Push,
+        data_push::{chapter::image::ChapterImagePushEntry, Push},
         file_dirs::DirsOptions as DirsOptionsCore,
     };
 }
