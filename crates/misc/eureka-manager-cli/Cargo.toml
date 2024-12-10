@@ -20,5 +20,6 @@ log.workspace = true
 tokio.workspace = true
 mangadex-api-types-rust.workspace = true
 serde.workspace = true
+tokio-stream.workspace = true
 
 [dev-dependencies]

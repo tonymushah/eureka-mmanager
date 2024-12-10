@@ -648,6 +648,7 @@ dependencies = [
  "serde",
  "time",
  "tokio",
+ "tokio-stream",
  "uuid",
 ]
 
