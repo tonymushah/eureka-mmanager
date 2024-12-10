@@ -1,3 +1,4 @@
+pub mod chapter;
 pub mod cover;
 pub mod manga;
 
@@ -7,10 +8,12 @@ use super::AsyncRun;
 
 #[derive(Debug, Subcommand)]
 pub enum DownloadSubCommands {
-    /// Download a Manga subcommand
+    /// Download Mangas subcommand
     Manga(manga::MangaDownloadArgs),
-    /// Download a Cover subcommand
+    /// Download Covers subcommand
     Cover(cover::CoverDownloadArgs),
+    /// Download Chapters subcommand
+    Chapter(chapter::ChapterDownloadArgs),
 }
 
 impl AsyncRun for DownloadSubCommands {
@@ -21,6 +24,7 @@ impl AsyncRun for DownloadSubCommands {
         match self {
             Self::Manga(r) => r.run(manager).await,
             Self::Cover(r) => r.run(manager).await,
+            Self::Chapter(r) => r.run(manager).await,
         }
     }
 }
