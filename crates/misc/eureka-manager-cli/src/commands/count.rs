@@ -1,3 +1,4 @@
+pub mod chapter;
 pub mod cover;
 pub mod manga;
 
@@ -20,6 +21,7 @@ pub enum CountSubcommand {
     Manga(Box<manga::CountMangaArgs>),
     /// Count covers with filters,
     Cover(cover::CountCoverArgs),
+    Chapter(Box<chapter::CountChapterArgs>),
 }
 
 impl AsyncRun for CountSubcommand {
@@ -30,6 +32,7 @@ impl AsyncRun for CountSubcommand {
         match self {
             CountSubcommand::Manga(count_manga_args) => count_manga_args.run(manager).await,
             CountSubcommand::Cover(count_cover_args) => count_cover_args.run(manager).await,
+            CountSubcommand::Chapter(count_chapter_args) => count_chapter_args.run(manager).await,
         }
     }
 }
