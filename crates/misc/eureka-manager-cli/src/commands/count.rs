@@ -1,4 +1,6 @@
-use clap::{Args, Subcommand};
+pub mod manga;
+
+use clap::{Args, Subcommand, ValueEnum};
 use eureka_mmanager::{
     files_dirs::messages::pull::{
         chapter::ChapterListDataPullMessage, cover::CoverListDataPullMessage,
@@ -6,18 +8,25 @@ use eureka_mmanager::{
     },
     prelude::GetManagerStateData,
 };
+use mangadex_api_types_rust::{MangaDexDateTime, TagSearchMode};
+use serde::{de::IntoDeserializer, Deserialize};
 
 use super::AsyncRun;
 
 #[derive(Debug, Subcommand)]
-pub enum CountSubcommand {}
+pub enum CountSubcommand {
+    /// Count manga with filters
+    Manga(manga::CountMangaArgs),
+}
 
 impl AsyncRun for CountSubcommand {
     async fn run(
         &self,
         manager: actix::Addr<eureka_mmanager::DownloadManager>,
     ) -> anyhow::Result<()> {
-        todo!()
+        match self {
+            CountSubcommand::Manga(count_manga_args) => count_manga_args.run(manager).await,
+        }
     }
 }
 
@@ -63,4 +72,24 @@ impl AsyncRun for CountArgs {
             Ok(())
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, ValueEnum)]
+pub enum TagSearchModeEnum {
+    And,
+    Or,
+}
+
+impl From<TagSearchModeEnum> for TagSearchMode {
+    fn from(value: TagSearchModeEnum) -> Self {
+        match value {
+            TagSearchModeEnum::And => Self::And,
+            TagSearchModeEnum::Or => Self::Or,
+        }
+    }
+}
+
+pub fn mangadex_time_from_str(s: &str) -> Result<MangaDexDateTime, String> {
+    MangaDexDateTime::deserialize(s.into_deserializer())
+        .map_err(|e: serde::de::value::Error| format!("{e}"))
 }
