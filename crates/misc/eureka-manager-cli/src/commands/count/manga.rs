@@ -38,7 +38,7 @@ impl From<MangaStatusEnum> for MangaStatus {
 
 #[derive(Debug, Args)]
 pub struct CountMangaArgs {
-    #[arg(short)]
+    #[arg(short, long)]
     pub title: Option<String>,
     #[arg(long)]
     pub author_or_artist: Option<Uuid>,
