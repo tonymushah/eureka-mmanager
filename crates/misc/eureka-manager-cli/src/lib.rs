@@ -6,7 +6,7 @@ use clap::{Args, Parser};
 use commands::Commands;
 use eureka_mmanager::prelude::DirsOptionsCore;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Args, Clone)]
 pub struct DirsOptionsArgs {
     /// data directory path
     ///

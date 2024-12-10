@@ -1,3 +1,4 @@
+pub mod count;
 pub mod download;
 
 use std::future::Future;
@@ -12,6 +13,7 @@ pub enum Commands {
     /// Download subcommands
     #[command(subcommand)]
     Download(DownloadSubCommands),
+    Count(count::CountArgs),
 }
 
 pub trait AsyncRun: Sync {
@@ -25,6 +27,7 @@ impl AsyncRun for Commands {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
         match self {
             Self::Download(d) => d.run(manager).await,
+            Self::Count(d) => d.run(manager).await,
         }
     }
 }
