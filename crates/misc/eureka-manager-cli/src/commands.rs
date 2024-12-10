@@ -1,4 +1,5 @@
 pub mod count;
+pub mod delete;
 pub mod download;
 
 use std::future::Future;
@@ -14,6 +15,8 @@ pub enum Commands {
     #[command(subcommand)]
     Download(DownloadSubCommands),
     Count(Box<count::CountArgs>),
+    #[command(subcommand)]
+    Remove(delete::DeleteSubcommands),
 }
 
 pub trait AsyncRun: Sync {
@@ -28,6 +31,7 @@ impl AsyncRun for Commands {
         match self {
             Self::Download(d) => d.run(manager).await,
             Self::Count(d) => d.run(manager).await,
+            Self::Remove(d) => d.run(manager).await,
         }
     }
 }
