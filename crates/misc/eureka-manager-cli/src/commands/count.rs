@@ -1,3 +1,4 @@
+pub mod cover;
 pub mod manga;
 
 use clap::{Args, Subcommand, ValueEnum};
@@ -16,7 +17,9 @@ use super::AsyncRun;
 #[derive(Debug, Subcommand)]
 pub enum CountSubcommand {
     /// Count manga with filters
-    Manga(manga::CountMangaArgs),
+    Manga(Box<manga::CountMangaArgs>),
+    /// Count covers with filters,
+    Cover(cover::CountCoverArgs),
 }
 
 impl AsyncRun for CountSubcommand {
@@ -26,6 +29,7 @@ impl AsyncRun for CountSubcommand {
     ) -> anyhow::Result<()> {
         match self {
             CountSubcommand::Manga(count_manga_args) => count_manga_args.run(manager).await,
+            CountSubcommand::Cover(count_cover_args) => count_cover_args.run(manager).await,
         }
     }
 }
