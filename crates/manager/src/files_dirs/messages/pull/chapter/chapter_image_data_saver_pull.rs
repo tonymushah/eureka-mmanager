@@ -1,11 +1,6 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-    path::Path,
-};
+use std::{fs::File, path::Path};
 
 use actix::prelude::*;
-use bytes::Bytes;
 use mangadex_api_input_types::PathBuf;
 use uuid::Uuid;
 
@@ -36,7 +31,7 @@ where
 }
 
 impl<P: AsRef<Path>> Message for ChapterImageDataSaverPullMessage<P> {
-    type Result = ManagerCoreResult<Bytes>;
+    type Result = ManagerCoreResult<File>;
 }
 
 impl<P: AsRef<Path>> Handler<ChapterImageDataSaverPullMessage<P>> for DirsOptions {
@@ -46,11 +41,8 @@ impl<P: AsRef<Path>> Handler<ChapterImageDataSaverPullMessage<P>> for DirsOption
         msg: ChapterImageDataSaverPullMessage<P>,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
-        let mut file = BufReader::new(File::open(
+        Ok(File::open(
             self.chapters_id_data_saver_add(msg.0).join(msg.1),
-        )?);
-        let mut buf = Vec::<u8>::new();
-        file.read_to_end(&mut buf)?;
-        Ok(buf.into())
+        )?)
     }
 }
