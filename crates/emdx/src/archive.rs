@@ -303,13 +303,13 @@ impl<'a, R: BufRead + Seek> Push<Archive<'a, R>> for DirsOptions {
         for entry in pull.flatten() {
             match entry {
                 pull::any::PossibleEntryData::Manga(manga) => {
-                    self.push(manga)?;
+                    self.push(*manga)?;
                 }
                 pull::any::PossibleEntryData::Chapter(chapter) => {
-                    self.push(chapter)?;
+                    self.push(*chapter)?;
                 }
                 pull::any::PossibleEntryData::Cover(cover) => {
-                    cover_acc.insert(cover.attributes.file_name.clone(), cover);
+                    cover_acc.insert(cover.attributes.file_name.clone(), *cover);
                 }
                 pull::any::PossibleEntryData::CoverImage { filename, file } => {
                     cover_image_acc.insert(filename, file);

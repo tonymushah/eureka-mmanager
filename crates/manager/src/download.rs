@@ -32,8 +32,8 @@ pub struct DownloadManager {
 }
 
 impl DownloadManager {
-    pub async fn new(dir_option: Addr<DirsOptions>, client: MangaDexClient) -> Self {
-        let history = HistoryActorService::new(dir_option.clone()).await.start();
+    pub fn new(dir_option: Addr<DirsOptions>, client: MangaDexClient) -> Self {
+        let history = HistoryActorService::new(dir_option.clone()).start();
         let state = DownloadManagerState::new(dir_option, client, history).start();
         state.into()
     }

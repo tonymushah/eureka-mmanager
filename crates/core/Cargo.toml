@@ -1,5 +1,5 @@
 [package]
-name = "mangadex-desktop-api2-core"
+name = "eureka-mmanager-core"
 version = "0.1.0"
 edition = "2021"
 
@@ -20,6 +20,9 @@ mangadex-api-input-types.workspace = true
 actix = { workspace = true, optional = true }
 regex.workspace = true
 log = { workspace = true, optional = true }
+
+[dev-dependencies]
+anyhow.workspace = true
 
 [features]
 actix = ["dep:actix"]

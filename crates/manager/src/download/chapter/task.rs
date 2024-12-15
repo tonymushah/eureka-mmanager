@@ -1,6 +1,6 @@
 pub mod messages;
 
-use std::{ops::Deref, time::Duration};
+use std::ops::Deref;
 
 use actix::prelude::*;
 use mangadex_api::utils::download::chapter::DownloadMode as Mode;
@@ -73,21 +73,29 @@ pub struct ChapterDownloadTask {
     handle: Option<SpawnHandle>,
     sender: Sender<ChapterDownloadTaskState>,
     have_been_read: bool,
-    manager_handle: Option<SpawnHandle>,
     manager: Addr<ChapterDownloadManager>,
 }
 
 impl Actor for ChapterDownloadTask {
     type Context = Context<Self>;
-    fn started(&mut self, ctx: &mut Self::Context) {
-        self.manager_handle = Some(ctx.run_interval(Duration::from_millis(500), |this, _ctx| {
-            if this.have_been_read
-                && this.sender.is_closed()
-                && std::convert::Into::<TaskState>::into(this.sender.borrow().deref()).is_finished()
-            {
-                this.manager.do_send(DropSingleTaskMessage(this.id));
-            }
-        }));
+    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
+        if self.have_been_read
+            && self.sender.is_closed()
+            && std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_finished()
+        {
+            self.manager
+                .send(DropSingleTaskMessage(self.id))
+                .into_actor(self)
+                .map(|res, _, _| {
+                    if let Err(er) = res {
+                        log::error!("{er}");
+                    }
+                })
+                .wait(ctx);
+            Running::Stop
+        } else {
+            Running::Continue
+        }
     }
 }
 
@@ -105,7 +113,6 @@ impl ChapterDownloadTask {
             sender,
             manager,
             have_been_read: false,
-            manager_handle: None,
         }
     }
 }

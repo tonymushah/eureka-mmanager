@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use actix::prelude::*;
-use mangadex_desktop_api2::prelude::*;
+use eureka_mmanager::prelude::*;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<()> {
         // Get all the manga chapter
         let chapters: Vec<Uuid> = {
             let params = ChapterListDataPullFilterParams {
-                manga_id: Some(manga_id),
+                manga_ids: vec![manga_id],
                 ..Default::default()
             };
             options_actor

@@ -4,7 +4,7 @@ use std::{
 };
 
 use actix::prelude::*;
-use mangadex_desktop_api2::{
+use eureka_mmanager::{
     files_dirs::messages::pull::manga::MangaListDataPullMessage, DirsOptions,
 };
 use tokio_stream::StreamExt;
@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
         options.verify_and_init()?;
         let options_actor = options.start();
         let mut data_pull = options_actor.send(MangaListDataPullMessage).await??;
-        while let Some(manga) = data_pull.next().await {
+        while let Some(manga) = StreamExt::next(&mut data_pull).await {
             println!("{}", manga.id);
             let mut file = BufWriter::new(File::create(format!("output/manga/{}.cbor", manga.id))?);
             ciborium::into_writer(&manga, &mut file)?;

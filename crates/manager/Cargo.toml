@@ -1,5 +1,5 @@
 [package]
-name = "mangadex-desktop-api2"
+name = "eureka-mmanager"
 version = "1.0.0-alpha.1"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
@@ -37,3 +37,4 @@ once_cell = "1.19"
 # moka = { version = "0.12", features = ["future"]}
 toml = "0.8"
 anyhow = "1.0"
+ciborium.workspace = true

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 /// This example will illustrate how to push data to a
 /// You need to enable the `macros` feature for `actix` to make this example work.
 use actix::prelude::*;
+use eureka_mmanager::prelude::*;
 use mangadex_api_schema_rust::{
     v5::{
         AuthorAttributes, CoverAttributes, MangaAttributes, RelatedAttributes, Relationship,
@@ -13,7 +14,6 @@ use mangadex_api_schema_rust::{
 use mangadex_api_types_rust::{
     ContentRating, Demographic, Language, MangaState, MangaStatus, RelationshipType, Tag,
 };
-use mangadex_desktop_api2::prelude::*;
 use url::Url;
 use uuid::Uuid;
 
