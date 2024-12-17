@@ -1,9 +1,9 @@
 [package]
 name = "eureka-mmanager"
-version = "1.0.0-alpha.1"
+version = "0.1.0"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
-description = "A Actix server for downloading manga, chapters, covers from Mangadex"
+description = "An Actix actor collection for downloading manga, chapters, covers from Mangadex"
 repository = "https://github.com/tonymushah/eureka-mmanager"
 edition = "2021"
 resolver = "2"

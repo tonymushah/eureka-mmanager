@@ -10,10 +10,10 @@ default-members = ["./crates/manager"]
 resolver = "2"
 
 [workspace.dependencies]
-emdx = { path = "crates/emdx" }
+emdx = { path = "crates/emdx", version = "0.1.0" }
 id_list_txt_reader = { path = "./crates/misc/id_list_txt_reader" }
-eureka-mmanager = { path = "./crates/manager" }
-api-core = { path = "./crates/core", package = "eureka-mmanager-core" }
+eureka-mmanager = { path = "./crates/manager", version = "0.1.0" }
+api-core = { path = "./crates/core", package = "eureka-mmanager-core", version = "0.1.0" }
 reqwest = { version = "0.12", features = [
     "cookies",
     "json",
