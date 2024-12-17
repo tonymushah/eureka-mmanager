@@ -55,7 +55,7 @@ where
 }
 
 // Test if this fucking works
-impl<'a, R> Iterator for ArchiveChapterPull<'a, R>
+impl<R> Iterator for ArchiveChapterPull<'_, R>
 where
     R: Read,
 {

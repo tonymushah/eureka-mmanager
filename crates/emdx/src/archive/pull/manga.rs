@@ -54,7 +54,7 @@ where
 }
 
 // Test if this fucking works
-impl<'a, R> Iterator for ArchiveMangaPull<'a, R>
+impl<R> Iterator for ArchiveMangaPull<'_, R>
 where
     R: Read,
 {

@@ -60,7 +60,7 @@ fn tar_archive_not_found_error() -> io::Error {
     )
 }
 
-impl<'a, R> Seek for Archive<'a, R>
+impl<R> Seek for Archive<'_, R>
 where
     R: Seek + BufRead,
 {
