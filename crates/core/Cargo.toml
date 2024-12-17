@@ -2,6 +2,10 @@
 name = "eureka-mmanager-core"
 version = "0.1.0"
 edition = "2021"
+authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
+license = "MIT OR Apache-2.0"
+description = "The core package for the eureka-mmanager crate."
+repository = "https://github.com/tonymushah/eureka-mmanager"
 
 [dependencies]
 serde.workspace = true

@@ -1,0 +1,55 @@
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit-files"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy"]
+
+[tasks.publish-core]
+command = "cargo"
+args = ["publish", "-p", "eureka-mmanager-core"]
+
+[tasks.publish-manager]
+command = "cargo"
+args = ["publish", "-p", "eureka-mmanager"]
+
+[tasks.publish-emdx]
+command = "cargo"
+args = ["publish", "-p", "emdx"]
+
+[tasks.publish-ids]
+command = "cargo"
+args = ["publish", "-p", "id_list_txt_reader"]
+
+[tasks.publish-cli]
+command = "cargo"
+args = ["publish", "-p", "eureka-mmanager-cli"]
+
+[tasks.download-chapter]
+command = "cargo"
+args = [
+    "run",
+    "-p",
+    "eureka-manager-cli",
+    "--",
+    "-v",
+    "download",
+    "chapter",
+    "--id-text-file",
+    "./chapters.txt",
+]
+
+[tasks.publish-all]
+dependencies = [
+    "publish-core",
+    "publish-manager",
+    "publish-emdx",
+    "publish-ids",
+    "publish-cli",
+]

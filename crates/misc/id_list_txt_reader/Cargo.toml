@@ -2,5 +2,9 @@
 name = "id_list_txt_reader"
 version = "0.1.0"
 edition = "2021"
+authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
+license = "MIT OR Apache-2.0"
+description = "A simple utility library to read a txt"
+repository = "https://github.com/tonymushah/eureka-mmanager"
 
 [dependencies]
