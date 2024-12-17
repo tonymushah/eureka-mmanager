@@ -1,5 +1,6 @@
 use std::io::BufRead;
 
+#[derive(Debug)]
 pub struct IdListTxtReader<R: BufRead> {
     reader: R,
     only_comments: bool,
@@ -9,6 +10,9 @@ impl<R> IdListTxtReader<R>
 where
     R: BufRead,
 {
+    pub fn into_inner(self) -> R {
+        self.reader
+    }
     pub fn new(reader: R) -> Self {
         Self {
             reader,

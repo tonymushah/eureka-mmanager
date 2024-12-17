@@ -5,10 +5,9 @@ pub mod chapter_image_data_pull;
 pub mod chapter_image_data_saver_pull;
 pub mod chapter_list_data_pull;
 
-use std::{future::Future, path::Path};
+use std::{fs::File, future::Future, path::Path};
 
 use actix::Addr;
-use bytes::Bytes;
 use mangadex_api_schema_rust::v5::ChapterObject;
 use uuid::Uuid;
 
@@ -42,12 +41,12 @@ pub trait ChapterDataPullAsyncTrait: Sync {
         &self,
         id: Uuid,
         filename: impl AsRef<Path> + Send + 'static,
-    ) -> impl Future<Output = ManagerCoreResult<Bytes>> + Send;
+    ) -> impl Future<Output = ManagerCoreResult<File>> + Send;
     fn get_chapter_image_data_saver(
         &self,
         id: Uuid,
         filename: impl AsRef<Path> + Send + 'static,
-    ) -> impl Future<Output = ManagerCoreResult<Bytes>> + Send;
+    ) -> impl Future<Output = ManagerCoreResult<File>> + Send;
     fn get_chapters_by_ids(
         &self,
         ids: impl Iterator<Item = Uuid> + Send,
@@ -68,14 +67,14 @@ impl ChapterDataPullAsyncTrait for Addr<DirsOptions> {
         &self,
         id: Uuid,
         filename: impl AsRef<Path> + Send + 'static,
-    ) -> ManagerCoreResult<Bytes> {
+    ) -> ManagerCoreResult<File> {
         self.send(ChapterImageDataPullMessage(id, filename)).await?
     }
     async fn get_chapter_image_data_saver(
         &self,
         id: Uuid,
         filename: impl AsRef<Path> + Send + 'static,
-    ) -> ManagerCoreResult<Bytes> {
+    ) -> ManagerCoreResult<File> {
         self.send(ChapterImageDataSaverPullMessage(id, filename))
             .await?
     }
@@ -107,7 +106,7 @@ where
         &self,
         id: Uuid,
         filename: impl AsRef<Path> + Send + 'static,
-    ) -> ManagerCoreResult<Bytes> {
+    ) -> ManagerCoreResult<File> {
         self.get_dir_options()
             .await?
             .get_chapter_image(id, filename)
@@ -118,7 +117,7 @@ where
         &self,
         id: Uuid,
         filename: impl AsRef<Path> + Send + 'static,
-    ) -> ManagerCoreResult<Bytes> {
+    ) -> ManagerCoreResult<File> {
         self.get_dir_options()
             .await?
             .get_chapter_image_data_saver(id, filename)

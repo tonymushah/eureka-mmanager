@@ -6,9 +6,20 @@ edition = "2021"
 [dependencies]
 eureka-mmanager.workspace = true
 actix.workspace = true
-anyhow = "1.0.86"
+anyhow.workspace = true
 clap = { workspace = true, features = ["unstable-doc"] }
 fern = "0.6.2"
 id_list_txt_reader = { workspace = true, package = "file_listing" }
+time = { version = "0.3.37", features = ["formatting", "local-offset"] }
+humantime = "2.1.0"
+mangadex-api.workspace = true
+reqwest.workspace = true
+emdx.workspace = true
+uuid.workspace = true
+log.workspace = true
+tokio.workspace = true
+mangadex-api-types-rust.workspace = true
+serde.workspace = true
+tokio-stream.workspace = true
 
 [dev-dependencies]
