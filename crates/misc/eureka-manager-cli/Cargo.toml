@@ -7,8 +7,9 @@ license = "MIT OR Apache-2.0"
 description = "The official cli for the eureka-mmanager"
 repository = "https://github.com/tonymushah/eureka-mmanager"
 
-[lib]
-crate-type = ["bin"]
+[[bin]]
+name = "eureka-manager"
+path = "./src/main.rs"
 
 [dependencies]
 eureka-mmanager.workspace = true
