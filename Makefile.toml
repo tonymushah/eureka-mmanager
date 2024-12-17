@@ -39,7 +39,7 @@ args = ["publish", "-p", "id_list_txt_reader"]
 
 [tasks.publish-cli]
 command = "cargo"
-args = ["publish", "-p", "eureka-mmanager-cli"]
+args = ["publish", "-p", "eureka-manager-cli"]
 
 [tasks.download-chapter]
 command = "cargo"
