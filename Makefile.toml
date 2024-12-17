@@ -15,26 +15,32 @@ command = "cargo"
 args = ["clippy"]
 
 [tasks.publish-core]
+workspace = false
 command = "cargo"
 args = ["publish", "-p", "eureka-mmanager-core"]
 
 [tasks.publish-manager]
+workspace = false
 command = "cargo"
 args = ["publish", "-p", "eureka-mmanager"]
 
 [tasks.publish-emdx]
+workspace = false
 command = "cargo"
 args = ["publish", "-p", "emdx"]
 
 [tasks.publish-ids]
+workspace = false
 command = "cargo"
 args = ["publish", "-p", "id_list_txt_reader"]
 
 [tasks.publish-cli]
+workspace = false
 command = "cargo"
 args = ["publish", "-p", "eureka-mmanager-cli"]
 
 [tasks.download-chapter]
+workspace = false
 command = "cargo"
 args = [
     "run",
@@ -49,6 +55,7 @@ args = [
 ]
 
 [tasks.publish-all]
+workspace = false
 dependencies = [
     "publish-core",
     "publish-manager",
