@@ -4,9 +4,7 @@ use std::{
 };
 
 use actix::prelude::*;
-use eureka_mmanager::{
-    files_dirs::messages::pull::manga::MangaListDataPullMessage, DirsOptions,
-};
+use eureka_mmanager::{files_dirs::messages::pull::manga::MangaListDataPullMessage, DirsOptions};
 use tokio_stream::StreamExt;
 
 fn main() -> anyhow::Result<()> {

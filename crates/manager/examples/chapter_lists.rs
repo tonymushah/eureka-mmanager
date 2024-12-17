@@ -1,9 +1,9 @@
 use actix::prelude::*;
-use mangadex_api_types_rust::{ChapterSortOrder, Language, OrderDirection};
 use eureka_mmanager::{
     files_dirs::messages::pull::chapter::ChapterListDataPullMessage,
     history::service::HistoryActorService, prelude::*, DirsOptions,
 };
+use mangadex_api_types_rust::{ChapterSortOrder, Language, OrderDirection};
 use uuid::Uuid;
 
 fn main() -> anyhow::Result<()> {

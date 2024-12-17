@@ -1,6 +1,6 @@
 use actix::prelude::*;
-use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 use eureka_mmanager::prelude::*;
+use mangadex_api_types_rust::{MangaSortOrder, OrderDirection};
 
 fn main() -> anyhow::Result<()> {
     let run = System::new();

@@ -1,8 +1,6 @@
 use std::str::FromStr;
 
 use actix::prelude::*;
-use mangadex_api::MangaDexClient;
-use mangadex_api_types_rust::RelationshipType;
 use eureka_mmanager::{
     download::{
         chapter::{task::DownloadMode, ChapterDownloadMessage},
@@ -24,6 +22,8 @@ use eureka_mmanager::{
     history::{service::messages::is_in::IsInMessage, HistoryEntry},
     DirsOptions,
 };
+use mangadex_api::MangaDexClient;
+use mangadex_api_types_rust::RelationshipType;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
