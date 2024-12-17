@@ -23,7 +23,7 @@ enum BuilderInnerWriter<'a, W: Write> {
     Encoder(AutoFinishEncoder<'a, W>),
 }
 
-impl<'a, W: Write> BuilderInnerWriter<'a, W> {
+impl<W: Write> BuilderInnerWriter<'_, W> {
     fn encoder(writer: W, compression_level: i32) -> io::Result<Self> {
         Ok(Self::Encoder(
             Encoder::new(writer, compression_level)?.auto_finish(),
@@ -31,7 +31,7 @@ impl<'a, W: Write> BuilderInnerWriter<'a, W> {
     }
 }
 
-impl<'a, W: Write> Write for BuilderInnerWriter<'a, W> {
+impl<W: Write> Write for BuilderInnerWriter<'_, W> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             BuilderInnerWriter::Default(w) => w.write(buf),
@@ -62,7 +62,7 @@ where
     header_mode: HeaderMode,
 }
 
-impl<'a, W> BuilderInner<'a, W>
+impl<W> BuilderInner<'_, W>
 where
     W: Write,
 {

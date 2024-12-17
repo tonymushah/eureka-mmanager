@@ -55,7 +55,7 @@ where
 }
 
 // Test if this fucking works
-impl<'a, R> Iterator for ArchiveCoverPull<'a, R>
+impl<R> Iterator for ArchiveCoverPull<'_, R>
 where
     R: Read,
 {
