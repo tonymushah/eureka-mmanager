@@ -151,4 +151,7 @@ where
     fn push(&mut self, data: T) -> Result<(), Self::Error> {
         self.0.push(data).map_err(|e| e.into())
     }
+    fn verify_and_push(&mut self, data: T) -> Result<(), Self::Error> {
+        self.0.verify_and_push(data).map(|e| e.into())
+    }
 }
