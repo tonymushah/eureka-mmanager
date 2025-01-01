@@ -99,7 +99,7 @@ impl AsyncRun for ChapterDownloadArgs {
         for (id, mode) in ids {
             let manager = manager.clone();
             tasks.spawn(async move {
-                trace!("Downloading title {id}");
+                trace!("Downloading chapter {id}");
                 let dirs =
                     <Addr<DownloadManager> as GetManagerStateData>::get_dir_options(&manager)
                         .await?;
