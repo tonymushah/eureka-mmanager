@@ -184,6 +184,9 @@ impl AsyncRun for ChapterDownloadArgs {
                 Ok(())
             });
         }
+        while let Some(task) = tasks.join_next().await {
+            task??;
+        }
         Ok(())
     }
 }
