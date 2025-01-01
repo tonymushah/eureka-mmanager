@@ -52,7 +52,6 @@ impl CoverDownloadArgs {
 
 impl AsyncRun for CoverDownloadArgs {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
-        let mut tasks = JoinSet::<anyhow::Result<()>>::new();
         let ids = self.get_ids();
         trace!(
             "Downloading {} covers with their titles if missing",
@@ -60,66 +59,57 @@ impl AsyncRun for CoverDownloadArgs {
         );
         for id in ids {
             let manager = manager.clone();
-            tasks.spawn(async move {
-                trace!("Downloading Cover {id}");
-                let dirs =
-                    <Addr<DownloadManager> as GetManagerStateData>::get_dir_options(&manager)
+            trace!("Downloading Cover {id}");
+            let dirs =
+                <Addr<DownloadManager> as GetManagerStateData>::get_dir_options(&manager).await?;
+            let manga = {
+                let manga_manager =
+                    <Addr<DownloadManager> as GetManager<CoverDownloadManager>>::get(&manager)
                         .await?;
-                let manga = {
-                    let manga_manager =
-                        <Addr<DownloadManager> as GetManager<CoverDownloadManager>>::get(&manager)
-                            .await?;
-                    let mut task = manga_manager
-                        .send(
-                            CoverDownloadMessage::new(id).state(DownloadMessageState::Downloading),
-                        )
+                let mut task = manga_manager
+                    .send(CoverDownloadMessage::new(id).state(DownloadMessageState::Downloading))
+                    .await?;
+                let data = task.wait().await?.await?;
+                info!(
+                    "downloaded cover {} = {:?}",
+                    data.id, data.attributes.file_name
+                );
+                data.find_first_relationships(RelationshipType::Manga)
+                    .ok_or(anyhow::Error::msg(format!(
+                        "Cannot find the title for cover art {}",
+                        id,
+                    )))?
+                    .clone()
+            };
+            if !dirs
+                .send(IsInMessage(HistoryEntry::new(
+                    manga.id,
+                    RelationshipType::Manga,
+                )))
+                .await?
+            {
+                trace!("Downloading title {}", manga.id);
+                let manga_manager =
+                    <Addr<DownloadManager> as GetManager<MangaDownloadManager>>::get(&manager)
                         .await?;
-                    let data = task.wait().await?.await?;
-                    info!(
-                        "downloaded cover {} = {:?}",
-                        data.id, data.attributes.file_name
-                    );
-                    data.find_first_relationships(RelationshipType::Manga)
-                        .ok_or(anyhow::Error::msg(format!(
-                            "Cannot find the title for cover art {}",
-                            id,
-                        )))?
-                        .clone()
-                };
-                if !dirs
-                    .send(IsInMessage(HistoryEntry::new(
-                        manga.id,
-                        RelationshipType::Manga,
-                    )))
-                    .await?
-                {
-                    trace!("Downloading title {}", manga.id);
-                    let manga_manager =
-                        <Addr<DownloadManager> as GetManager<MangaDownloadManager>>::get(&manager)
-                            .await?;
-                    let mut task = manga_manager
-                        .send(
-                            MangaDownloadMessage::new(manga.id)
-                                .state(DownloadMessageState::Downloading),
-                        )
-                        .await?;
-                    task.wait().await?.await?;
-                    info!(
-                        "downloaded title {} = {:?}",
-                        manga.id,
-                        manga.attributes.and_then(|attr| {
-                            let RelatedAttributes::Manga(manga) = attr else {
-                                return None;
-                            };
-                            manga.title.values().next().cloned()
-                        })
-                    );
-                }
-                Ok(())
-            });
-        }
-        while let Some(task) = tasks.join_next().await {
-            task??;
+                let mut task = manga_manager
+                    .send(
+                        MangaDownloadMessage::new(manga.id)
+                            .state(DownloadMessageState::Downloading),
+                    )
+                    .await?;
+                task.wait().await?.await?;
+                info!(
+                    "downloaded title {} = {:?}",
+                    manga.id,
+                    manga.attributes.and_then(|attr| {
+                        let RelatedAttributes::Manga(manga) = attr else {
+                            return None;
+                        };
+                        manga.title.values().next().cloned()
+                    })
+                );
+            }
         }
         Ok(())
     }
