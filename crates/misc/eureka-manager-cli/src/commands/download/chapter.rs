@@ -12,6 +12,7 @@ use eureka_mmanager::{
     history::service::messages::is_in::IsInMessage,
     prelude::*,
 };
+use indicatif::ProgressBar;
 use log::{info, trace};
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
@@ -94,6 +95,10 @@ impl ChapterDownloadArgs {
 impl AsyncRun for ChapterDownloadArgs {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
         let ids = self.get_id_and_modes();
+        let progress = ProgressBar::new(ids.len() as u64).with_message(format!(
+            "Downloading {} chapters with their titles and cover if needed",
+            ids.len()
+        ));
         trace!(
             "Downloading {} chapters with their titles and cover if needed",
             ids.len()
@@ -178,7 +183,9 @@ impl AsyncRun for ChapterDownloadArgs {
                     info!("Downloaded {} cover art", cover.id);
                 }
             }
+            progress.inc(1);
         }
+        progress.finish();
         Ok(())
     }
 }

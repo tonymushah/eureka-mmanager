@@ -9,10 +9,10 @@ use eureka_mmanager::{
     history::service::messages::is_in::IsInMessage,
     prelude::*,
 };
+use indicatif::ProgressBar;
 use log::{info, trace};
 use mangadex_api::v5::schema::RelatedAttributes;
 use mangadex_api_types_rust::RelationshipType;
-use tokio::task::JoinSet;
 use uuid::Uuid;
 
 use crate::commands::AsyncRun;
@@ -53,6 +53,10 @@ impl CoverDownloadArgs {
 impl AsyncRun for CoverDownloadArgs {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
         let ids = self.get_ids();
+        let progress = ProgressBar::new(ids.len() as u64).with_message(format!(
+            "Downloading {} covers with their titles if missing",
+            ids.len()
+        ));
         trace!(
             "Downloading {} covers with their titles if missing",
             ids.len()
@@ -110,7 +114,9 @@ impl AsyncRun for CoverDownloadArgs {
                     })
                 );
             }
+            progress.inc(1);
         }
+        progress.finish();
         Ok(())
     }
 }
