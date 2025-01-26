@@ -14,7 +14,6 @@ use eureka_mmanager::{
 };
 use log::{info, trace};
 use mangadex_api_types_rust::RelationshipType;
-use tokio::task::JoinSet;
 use uuid::Uuid;
 
 use crate::commands::AsyncRun;
@@ -74,13 +73,17 @@ impl ChapterDownloadArgs {
             })
             .flat_map(|reader| {
                 reader.flat_map(|entry| -> Option<(Uuid, ChapterDownloadMode)> {
-                    let mut split = entry.split(';');
-                    let id: Uuid = split.next()?.parse().ok()?;
-                    let mode = split
-                        .next()
-                        .and_then(|part| ChapterDownloadMode::from_str(part, true).ok())
-                        .unwrap_or(self.mode);
-                    Some((id, mode))
+                    if entry.contains(';') {
+                        let mut split = entry.split(';');
+                        let id: Uuid = split.next()?.parse().ok()?;
+                        let mode = split
+                            .next()
+                            .and_then(|part| ChapterDownloadMode::from_str(part, true).ok())
+                            .unwrap_or(self.mode);
+                        Some((id, mode))
+                    } else {
+                        Some((entry.parse().ok()?, self.mode))
+                    }
                 })
             })
             .for_each(&mut push_res);
