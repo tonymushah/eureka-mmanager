@@ -36,12 +36,6 @@ impl ChapterRequiredRelationship {
         if data.find_relationships(RelationshipType::Manga).is_empty() {
             required.push(Self::Manga);
         }
-        if data
-            .find_relationships(RelationshipType::ScanlationGroup)
-            .is_empty()
-        {
-            required.push(Self::ScanlationGroup)
-        }
         if data.find_relationships(RelationshipType::User).is_empty() {
             required.push(Self::Uploader);
         }
