@@ -29,5 +29,6 @@ tokio.workspace = true
 mangadex-api-types-rust.workspace = true
 serde.workspace = true
 tokio-stream.workspace = true
+indicatif = "0.17.9"
 
 [dev-dependencies]
