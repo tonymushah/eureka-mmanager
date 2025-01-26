@@ -593,6 +593,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "duration-string"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04782251e09dc67c90d694d89e9a3e5fc6cfe883df1b203202de672d812fb299"
+
+[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -655,6 +661,7 @@ dependencies = [
  "actix",
  "anyhow",
  "clap",
+ "duration-string",
  "emdx",
  "eureka-mmanager",
  "fern",

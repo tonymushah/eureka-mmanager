@@ -30,5 +30,6 @@ mangadex-api-types-rust.workspace = true
 serde.workspace = true
 tokio-stream.workspace = true
 indicatif = "0.17.9"
+duration-string = "0.5.2"
 
 [dev-dependencies]

@@ -1,5 +1,6 @@
 pub mod commands;
 
+use duration_string::DurationString;
 use std::{path::PathBuf, time::SystemTime};
 
 use clap::{Args, Parser};
@@ -47,6 +48,8 @@ pub struct Cli {
     /// Verbose
     #[arg(short, long)]
     verbose: bool,
+    #[arg(long)]
+    pub request_timeout: Option<DurationString>,
     #[command(flatten)]
     pub options: DirsOptionsArgs,
     #[command(subcommand)]
