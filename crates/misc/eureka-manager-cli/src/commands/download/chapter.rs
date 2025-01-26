@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, path::PathBuf};
+use std::{fs::File, io::BufReader, path::PathBuf, time::Duration};
 
 use actix::Addr;
 use clap::{Args, ValueEnum};
@@ -95,10 +95,12 @@ impl ChapterDownloadArgs {
 impl AsyncRun for ChapterDownloadArgs {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
         let ids = self.get_id_and_modes();
-        let progress = ProgressBar::new(ids.len() as u64).with_message(format!(
-            "Downloading {} chapters with their titles and cover if needed",
-            ids.len()
-        ));
+        let progress = ProgressBar::new(ids.len() as u64)
+            .with_message(format!(
+                "Downloading {} chapters with their titles and cover if needed",
+                ids.len()
+            ))
+            .with_elapsed(Duration::from_secs(1));
         trace!(
             "Downloading {} chapters with their titles and cover if needed",
             ids.len()

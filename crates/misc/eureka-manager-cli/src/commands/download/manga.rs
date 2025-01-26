@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr};
+use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr, time::Duration};
 
 use actix::Addr;
 use clap::Args;
@@ -9,7 +9,7 @@ use eureka_mmanager::{
     history::service::messages::is_in::IsInMessage,
     prelude::*,
 };
-use indicatif::{MultiProgress, ProgressBar, ProgressBarIter};
+use indicatif::ProgressBar;
 use log::{info, trace};
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
@@ -53,7 +53,8 @@ impl AsyncRun for MangaDownloadArgs {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
         let ids = self.get_ids();
         let progress = ProgressBar::new(ids.len() as u64)
-            .with_message(format!("Downloading {} titles with their cover", ids.len()));
+            .with_message(format!("Downloading {} titles with their cover", ids.len()))
+            .with_elapsed(Duration::from_secs(1));
         trace!("Downloading {} titles with their cover", ids.len());
 
         for id in ids {

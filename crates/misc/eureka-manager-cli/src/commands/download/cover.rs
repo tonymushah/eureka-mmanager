@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr};
+use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr, time::Duration};
 
 use actix::Addr;
 use clap::Args;
@@ -53,10 +53,12 @@ impl CoverDownloadArgs {
 impl AsyncRun for CoverDownloadArgs {
     async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
         let ids = self.get_ids();
-        let progress = ProgressBar::new(ids.len() as u64).with_message(format!(
-            "Downloading {} covers with their titles if missing",
-            ids.len()
-        ));
+        let progress = ProgressBar::new(ids.len() as u64)
+            .with_message(format!(
+                "Downloading {} covers with their titles if missing",
+                ids.len()
+            ))
+            .with_elapsed(Duration::from_secs(1));
         trace!(
             "Downloading {} covers with their titles if missing",
             ids.len()
