@@ -110,7 +110,6 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
                     });
                 }
             },
-            _ => {}
         };
         self
     }

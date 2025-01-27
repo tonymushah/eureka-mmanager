@@ -35,7 +35,7 @@ pub trait AsyncAutoCommitRollbackInsert<'a, T> {
     fn insert_and_commit(
         &'a mut self,
         input: T,
-    ) -> impl std::future::Future<Output = <Self as AsyncAutoCommitRollbackInsert<T>>::Output> + Send;
+    ) -> impl std::future::Future<Output = <Self as AsyncAutoCommitRollbackInsert<'a, T>>::Output> + Send;
 }
 
 pub trait AsyncAutoCommitRollbackRemove<'a, T> {
@@ -43,5 +43,5 @@ pub trait AsyncAutoCommitRollbackRemove<'a, T> {
     fn remove_and_commit(
         &'a mut self,
         input: T,
-    ) -> impl std::future::Future<Output = <Self as AsyncAutoCommitRollbackRemove<T>>::Output> + Send;
+    ) -> impl std::future::Future<Output = <Self as AsyncAutoCommitRollbackRemove<'a, T>>::Output> + Send;
 }

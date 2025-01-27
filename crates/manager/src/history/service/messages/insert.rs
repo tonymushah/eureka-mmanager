@@ -104,7 +104,7 @@ impl<'a> AsyncAutoCommitRollbackInsert<'a, HistoryEntry> for Addr<HistoryActorSe
     async fn insert_and_commit(
         &'a mut self,
         value: HistoryEntry,
-    ) -> <Self as AsyncAutoCommitRollbackInsert<HistoryEntry>>::Output {
+    ) -> <Self as AsyncAutoCommitRollbackInsert<'a, HistoryEntry>>::Output {
         self.send(InsertMessage::new(value)).await?
     }
 }
@@ -114,7 +114,7 @@ impl<'a> AsyncInsert<'a, HistoryEntry> for Addr<HistoryActorService> {
     async fn insert(
         &'a mut self,
         value: HistoryEntry,
-    ) -> <Self as AsyncInsert<HistoryEntry>>::Output {
+    ) -> <Self as AsyncInsert<'a, HistoryEntry>>::Output {
         self.send(InsertMessage::new(value).no_commit()).await?
     }
 }
