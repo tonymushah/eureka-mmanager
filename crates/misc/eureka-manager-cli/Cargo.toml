@@ -16,7 +16,7 @@ eureka-mmanager.workspace = true
 actix.workspace = true
 anyhow.workspace = true
 clap = { workspace = true, features = ["unstable-doc"] }
-fern = "0.6.2"
+fern = { version = "0.7", features = ["colored"] }
 id_list_txt_reader = { workspace = true, package = "file_listing" }
 time = { version = "0.3.37", features = ["formatting", "local-offset"] }
 humantime = "2.1.0"

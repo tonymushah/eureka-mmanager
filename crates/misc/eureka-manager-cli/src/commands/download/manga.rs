@@ -108,7 +108,7 @@ impl AsyncRun for MangaDownloadArgs {
                 Ok::<_, anyhow::Error>(())
             };
             if let Err(err) = task.await {
-                progress.println(err.to_string());
+                log::error!("{}", err);
             }
             progress.inc(1);
         }

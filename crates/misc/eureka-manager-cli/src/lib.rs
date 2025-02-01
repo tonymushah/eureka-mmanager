@@ -1,7 +1,8 @@
 pub mod commands;
 
 use duration_string::DurationString;
-use log::Log;
+use fern::colors::ColoredLevelConfig;
+use log::{LevelFilter, Log};
 use std::{path::PathBuf, time::SystemTime};
 
 use clap::{Args, Parser};
@@ -58,23 +59,26 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn setup_logger(&self) -> Option<Box<dyn Log>> {
-        if self.verbose {
-            let (_level, log) = fern::Dispatch::new()
-                .format(|out, message, record| {
-                    out.finish(format_args!(
-                        "[{} {} {}] {}",
-                        humantime::format_rfc3339_seconds(SystemTime::now()),
-                        record.level(),
-                        record.target(),
-                        message
-                    ));
-                })
-                .into_log();
-            Some(log)
-        } else {
-            None
-        }
+    pub fn setup_logger(&self) -> (LevelFilter, Box<dyn Log>) {
+        let colors = ColoredLevelConfig::new();
+        let (level, log) = fern::Dispatch::new()
+            .format(move |out, message, record| {
+                out.finish(format_args!(
+                    "[{} {} {}] {}",
+                    humantime::format_rfc3339_seconds(SystemTime::now()),
+                    colors.color(record.level()),
+                    record.target(),
+                    message
+                ));
+            })
+            .level(if self.verbose {
+                LevelFilter::max()
+            } else {
+                LevelFilter::Error
+            })
+            .chain(std::io::stdout())
+            .into_log();
+        (level, log)
     }
 }
 

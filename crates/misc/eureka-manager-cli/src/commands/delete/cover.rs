@@ -2,6 +2,7 @@ use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr};
 
 use clap::Args;
 use eureka_mmanager::prelude::{DeleteDataAsyncTrait, GetManagerStateData};
+use indicatif::ProgressBar;
 use log::info;
 use uuid::Uuid;
 
@@ -42,6 +43,8 @@ impl CoverDeleteArgs {
 impl AsyncRun for CoverDeleteArgs {
     async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_ids();
+        let pb = ProgressBar::new(ids.len() as u64);
+        let pb = ctx.progress.add(pb);
         info!("Deleting {} cover", ids.len());
 
         let dir_option = ctx.manager.get_dir_options().await?;
@@ -49,7 +52,10 @@ impl AsyncRun for CoverDeleteArgs {
             info!("Deleting cover {}", id);
             dir_option.delete_cover(*id).await?;
             info!("Deleted cover {}", id);
+            pb.inc(1);
         }
+        pb.finish();
+        ctx.progress.remove(&pb);
         Ok(())
     }
 }

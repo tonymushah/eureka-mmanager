@@ -191,7 +191,7 @@ impl AsyncRun for ChapterDownloadArgs {
             let res = task.await;
 
             if let Err(err) = res {
-                progress.println(err.to_string());
+                log::error!("{}", err);
             }
             progress.inc(1);
         }

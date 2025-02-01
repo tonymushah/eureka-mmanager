@@ -16,10 +16,10 @@ fn main() {
     let sys = System::new();
     let progress = MultiProgress::new();
     let cli = Cli::parse();
-    if let Some(log) = cli.setup_logger() {
-        if let Err(err) = LogWrapper::new(progress.clone(), log).try_init() {
-            let _ = progress.println(format!("{err}"));
-        }
+    let (filter, log) = cli.setup_logger();
+    log::set_max_level(filter);
+    if let Err(err) = log::set_boxed_logger(Box::new(LogWrapper::new(progress.clone(), log))) {
+        eprintln!("{err}");
     }
     let name = clap::crate_name!();
     let version = clap::crate_name!();
