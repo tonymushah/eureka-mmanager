@@ -17,7 +17,7 @@ use log::{info, trace};
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, ValueEnum, Default)]
 pub enum ChapterDownloadMode {
@@ -93,15 +93,16 @@ impl ChapterDownloadArgs {
 }
 
 impl AsyncRun for ChapterDownloadArgs {
-    async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_id_and_modes();
-        let progress = ProgressBar::new(ids.len() as u64);
+        let mut progress = ProgressBar::new(ids.len() as u64);
+        progress = ctx.progress.add(progress);
         trace!(
             "Downloading {} chapters with their titles and cover if needed",
             ids.len()
         );
         for (id, mode) in ids {
-            let manager = manager.clone();
+            let manager = ctx.manager.clone();
             let task = async move {
                 trace!("Downloading chapter {id}");
                 let dirs =
@@ -195,6 +196,7 @@ impl AsyncRun for ChapterDownloadArgs {
             progress.inc(1);
         }
         progress.finish();
+        ctx.progress.remove(&progress);
         Ok(())
     }
 }

@@ -9,7 +9,7 @@ use mangadex_api_types_rust::{
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 use super::TagSearchModeEnum;
 
@@ -102,11 +102,8 @@ impl CountMangaArgs {
 }
 
 impl AsyncRun for CountMangaArgs {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
-        let dir_options = manager.get_dir_options().await?;
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
+        let dir_options = ctx.manager.get_dir_options().await?;
         let mut stream = dir_options
             .send(MangaListDataPullMessage)
             .await??

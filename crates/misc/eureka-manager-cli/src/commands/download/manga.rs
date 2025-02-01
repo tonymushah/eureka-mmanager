@@ -14,7 +14,7 @@ use log::{info, trace};
 use mangadex_api_types_rust::RelationshipType;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct MangaDownloadArgs {
@@ -50,13 +50,14 @@ impl MangaDownloadArgs {
 }
 
 impl AsyncRun for MangaDownloadArgs {
-    async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_ids();
-        let progress = ProgressBar::new(ids.len() as u64);
+        let mut progress = ProgressBar::new(ids.len() as u64);
+        progress = ctx.progress.add(progress);
         trace!("Downloading {} titles with their cover", ids.len());
 
         for id in ids {
-            let manager = manager.clone();
+            let manager = ctx.manager.clone();
             let task = async move {
                 trace!("Downloading title {id}");
                 let dirs =
@@ -112,6 +113,7 @@ impl AsyncRun for MangaDownloadArgs {
             progress.inc(1);
         }
         progress.finish();
+        ctx.progress.remove(&progress);
         Ok(())
     }
 }

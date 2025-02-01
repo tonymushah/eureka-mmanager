@@ -5,7 +5,7 @@ use eureka_mmanager::prelude::{DeleteDataAsyncTrait, GetManagerStateData};
 use log::info;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct MangaDeleteArgs {
@@ -40,13 +40,10 @@ impl MangaDeleteArgs {
 }
 
 impl AsyncRun for MangaDeleteArgs {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_ids();
         info!("Deleting {} titles", ids.len());
-        let dir_option = manager.get_dir_options().await?;
+        let dir_option = ctx.manager.get_dir_options().await?;
         for id in &ids {
             info!("Deleting title {}", id);
             let delete_data = dir_option.delete_manga(*id).await?;

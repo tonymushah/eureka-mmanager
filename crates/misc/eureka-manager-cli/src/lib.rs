@@ -1,6 +1,7 @@
 pub mod commands;
 
 use duration_string::DurationString;
+use log::Log;
 use std::{path::PathBuf, time::SystemTime};
 
 use clap::{Args, Parser};
@@ -57,9 +58,9 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn setup_logger(&self) -> Result<(), fern::InitError> {
+    pub fn setup_logger(&self) -> Option<Box<dyn Log>> {
         if self.verbose {
-            fern::Dispatch::new()
+            let (_level, log) = fern::Dispatch::new()
                 .format(|out, message, record| {
                     out.finish(format_args!(
                         "[{} {} {}] {}",
@@ -69,10 +70,11 @@ impl Cli {
                         message
                     ));
                 })
-                .chain(std::io::stdout())
-                .apply()?;
+                .into_log();
+            Some(log)
+        } else {
+            None
         }
-        Ok(())
     }
 }
 

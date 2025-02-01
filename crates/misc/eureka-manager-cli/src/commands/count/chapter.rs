@@ -10,7 +10,7 @@ use mangadex_api_types_rust::{ContentRating, Language, MangaDexDateTime};
 use tokio_stream::StreamExt;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct CountChapterArgs {
@@ -95,11 +95,8 @@ impl CountChapterArgs {
 }
 
 impl AsyncRun for CountChapterArgs {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
-        let dir_options = manager.get_dir_options().await?;
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
+        let dir_options = ctx.manager.get_dir_options().await?;
         let mut stream = dir_options
             .send(ChapterListDataPullMessage)
             .await??

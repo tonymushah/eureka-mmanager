@@ -5,7 +5,7 @@ use eureka_mmanager::prelude::{DeleteDataAsyncTrait, GetManagerStateData};
 use log::info;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct CoverDeleteArgs {
@@ -40,13 +40,11 @@ impl CoverDeleteArgs {
 }
 
 impl AsyncRun for CoverDeleteArgs {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_ids();
         info!("Deleting {} cover", ids.len());
-        let dir_option = manager.get_dir_options().await?;
+
+        let dir_option = ctx.manager.get_dir_options().await?;
         for id in &ids {
             info!("Deleting cover {}", id);
             dir_option.delete_cover(*id).await?;

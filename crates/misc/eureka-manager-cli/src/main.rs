@@ -1,17 +1,26 @@
 use actix::{Actor, System};
 use clap::Parser;
-use eureka_manager_cli::{commands::AsyncRun, Cli};
+use eureka_manager_cli::{
+    commands::{AsyncRun, AsyncRunContext},
+    Cli,
+};
 use eureka_mmanager::{
     prelude::{DirsOptions, DirsOptionsCore},
     DownloadManager,
 };
+use indicatif::MultiProgress;
+use indicatif_log_bridge::LogWrapper;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
 
 fn main() {
     let sys = System::new();
-
+    let progress = MultiProgress::new();
     let cli = Cli::parse();
-    cli.setup_logger().unwrap();
+    if let Some(log) = cli.setup_logger() {
+        if let Err(err) = LogWrapper::new(progress.clone(), log).try_init() {
+            let _ = progress.println(format!("{err}"));
+        }
+    }
     let name = clap::crate_name!();
     let version = clap::crate_name!();
     let manager = {
@@ -38,5 +47,6 @@ fn main() {
         });
         sys.block_on(async move { DownloadManager::new(options, mangadex_client).start() })
     };
-    sys.block_on(cli.commands.run(manager)).unwrap();
+    let ctx = AsyncRunContext { manager, progress };
+    sys.block_on(cli.commands.run(ctx)).unwrap();
 }

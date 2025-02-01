@@ -4,7 +4,7 @@ pub mod manga;
 
 use clap::Subcommand;
 
-use super::AsyncRun;
+use super::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Subcommand)]
 pub enum DownloadSubCommands {
@@ -17,14 +17,11 @@ pub enum DownloadSubCommands {
 }
 
 impl AsyncRun for DownloadSubCommands {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         match self {
-            Self::Manga(r) => r.run(manager).await,
-            Self::Cover(r) => r.run(manager).await,
-            Self::Chapter(r) => r.run(manager).await,
+            Self::Manga(r) => r.run(ctx).await,
+            Self::Cover(r) => r.run(ctx).await,
+            Self::Chapter(r) => r.run(ctx).await,
         }
     }
 }
