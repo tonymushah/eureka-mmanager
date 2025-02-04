@@ -18,7 +18,8 @@ pub trait Rand {
 impl<T: Clone> Rand for Vec<T> {
     type Output = T;
     fn random(self) -> Option<Self::Output> {
-        self.get(random::<usize>() % self.len()).cloned()
+        let random_ = random::<u64>() as usize;
+        self.get(random_ % self.len()).cloned()
     }
 }
 
