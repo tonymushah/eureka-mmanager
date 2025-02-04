@@ -107,7 +107,6 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
                     });
                 }
             },
-            _ => {}
         }
         self
     }

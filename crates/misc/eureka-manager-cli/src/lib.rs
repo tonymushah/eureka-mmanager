@@ -1,5 +1,8 @@
 pub mod commands;
 
+use duration_string::DurationString;
+use fern::colors::ColoredLevelConfig;
+use log::{LevelFilter, Log};
 use std::{path::PathBuf, time::SystemTime};
 
 use clap::{Args, Parser};
@@ -47,6 +50,8 @@ pub struct Cli {
     /// Verbose
     #[arg(short, long)]
     verbose: bool,
+    #[arg(long)]
+    pub request_timeout: Option<DurationString>,
     #[command(flatten)]
     pub options: DirsOptionsArgs,
     #[command(subcommand)]
@@ -54,27 +59,30 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn setup_logger(&self) -> Result<(), fern::InitError> {
-        if self.verbose {
-            fern::Dispatch::new()
-                .format(|out, message, record| {
-                    out.finish(format_args!(
-                        "[{} {} {}] {}",
-                        humantime::format_rfc3339_seconds(SystemTime::now()),
-                        record.level(),
-                        record.target(),
-                        message
-                    ));
-                })
-                .chain(std::io::stdout())
-                .apply()?;
-        }
-        Ok(())
+    pub fn setup_logger(&self) -> (LevelFilter, Box<dyn Log>) {
+        let colors = ColoredLevelConfig::new();
+        let (level, log) = fern::Dispatch::new()
+            .format(move |out, message, record| {
+                out.finish(format_args!(
+                    "[{} {} {}] {}",
+                    humantime::format_rfc3339_seconds(SystemTime::now()),
+                    colors.color(record.level()),
+                    record.target(),
+                    message
+                ));
+            })
+            .level(if self.verbose {
+                LevelFilter::max()
+            } else {
+                LevelFilter::Error
+            })
+            .chain(std::io::stdout())
+            .into_log();
+        (level, log)
     }
 }
 
 #[cfg(test)]
-
 mod tests {
     use clap::CommandFactory;
 

@@ -175,7 +175,6 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                     });
                 }
             },
-            _ => {}
         };
         self
     }

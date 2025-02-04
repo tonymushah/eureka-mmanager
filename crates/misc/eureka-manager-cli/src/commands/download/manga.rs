@@ -9,12 +9,12 @@ use eureka_mmanager::{
     history::service::messages::is_in::IsInMessage,
     prelude::*,
 };
+use indicatif::ProgressBar;
 use log::{info, trace};
 use mangadex_api_types_rust::RelationshipType;
-use tokio::task::JoinSet;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct MangaDownloadArgs {
@@ -50,55 +50,70 @@ impl MangaDownloadArgs {
 }
 
 impl AsyncRun for MangaDownloadArgs {
-    async fn run(&self, manager: Addr<DownloadManager>) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_ids();
+        let mut progress = ProgressBar::new(ids.len() as u64);
+        progress = ctx.progress.add(progress);
         trace!("Downloading {} titles with their cover", ids.len());
+
         for id in ids {
-            let manager = manager.clone();
-            trace!("Downloading title {id}");
-            let dirs =
-                <Addr<DownloadManager> as GetManagerStateData>::get_dir_options(&manager).await?;
-            let cover = {
-                let manga_manager =
-                    <Addr<DownloadManager> as GetManager<MangaDownloadManager>>::get(&manager)
+            let manager = ctx.manager.clone();
+            let task = async move {
+                trace!("Downloading title {id}");
+                let dirs =
+                    <Addr<DownloadManager> as GetManagerStateData>::get_dir_options(&manager)
                         .await?;
-                let mut task = manga_manager
-                    .send(MangaDownloadMessage::new(id).state(DownloadMessageState::Downloading))
-                    .await?;
-                let data = task.wait().await?.await?;
-                info!(
-                    "downloaded title {} = {:?}",
-                    data.id,
-                    data.attributes.title.values().next()
-                );
-                data.find_first_relationships(RelationshipType::CoverArt)
-                    .ok_or(anyhow::Error::msg(format!(
-                        "Cannot find the title {} cover art",
-                        id
-                    )))?
-                    .clone()
+                let cover = {
+                    let manga_manager =
+                        <Addr<DownloadManager> as GetManager<MangaDownloadManager>>::get(&manager)
+                            .await?;
+                    let mut task = manga_manager
+                        .send(
+                            MangaDownloadMessage::new(id).state(DownloadMessageState::Downloading),
+                        )
+                        .await?;
+                    let data = task.wait().await?.await?;
+                    info!(
+                        "downloaded title {} = {:?}",
+                        data.id,
+                        data.attributes.title.values().next()
+                    );
+                    data.find_first_relationships(RelationshipType::CoverArt)
+                        .ok_or(anyhow::Error::msg(format!(
+                            "Cannot find the title {} cover art",
+                            id
+                        )))?
+                        .clone()
+                };
+                if !dirs
+                    .send(IsInMessage(HistoryEntry::new(
+                        cover.id,
+                        RelationshipType::CoverArt,
+                    )))
+                    .await?
+                {
+                    trace!("Downloading {} cover art", cover.id);
+                    let cover_manager =
+                        <Addr<DownloadManager> as GetManager<CoverDownloadManager>>::get(&manager)
+                            .await?;
+                    let mut task = cover_manager
+                        .send(
+                            CoverDownloadMessage::new(cover.id)
+                                .state(DownloadMessageState::Downloading),
+                        )
+                        .await?;
+                    task.wait().await?.await?;
+                    info!("Downloaded {} cover art", cover.id);
+                }
+                Ok::<_, anyhow::Error>(())
             };
-            if !dirs
-                .send(IsInMessage(HistoryEntry::new(
-                    cover.id,
-                    RelationshipType::CoverArt,
-                )))
-                .await?
-            {
-                trace!("Downloading {} cover art", cover.id);
-                let cover_manager =
-                    <Addr<DownloadManager> as GetManager<CoverDownloadManager>>::get(&manager)
-                        .await?;
-                let mut task = cover_manager
-                    .send(
-                        CoverDownloadMessage::new(cover.id)
-                            .state(DownloadMessageState::Downloading),
-                    )
-                    .await?;
-                task.wait().await?.await?;
-                info!("Downloaded {} cover art", cover.id);
+            if let Err(err) = task.await {
+                log::error!("{}", err);
             }
+            progress.inc(1);
         }
+        progress.finish();
+        ctx.progress.remove(&progress);
         Ok(())
     }
 }

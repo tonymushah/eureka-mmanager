@@ -13,7 +13,7 @@ use eureka_mmanager::{
 use mangadex_api_types_rust::{MangaDexDateTime, TagSearchMode};
 use serde::{de::IntoDeserializer, Deserialize};
 
-use super::AsyncRun;
+use super::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Subcommand)]
 pub enum CountSubcommand {
@@ -25,14 +25,11 @@ pub enum CountSubcommand {
 }
 
 impl AsyncRun for CountSubcommand {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         match self {
-            CountSubcommand::Manga(count_manga_args) => count_manga_args.run(manager).await,
-            CountSubcommand::Cover(count_cover_args) => count_cover_args.run(manager).await,
-            CountSubcommand::Chapter(count_chapter_args) => count_chapter_args.run(manager).await,
+            CountSubcommand::Manga(count_manga_args) => count_manga_args.run(ctx).await,
+            CountSubcommand::Cover(count_cover_args) => count_cover_args.run(ctx).await,
+            CountSubcommand::Chapter(count_chapter_args) => count_chapter_args.run(ctx).await,
         }
     }
 }
@@ -44,14 +41,11 @@ pub struct CountArgs {
 }
 
 impl AsyncRun for CountArgs {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         if let Some(subcommand) = self.subcommand.as_ref() {
-            subcommand.run(manager).await
+            subcommand.run(ctx).await
         } else {
-            let dirs_options = manager.get_dir_options().await?;
+            let dirs_options = ctx.manager.get_dir_options().await?;
             println!(
                 "Number of titles available: {}",
                 dirs_options

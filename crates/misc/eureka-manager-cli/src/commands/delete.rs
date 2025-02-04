@@ -4,7 +4,7 @@ pub mod manga;
 
 use clap::Subcommand;
 
-use super::AsyncRun;
+use super::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Subcommand)]
 pub enum DeleteSubcommands {
@@ -17,16 +17,11 @@ pub enum DeleteSubcommands {
 }
 
 impl AsyncRun for DeleteSubcommands {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         match self {
-            DeleteSubcommands::Manga(manga_delete_args) => manga_delete_args.run(manager).await,
-            DeleteSubcommands::Cover(cover_delete_args) => cover_delete_args.run(manager).await,
-            DeleteSubcommands::Chapter(chapter_delete_args) => {
-                chapter_delete_args.run(manager).await
-            }
+            DeleteSubcommands::Manga(manga_delete_args) => manga_delete_args.run(ctx).await,
+            DeleteSubcommands::Cover(cover_delete_args) => cover_delete_args.run(ctx).await,
+            DeleteSubcommands::Chapter(chapter_delete_args) => chapter_delete_args.run(ctx).await,
         }
     }
 }

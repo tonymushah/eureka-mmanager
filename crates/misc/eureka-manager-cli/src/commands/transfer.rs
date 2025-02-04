@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 use crate::DirsOptionsArgs;
 
-use super::AsyncRun;
+use super::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct TransferCommand {
@@ -130,10 +130,7 @@ impl TransferChapterArgs {
 }
 
 impl AsyncRun for TransferCommand {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let mut chapters = self.chapters.get_ids();
         let mut mangas = self.mangas.get_ids();
         let mut covers = self.covers.get_ids();
@@ -144,7 +141,7 @@ impl AsyncRun for TransferCommand {
             opts.start()
         };
 
-        let current_opts = manager.get_dir_options().await?;
+        let current_opts = ctx.manager.get_dir_options().await?;
         chapters.dedup();
         let mut chapter_stream = current_opts
             .get_chapters_by_ids(chapters.into_iter())

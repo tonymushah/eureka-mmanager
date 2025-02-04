@@ -1,11 +1,8 @@
-use std::{
-    future::Future,
-    ops::Deref,
-    task::{ready, Poll},
-};
+use std::{future::Future, ops::Deref, task::Poll};
 
 use actix::prelude::*;
 use tokio::sync::watch::Receiver;
+use tokio_util::sync::ReusableBoxFuture;
 
 use crate::{ManagerCoreResult, OwnedError};
 
@@ -78,24 +75,52 @@ impl<T, L> From<ManagerCoreResult<T>> for DownloadTaskState<T, L> {
     }
 }
 
-#[derive(Debug, Clone, MessageResponse)]
+#[derive(Debug, MessageResponse)]
 pub struct WaitForFinished<T, L> {
     state: Receiver<DownloadTaskState<T, L>>,
-    waker_on_load: bool,
+    fut: ReusableBoxFuture<'static, Result<T, WaitForFinishedError>>,
 }
 
-impl<T, L> WaitForFinished<T, L> {
-    pub fn new(state: Receiver<DownloadTaskState<T, L>>) -> Self {
-        Self {
-            state,
-            waker_on_load: true,
+async fn make_future<T: Clone + Send + Sync, L: Send + Sync>(
+    mut rx: Receiver<DownloadTaskState<T, L>>,
+) -> Result<T, WaitForFinishedError> {
+    loop {
+        rx.changed()
+            .await
+            .map_err(WaitForFinishedError::RecvError)?;
+        match rx.borrow().deref() {
+            DownloadTaskState::Error(e) => {
+                return Err(WaitForFinishedError::Error(e.clone()));
+            }
+            DownloadTaskState::Done(d) => return Ok(d.clone()),
+            DownloadTaskState::Canceled => return Err(WaitForFinishedError::Canceled),
+            _ => {}
         }
     }
-    pub fn waker_on_load(self, waker_on_load: bool) -> Self {
+}
+
+impl<T, L> WaitForFinished<T, L>
+where
+    T: Clone + Send + Sync + 'static,
+    L: Send + Sync + 'static,
+{
+    pub fn new(state: Receiver<DownloadTaskState<T, L>>) -> Self {
+        let mut rx = state.clone();
+        rx.mark_changed();
         Self {
-            waker_on_load,
-            ..self
+            state,
+            fut: ReusableBoxFuture::new(make_future(rx)),
         }
+    }
+}
+
+impl<T, L> Clone for WaitForFinished<T, L>
+where
+    T: Clone + Send + Sync + 'static,
+    L: Send + Sync + 'static,
+{
+    fn clone(&self) -> Self {
+        Self::new(self.state.clone())
     }
 }
 
@@ -111,35 +136,14 @@ pub enum WaitForFinishedError {
 
 impl<T, L> Future for WaitForFinished<T, L>
 where
-    T: Clone,
+    T: Send + Sync,
 {
     type Output = Result<T, WaitForFinishedError>;
-    // TODO test WaitForFinished with and without cx.waker().wake_by_ref()
-    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        let mut state = self.state.clone();
-        let mut changed = Box::pin(state.changed());
-        match ready!(changed.as_mut().poll(cx)) {
-            Ok(_) => match self.state.borrow().deref() {
-                DownloadTaskState::Pending => {
-                    if self.waker_on_load {
-                        cx.waker().wake_by_ref();
-                    }
-                    Poll::Pending
-                }
-                DownloadTaskState::Loading(_) => {
-                    if self.waker_on_load {
-                        cx.waker().wake_by_ref();
-                    }
-                    Poll::Pending
-                }
-                DownloadTaskState::Error(e) => {
-                    Poll::Ready(Err(WaitForFinishedError::Error(e.clone())))
-                }
-                DownloadTaskState::Done(d) => Poll::Ready(Ok(d.clone())),
-                DownloadTaskState::Canceled => Poll::Ready(Err(WaitForFinishedError::Canceled)),
-            },
-            Err(e) => Poll::Ready(Err(WaitForFinishedError::RecvError(e))),
-        }
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        self.fut.poll(cx)
     }
 }
 

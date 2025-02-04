@@ -2,10 +2,11 @@ use std::{fs::File, io::BufReader, path::PathBuf, str::FromStr};
 
 use clap::Args;
 use eureka_mmanager::prelude::{DeleteDataAsyncTrait, GetManagerStateData};
+use indicatif::ProgressBar;
 use log::info;
 use uuid::Uuid;
 
-use crate::commands::AsyncRun;
+use crate::commands::{AsyncRun, AsyncRunContext};
 
 #[derive(Debug, Args)]
 pub struct ChapterDeleteArgs {
@@ -40,18 +41,19 @@ impl ChapterDeleteArgs {
 }
 
 impl AsyncRun for ChapterDeleteArgs {
-    async fn run(
-        &self,
-        manager: actix::Addr<eureka_mmanager::DownloadManager>,
-    ) -> anyhow::Result<()> {
+    async fn run(&self, ctx: AsyncRunContext) -> anyhow::Result<()> {
         let ids = self.get_ids();
+        let pb = ctx.progress.add(ProgressBar::new(ids.len() as u64));
         info!("Deleting {} chapter", ids.len());
-        let dir_option = manager.get_dir_options().await?;
+        let dir_option = ctx.manager.get_dir_options().await?;
         for id in &ids {
             info!("Deleting chapter {}", id);
             dir_option.delete_chapter(*id).await?;
             info!("Deleted chapter {}", id);
+            pb.inc(1);
         }
+        pb.finish();
+        ctx.progress.remove(&pb);
         Ok(())
     }
 }

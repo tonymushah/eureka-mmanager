@@ -83,7 +83,7 @@ impl<'a> AsyncAutoCommitRollbackRemove<'a, HistoryEntry> for Addr<HistoryActorSe
     async fn remove_and_commit(
         &'a mut self,
         value: HistoryEntry,
-    ) -> <Self as AsyncAutoCommitRollbackRemove<HistoryEntry>>::Output {
+    ) -> <Self as AsyncAutoCommitRollbackRemove<'a, HistoryEntry>>::Output {
         self.send(RemoveMessage::new(value)).await?
     }
 }
@@ -93,7 +93,7 @@ impl<'a> AsyncRemove<'a, HistoryEntry> for Addr<HistoryActorService> {
     async fn remove(
         &'a mut self,
         value: HistoryEntry,
-    ) -> <Self as AsyncRemove<HistoryEntry>>::Output {
+    ) -> <Self as AsyncRemove<'a, HistoryEntry>>::Output {
         self.send(RemoveMessage::new(value).no_commit()).await?
     }
 }
