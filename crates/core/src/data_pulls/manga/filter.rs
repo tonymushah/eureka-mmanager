@@ -76,36 +76,42 @@ impl MangaListDataPullFilterParams {
         }
     }
     fn validate_authors(&self, input: &MangaObject) -> Option<bool> {
-        let authors_ids = input
-            .find_relationships(RelationshipType::Author)
-            .iter()
-            .map(|a| a.id)
-            .collect::<Vec<_>>();
-        if !self.authors.is_empty() && !authors_ids.is_empty() {
-            Some(self.authors.iter().all(|a| authors_ids.contains(a)))
-        } else if authors_ids.is_empty() {
-            Some(false)
+        if !self.authors.is_empty() {
+            let authors_ids = input
+                .find_relationships(RelationshipType::Author)
+                .iter()
+                .map(|a| a.id)
+                .collect::<Vec<_>>();
+            Some(
+                authors_ids
+                    .iter()
+                    .filter(|id| self.authors.contains(*id))
+                    .all(|a| self.authors.contains(a)),
+            )
         } else {
             None
         }
     }
     fn validate_artists(&self, input: &MangaObject) -> Option<bool> {
-        let artists_ids = input
-            .find_relationships(RelationshipType::Artist)
-            .iter()
-            .map(|a| a.id)
-            .collect::<Vec<_>>();
-        if !self.artists.is_empty() && !artists_ids.is_empty() {
-            Some(self.artists.iter().all(|a| artists_ids.contains(a)))
-        } else if artists_ids.is_empty() {
-            Some(false)
+        if !self.artists.is_empty() {
+            let artists_ids = input
+                .find_relationships(RelationshipType::Artist)
+                .iter()
+                .map(|a| a.id)
+                .collect::<Vec<_>>();
+            Some(
+                artists_ids
+                    .iter()
+                    .filter(|a| self.artists.contains(*a))
+                    .all(|a| self.artists.contains(a)),
+            )
         } else {
             None
         }
     }
     fn validate_year(&self, input: &MangaObject) -> Option<bool> {
         let year = self.year?;
-        let input_year = option_bool_match!(input.attributes.year);
+        let input_year = input.attributes.year?;
         Some(year == input_year)
     }
     fn validate_included_tags(&self, input: &MangaObject) -> Option<bool> {
@@ -118,7 +124,10 @@ impl MangaListDataPullFilterParams {
                 .map(|t| t.id)
                 .collect::<Vec<_>>();
             let res = match mode {
-                TagSearchMode::And => self.included_tags.iter().all(|t| input_tags.contains(t)),
+                TagSearchMode::And => input_tags
+                    .iter()
+                    .filter(|t| self.included_tags.contains(t))
+                    .all(|t| self.included_tags.contains(t)),
                 TagSearchMode::Or => self.included_tags.iter().any(|t| input_tags.contains(t)),
             };
             Some(res)
@@ -136,7 +145,10 @@ impl MangaListDataPullFilterParams {
                 .map(|t| t.id)
                 .collect::<Vec<_>>();
             let res = match mode {
-                TagSearchMode::And => self.excluded_tags.iter().all(|t| input_tags.contains(t)),
+                TagSearchMode::And => input_tags
+                    .iter()
+                    .filter(|t| self.excluded_tags.contains(t))
+                    .all(|t| self.excluded_tags.contains(t)),
                 TagSearchMode::Or => self.excluded_tags.iter().any(|t| input_tags.contains(t)),
             };
             Some(!res)
@@ -184,7 +196,7 @@ impl MangaListDataPullFilterParams {
         if !self.content_rating.is_empty() {
             Some(
                 self.content_rating
-                    .contains(option_bool_match!(input.attributes.content_rating.as_ref())),
+                    .contains(input.attributes.content_rating.as_ref()?),
             )
         } else {
             None
@@ -196,7 +208,7 @@ impl MangaListDataPullFilterParams {
     fn validate_updated_at_since(&self, input: &MangaObject) -> Option<bool> {
         Some(
             self.updated_at_since?.as_ref()
-                < option_bool_match!(input.attributes.updated_at.as_ref().map(|d| d.as_ref())),
+                < input.attributes.updated_at.as_ref().map(|d| d.as_ref())?,
         )
     }
     fn validate_title(&self, input: &MangaObject) -> Option<bool> {

@@ -78,49 +78,54 @@ impl From<MangaAggregateParam> for ChapterListDataPullFilterParams {
 impl ChapterListDataPullFilterParams {
     fn validate_title(&self, input: &ChapterObject) -> Option<bool> {
         let title = self.title.as_ref()?;
+        let title_regex = regex::Regex::new(title).ok()?;
         let input_title = option_bool_match!(input.attributes.title.as_ref());
-        Some(title == input_title)
+        Some(title_regex.is_match(input_title))
     }
     fn validate_groups(&self, input: &ChapterObject) -> Option<bool> {
         let groups = &self.groups;
-        let input_groups = input
-            .find_relationships(RelationshipType::ScanlationGroup)
-            .into_iter()
-            .map(|o| o.id)
-            .collect::<Vec<_>>();
-        if !groups.is_empty() && !input_groups.is_empty() {
-            Some(groups.iter().all(|g| input_groups.contains(g)))
-        } else if input_groups.is_empty() {
-            Some(false)
+        if !groups.is_empty() {
+            let input_groups = input
+                .find_relationships(RelationshipType::ScanlationGroup)
+                .into_iter()
+                .map(|o| o.id)
+                .collect::<Vec<_>>();
+            Some(
+                input_groups
+                    .iter()
+                    .filter(|id| groups.contains(*id))
+                    .all(|id| groups.contains(id)),
+            )
         } else {
             None
         }
     }
     fn validate_uploaders(&self, input: &ChapterObject) -> Option<bool> {
         let uploaders = &self.uploaders;
-        let input_uploaders: Vec<Uuid> = {
-            let mut us = input
-                .find_relationships(RelationshipType::User)
-                .into_iter()
-                .map(|o| o.id)
-                .collect::<Vec<_>>();
-            if let Some(u) = input.attributes.uploader.as_ref() {
-                us.push(*u);
-            }
-            us
-        };
-        if !uploaders.is_empty() && !input_uploaders.is_empty() {
+
+        if !uploaders.is_empty() {
+            let input_uploaders: Vec<Uuid> = {
+                let mut us = input
+                    .find_relationships(RelationshipType::User)
+                    .into_iter()
+                    .map(|o| o.id)
+                    .collect::<Vec<_>>();
+                if let Some(u) = input.attributes.uploader.as_ref() {
+                    us.push(*u);
+                }
+                us
+            };
             Some(uploaders.iter().all(|g| input_uploaders.contains(g)))
-        } else if input_uploaders.is_empty() {
-            Some(false)
         } else {
             None
         }
     }
     fn validate_volumes(&self, input: &ChapterObject) -> Option<bool> {
         let volumes = &self.volumes;
-        let input_volumes = option_bool_match!(input.attributes.volume.as_ref());
+
         if !volumes.is_empty() {
+            let none = String::from("none");
+            let input_volumes = input.attributes.volume.as_ref().unwrap_or(&none);
             Some(volumes.contains(input_volumes))
         } else {
             None
@@ -128,8 +133,9 @@ impl ChapterListDataPullFilterParams {
     }
     fn validate_chapters(&self, input: &ChapterObject) -> Option<bool> {
         let chapters = &self.chapters;
-        let input_chapter = option_bool_match!(input.attributes.chapter.as_ref());
         if !chapters.is_empty() {
+            let none = String::from("none");
+            let input_chapter = input.attributes.chapter.as_ref().unwrap_or(&none);
             Some(chapters.contains(input_chapter))
         } else {
             None
@@ -146,15 +152,16 @@ impl ChapterListDataPullFilterParams {
     }
     fn validate_original_language(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.original_languages;
-        let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
-                .find_first_relationships(RelationshipType::Manga)?
-                .clone()
-                .try_into()
-                .ok());
-            manga.attributes.original_language
-        };
+
         if !tl.is_empty() {
+            let input_tl = {
+                let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
+                    .find_first_relationships(RelationshipType::Manga)?
+                    .clone()
+                    .try_into()
+                    .ok());
+                manga.attributes.original_language
+            };
             Some(tl.contains(&input_tl))
         } else {
             None
@@ -162,15 +169,16 @@ impl ChapterListDataPullFilterParams {
     }
     fn validate_excluded_original_language(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.excluded_original_languages;
-        let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
-                .find_first_relationships(RelationshipType::Manga)?
-                .clone()
-                .try_into()
-                .ok());
-            manga.attributes.original_language
-        };
+
         if !tl.is_empty() {
+            let input_tl = {
+                let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
+                    .find_first_relationships(RelationshipType::Manga)?
+                    .clone()
+                    .try_into()
+                    .ok());
+                manga.attributes.original_language
+            };
             Some(!tl.contains(&input_tl))
         } else {
             None
@@ -178,15 +186,16 @@ impl ChapterListDataPullFilterParams {
     }
     fn validate_content_rating(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.content_rating;
-        let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
-                .find_first_relationships(RelationshipType::Manga)?
-                .clone()
-                .try_into()
-                .ok());
-            option_bool_match!(manga.attributes.content_rating)
-        };
+
         if !tl.is_empty() {
+            let input_tl = {
+                let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
+                    .find_first_relationships(RelationshipType::Manga)?
+                    .clone()
+                    .try_into()
+                    .ok());
+                option_bool_match!(manga.attributes.content_rating)
+            };
             Some(tl.contains(&input_tl))
         } else {
             None
@@ -194,36 +203,34 @@ impl ChapterListDataPullFilterParams {
     }
     fn validate_excluded_groups(&self, input: &ChapterObject) -> Option<bool> {
         let groups = &self.excluded_groups;
-        let input_groups = input
-            .find_relationships(RelationshipType::ScanlationGroup)
-            .into_iter()
-            .map(|o| o.id)
-            .collect::<Vec<_>>();
-        if !groups.is_empty() && !input_groups.is_empty() {
-            Some(!groups.iter().all(|g| input_groups.contains(g)))
-        } else if input_groups.is_empty() {
-            Some(false)
+
+        if !groups.is_empty() {
+            let input_groups = input
+                .find_relationships(RelationshipType::ScanlationGroup)
+                .into_iter()
+                .map(|o| o.id)
+                .collect::<Vec<_>>();
+            Some(!groups.iter().any(|g| input_groups.contains(g)))
         } else {
             None
         }
     }
     fn validate_excluded_uploaders(&self, input: &ChapterObject) -> Option<bool> {
         let uploaders = &self.excluded_groups;
-        let input_uploaders: Vec<Uuid> = {
-            let mut us = input
-                .find_relationships(RelationshipType::User)
-                .into_iter()
-                .map(|o| o.id)
-                .collect::<Vec<_>>();
-            if let Some(u) = input.attributes.uploader.as_ref() {
-                us.push(*u);
-            }
-            us
-        };
-        if !uploaders.is_empty() && !input_uploaders.is_empty() {
+
+        if !uploaders.is_empty() {
+            let input_uploaders: Vec<Uuid> = {
+                let mut us = input
+                    .find_relationships(RelationshipType::User)
+                    .into_iter()
+                    .map(|o| o.id)
+                    .collect::<Vec<_>>();
+                if let Some(u) = input.attributes.uploader.as_ref() {
+                    us.push(*u);
+                }
+                us
+            };
             Some(!uploaders.iter().all(|g| input_uploaders.contains(g)))
-        } else if input_uploaders.is_empty() {
-            Some(false)
         } else {
             None
         }
@@ -235,10 +242,7 @@ impl ChapterListDataPullFilterParams {
         Some(self.updated_at_since?.as_ref() < input.attributes.updated_at?.as_ref())
     }
     fn validate_publish_at_since(&self, input: &ChapterObject) -> Option<bool> {
-        Some(
-            self.publish_at_since?.as_ref()
-                < option_bool_match!(input.attributes.publish_at).as_ref(),
-        )
+        Some(self.publish_at_since?.as_ref() < input.attributes.publish_at?.as_ref())
     }
     fn validate_manga_id(&self, input: &ChapterObject) -> Option<bool> {
         let tl = &self.manga_ids;
@@ -246,11 +250,7 @@ impl ChapterListDataPullFilterParams {
             return None;
         }
         let input_tl = {
-            let manga: ApiObjectNoRelationships<MangaAttributes> = option_bool_match!(input
-                .find_first_relationships(RelationshipType::Manga)?
-                .clone()
-                .try_into()
-                .ok());
+            let manga = option_bool_match!(input.find_first_relationships(RelationshipType::Manga));
             manga.id
         };
         Some(tl.contains(&input_tl))
@@ -259,7 +259,7 @@ impl ChapterListDataPullFilterParams {
 
 impl Validate<ChapterObject> for ChapterListDataPullFilterParams {
     fn is_valid(&self, input: &ChapterObject) -> bool {
-        let validations = vec![
+        let start_val = [
             self.validate_title(input),
             self.validate_groups(input),
             self.validate_uploaders(input),
@@ -275,10 +275,8 @@ impl Validate<ChapterObject> for ChapterListDataPullFilterParams {
             self.validate_updated_at_since(input),
             self.validate_publish_at_since(input),
             self.validate_manga_id(input),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<bool>>();
+        ];
+        let validations = start_val.iter().flatten().copied().collect::<Vec<bool>>();
         let mut is_valid = true;
         for validation in validations {
             is_valid = is_valid && validation

@@ -1,6 +1,6 @@
 [package]
 name = "eureka-mmanager-core"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
@@ -27,6 +27,7 @@ log = { workspace = true, optional = true }
 
 [dev-dependencies]
 anyhow.workspace = true
+clap.workspace = true
 
 [features]
 actix = ["dep:actix"]

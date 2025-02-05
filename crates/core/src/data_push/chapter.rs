@@ -27,7 +27,6 @@ impl ChapterRequiredRelationship {
     pub fn get_includes() -> Vec<ReferenceExpansionResource> {
         vec![
             ReferenceExpansionResource::Manga,
-            ReferenceExpansionResource::ScanlationGroup,
             ReferenceExpansionResource::User,
         ]
     }
@@ -42,7 +41,8 @@ impl ChapterRequiredRelationship {
         required
     }
     fn seed(mut input: ChapterObject, seed: ChapterObject) -> ChapterObject {
-        let required = Self::validate(&input);
+        let mut required = Self::validate(&input);
+        required.push(ChapterRequiredRelationship::ScanlationGroup);
         for req in required {
             seed_rel(&mut input, &seed, req.into());
         }

@@ -59,3 +59,13 @@ macro_rules! option_bool_match {
         }
     };
 }
+
+#[macro_export]
+macro_rules! option_bool_match_true {
+    ($t:expr) => {
+        match $t {
+            Some(o) => o,
+            None => return Some(true),
+        }
+    };
+}

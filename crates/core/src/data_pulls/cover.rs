@@ -88,7 +88,7 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
                             .volume
                             .as_ref()
                             .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
-                        a.partial_cmp(&b).unwrap_or(Ordering::Equal)
+                        a.partial_cmp(&b).unwrap_or(Ordering::Greater)
                     });
                 }
                 OrderDirection::Descending => {
@@ -103,7 +103,7 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
                             .volume
                             .as_ref()
                             .and_then(|c| -> Option<f32> { c.parse::<f32>().ok() });
-                        b.partial_cmp(&a).unwrap_or(Ordering::Equal)
+                        b.partial_cmp(&a).unwrap_or(Ordering::Less)
                     });
                 }
             },
