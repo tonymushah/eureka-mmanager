@@ -27,6 +27,7 @@ impl ChapterRequiredRelationship {
     pub fn get_includes() -> Vec<ReferenceExpansionResource> {
         vec![
             ReferenceExpansionResource::Manga,
+            ReferenceExpansionResource::ScanlationGroup,
             ReferenceExpansionResource::User,
         ]
     }
@@ -79,7 +80,7 @@ impl Push<ChapterObject> for DirsOptions {
     }
     fn verify_and_push(&mut self, data: ChapterObject) -> ManagerCoreResult<()> {
         if let Ok(inner_chapter) = <Self as Pull<ChapterObject, Uuid>>::pull(self, data.id) {
-            self.push(ChapterRequiredRelationship::seed(data, inner_chapter))
+            self.push(ChapterRequiredRelationship::seed(inner_chapter, data))
         } else {
             let required = ChapterRequiredRelationship::validate(&data);
             if required.is_empty() {

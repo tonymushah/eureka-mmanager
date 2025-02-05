@@ -20,7 +20,7 @@ pub(crate) fn seed_rel<A>(input: &mut ApiObject<A>, seed: &ApiObject<A>, rel: Re
         &mut seed
             .relationships
             .iter()
-            .filter(|r| r.type_ == rel)
+            .filter(|r| r.type_ == rel || r.attributes.is_some())
             .cloned()
             .collect_vec(),
     );

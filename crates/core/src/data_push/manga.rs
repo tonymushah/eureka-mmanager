@@ -82,8 +82,8 @@ impl Push<MangaObject> for DirsOptions {
         Ok(())
     }
     fn verify_and_push(&mut self, data: MangaObject) -> crate::ManagerCoreResult<()> {
-        if let Ok(inner_chapter) = <Self as Pull<MangaObject, Uuid>>::pull(self, data.id) {
-            self.push(MangaRequiredRelationship::seed(data, inner_chapter))
+        if let Ok(inner_title) = <Self as Pull<MangaObject, Uuid>>::pull(self, data.id) {
+            self.push(MangaRequiredRelationship::seed(inner_title, data))
         } else {
             let required = MangaRequiredRelationship::validate(&data);
             if required.is_empty() {
