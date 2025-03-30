@@ -134,7 +134,7 @@ impl Download for Task {
                                         .and_then(|cl| {
                                             images
                                                 .get(resp.url().path().split('/').next()?)?
-                                                .partial_cmp(&cl.try_into().ok()?)
+                                                .partial_cmp(&TryInto::<usize>::try_into(cl).ok()?)
                                         })
                                         .map(|o| o.is_eq())
                                         .unwrap_or_default()
