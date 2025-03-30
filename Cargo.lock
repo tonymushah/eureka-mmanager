@@ -695,7 +695,7 @@ dependencies = [
  "ciborium",
  "criterion",
  "eureka-mmanager-core",
- "itertools 0.10.5",
+ "itertools 0.14.0",
  "log",
  "mangadex-api",
  "mangadex-api-input-types",
