@@ -176,7 +176,8 @@ impl MangaListDataPullFilterParams {
     fn validate_excluded_original_language(&self, input: &MangaObject) -> Option<bool> {
         if !self.excluded_original_language.is_empty() {
             Some(
-                self.excluded_original_language
+                !self
+                    .excluded_original_language
                     .contains(&input.attributes.original_language),
             )
         } else {
