@@ -78,24 +78,26 @@ pub struct ChapterDownloadTask {
 
 impl Actor for ChapterDownloadTask {
     type Context = Context<Self>;
-    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
+    fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         if self.have_been_read
             && self.sender.is_closed()
             && std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_finished()
         {
-            self.manager
-                .send(DropSingleTaskMessage(self.id))
-                .into_actor(self)
-                .map(|res, _, _| {
-                    if let Err(er) = res {
-                        log::error!("{er}");
-                    }
-                })
-                .wait(ctx);
             Running::Stop
         } else {
             Running::Continue
         }
+    }
+    fn stopped(&mut self, ctx: &mut Self::Context) {
+        self.manager
+            .send(DropSingleTaskMessage(self.id))
+            .into_actor(self)
+            .map(|res, _, _| {
+                if let Err(er) = res {
+                    log::error!("{er}");
+                }
+            })
+            .wait(ctx);
     }
 }
 

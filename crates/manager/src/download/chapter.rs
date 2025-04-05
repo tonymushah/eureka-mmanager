@@ -141,7 +141,11 @@ impl TaskManager for ChapterDownloadManager {
     }
 
     fn drop_task(&mut self, id: Uuid) {
-        self.tasks.remove(&id);
+        if let Some(task) = self.tasks.get(&id) {
+            if task.upgrade().is_none() {
+                self.tasks.remove(&id);
+            }
+        }
         self.notify.notify_waiters();
     }
 }
