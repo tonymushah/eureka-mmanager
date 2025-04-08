@@ -25,9 +25,6 @@ impl CanBeWaited for MangaDownloadTask {
     type Ok = MangaObject;
     type Loading = MangaDonwloadingState;
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading> {
-        if !self.have_been_read {
-            self.have_been_read = true;
-        }
         WaitForFinished::new(self.sender.subscribe())
     }
 }

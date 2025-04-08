@@ -14,9 +14,6 @@ impl CanBeWaited for Task {
     type Loading = State;
     type Ok = Object;
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading> {
-        if !self.have_been_read {
-            self.have_been_read = true;
-        }
         WaitForFinished::new(self.sender.subscribe())
     }
 }

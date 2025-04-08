@@ -15,9 +15,6 @@ impl Handler<SubcribeMessage<State>> for Task {
 
 impl Subscribe for Task {
     fn subscribe(&mut self) -> crate::ManagerCoreResult<tokio::sync::watch::Receiver<Self::State>> {
-        if !self.have_been_read {
-            self.have_been_read = true;
-        }
         Ok(self.sender.subscribe())
     }
 }
