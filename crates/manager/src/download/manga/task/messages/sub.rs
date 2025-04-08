@@ -19,9 +19,6 @@ impl Handler<SubcribeMessage<MangaDownloadTaskState>> for MangaDownloadTask {
 
 impl Subscribe for MangaDownloadTask {
     fn subscribe(&mut self) -> crate::ManagerCoreResult<tokio::sync::watch::Receiver<Self::State>> {
-        if !self.have_been_read {
-            self.have_been_read = true;
-        }
         Ok(self.sender.subscribe())
     }
 }

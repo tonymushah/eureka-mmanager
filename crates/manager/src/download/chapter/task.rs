@@ -72,20 +72,19 @@ pub struct ChapterDownloadTask {
     mode: DownloadMode,
     handle: Option<SpawnHandle>,
     sender: Sender<ChapterDownloadTaskState>,
-    have_been_read: bool,
     manager: Addr<ChapterDownloadManager>,
 }
 
 impl Actor for ChapterDownloadTask {
     type Context = Context<Self>;
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
-        if self.have_been_read
-            && self.sender.is_closed()
-            && std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_finished()
+        if std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_loading()
+            || (!self.sender.is_closed()
+                && std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_pending())
         {
-            Running::Stop
-        } else {
             Running::Continue
+        } else {
+            Running::Stop
         }
     }
     fn stopped(&mut self, ctx: &mut Self::Context) {
@@ -114,7 +113,6 @@ impl ChapterDownloadTask {
             handle: None,
             sender,
             manager,
-            have_been_read: false,
         }
     }
 }

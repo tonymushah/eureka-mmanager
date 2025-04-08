@@ -29,20 +29,19 @@ pub struct CoverDownloadTask {
     handle: Option<SpawnHandle>,
     sender: Sender<CoverDownloadTaskState>,
     manager: Addr<CoverDownloadManager>,
-    have_been_read: bool,
 }
 
 impl Actor for CoverDownloadTask {
     type Context = Context<Self>;
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
-        if self.have_been_read
-            && self.sender.is_closed()
-            && std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_finished()
+        if std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_loading()
+            || (!self.sender.is_closed()
+                && std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_pending())
         {
-            Running::Stop
-        } else {
             Running::Continue
+        } else {
+            Running::Stop
         }
     }
     fn stopped(&mut self, ctx: &mut Self::Context) {
@@ -66,7 +65,6 @@ impl CoverDownloadTask {
             handle: None,
             sender,
             manager,
-            have_been_read: false,
         }
     }
 }
