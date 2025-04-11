@@ -9,10 +9,7 @@ use actix::prelude::*;
 use tokio::sync::Notify;
 use uuid::Uuid;
 
-use super::{
-    state::{TaskState, WaitForFinished},
-    traits::managers::TaskManager,
-};
+use super::state::{TaskState, WaitForFinished};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DropSingleTaskMessage(pub Uuid);
