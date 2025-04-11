@@ -9,7 +9,10 @@ use actix::prelude::*;
 use tokio::sync::Notify;
 use uuid::Uuid;
 
-use super::state::{TaskState, WaitForFinished};
+use super::{
+    state::{TaskState, WaitForFinished},
+    traits::managers::TaskManager,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DropSingleTaskMessage(pub Uuid);
@@ -73,4 +76,38 @@ pub struct SubcribeToManagerMessage;
 
 impl Message for SubcribeToManagerMessage {
     type Result = Arc<Notify>;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct GetTaskMessage<T> {
+    id: Uuid,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> GetTaskMessage<T> {
+    pub fn new(id: Uuid) -> Self {
+        Self {
+            id,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> From<Uuid> for GetTaskMessage<T> {
+    fn from(value: Uuid) -> Self {
+        Self::new(value)
+    }
+}
+
+impl<T> From<GetTaskMessage<T>> for Uuid {
+    fn from(value: GetTaskMessage<T>) -> Self {
+        value.id
+    }
+}
+
+impl<T> Message for GetTaskMessage<T>
+where
+    T: Actor,
+{
+    type Result = Option<Addr<T>>;
 }

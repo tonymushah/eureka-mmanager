@@ -9,7 +9,7 @@ use super::MailBoxResult;
 
 use crate::download::{
     messages::{
-        state::GetManagerStateMessage, DropSingleTaskMessage, GetTasksListMessage,
+        state::GetManagerStateMessage, DropSingleTaskMessage, GetTaskMessage, GetTasksListMessage,
         SubcribeToManagerMessage,
     },
     state::DownloadManagerState,
@@ -29,6 +29,7 @@ where
     fn new_task(&mut self, msg: Self::DownloadMessage, ctx: &mut Self::Context)
         -> Addr<Self::Task>;
     fn drop_task(&mut self, id: Uuid);
+    fn get_task(&self, id: Uuid) -> Option<Addr<Self::Task>>;
 }
 
 pub trait TaskManagerAddr: Sync
@@ -56,13 +57,15 @@ where
         + Handler<SubcribeToManagerMessage>
         + Handler<GetTasksListMessage>
         + Handler<DropSingleTaskMessage>
-        + Handler<T::DownloadMessage>,
+        + Handler<T::DownloadMessage>
+        + Handler<GetTaskMessage<T::Task>>,
     T::DownloadMessage: Send,
     <T as Actor>::Context: ToEnvelope<T, GetManagerStateMessage>
         + ToEnvelope<T, SubcribeToManagerMessage>
         + ToEnvelope<T, GetTasksListMessage>
         + ToEnvelope<T, DropSingleTaskMessage>
-        + ToEnvelope<T, T::DownloadMessage>,
+        + ToEnvelope<T, T::DownloadMessage>
+        + ToEnvelope<T, GetTaskMessage<T::Task>>,
 {
     type DownloadMessage = T::DownloadMessage;
     type Task = T::Task;

@@ -12,7 +12,7 @@ use crate::prelude::AsyncState;
 use self::task::CoverDownloadTask;
 
 use super::{
-    messages::{DropSingleTaskMessage, StartDownload},
+    messages::{DropSingleTaskMessage, GetTaskMessage, StartDownload},
     state::{DownloadManagerState, DownloadMessageState},
     traits::managers::TaskManager,
 };
@@ -158,6 +158,9 @@ impl TaskManager for CoverDownloadManager {
         }
         self.notify.notify_waiters();
     }
+    fn get_task(&self, id: Uuid) -> Option<Addr<Self::Task>> {
+        self.tasks.get(&id).and_then(WeakAddr::upgrade)
+    }
 }
 
 impl Handler<CoverDownloadMessage> for CoverDownloadManager {
@@ -171,5 +174,16 @@ impl Handler<DropSingleTaskMessage> for CoverDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.drop_task(msg.0);
+    }
+}
+
+impl Handler<GetTaskMessage<CoverDownloadTask>> for CoverDownloadManager {
+    type Result = <GetTaskMessage<CoverDownloadTask> as Message>::Result;
+    fn handle(
+        &mut self,
+        msg: GetTaskMessage<CoverDownloadTask>,
+        _ctx: &mut Self::Context,
+    ) -> Self::Result {
+        self.get_task(msg.into())
     }
 }
