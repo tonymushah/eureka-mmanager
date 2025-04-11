@@ -47,7 +47,11 @@ where
         &self,
         msg: Self::DownloadMessage,
     ) -> impl Future<Output = MailBoxResult<Addr<Self::Task>>> + Send;
-    fn drop_task(&self, id: Uuid) -> impl Future<Output = MailBoxResult<()>>;
+    fn drop_task(&self, id: Uuid) -> impl Future<Output = MailBoxResult<()>> + Send;
+    fn get_task(
+        &self,
+        id: Uuid,
+    ) -> impl Future<Output = MailBoxResult<Option<Addr<Self::Task>>>> + Send;
 }
 
 impl<T> TaskManagerAddr for Addr<T>
@@ -87,5 +91,8 @@ where
     }
     async fn drop_task(&self, id: Uuid) -> MailBoxResult<()> {
         self.send(DropSingleTaskMessage(id)).await
+    }
+    async fn get_task(&self, id: Uuid) -> MailBoxResult<Option<Addr<Self::Task>>> {
+        self.send(GetTaskMessage::<Self::Task>::new(id)).await
     }
 }

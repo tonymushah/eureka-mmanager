@@ -81,6 +81,10 @@ pub struct GetTaskMessage<T> {
     _phantom: PhantomData<T>,
 }
 
+unsafe impl<T: Actor> Send for GetTaskMessage<T> {}
+
+unsafe impl<T: Actor> Sync for GetTaskMessage<T> {}
+
 impl<T> GetTaskMessage<T> {
     pub fn new(id: Uuid) -> Self {
         Self {
