@@ -11,7 +11,7 @@ use uuid::Uuid;
 use self::task::ChapterDownloadTask;
 
 use super::{
-    messages::{DropSingleTaskMessage, StartDownload},
+    messages::{DropSingleTaskMessage, GetTaskMessage, StartDownload},
     state::{DownloadManagerState, DownloadMessageState},
     traits::{managers::TaskManager, task::AsyncState},
 };
@@ -148,6 +148,9 @@ impl TaskManager for ChapterDownloadManager {
         }
         self.notify.notify_waiters();
     }
+    fn get_task(&self, id: Uuid) -> Option<Addr<Self::Task>> {
+        self.tasks.get(&id).and_then(WeakAddr::upgrade)
+    }
 }
 
 impl Handler<ChapterDownloadMessage> for ChapterDownloadManager {
@@ -175,5 +178,16 @@ impl Handler<DropSingleTaskMessage> for ChapterDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.drop_task(msg.0);
+    }
+}
+
+impl Handler<GetTaskMessage<ChapterDownloadTask>> for ChapterDownloadManager {
+    type Result = <GetTaskMessage<ChapterDownloadTask> as Message>::Result;
+    fn handle(
+        &mut self,
+        msg: GetTaskMessage<ChapterDownloadTask>,
+        _ctx: &mut Self::Context,
+    ) -> Self::Result {
+        self.get_task(msg.into())
     }
 }

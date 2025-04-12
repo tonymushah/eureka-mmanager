@@ -10,7 +10,7 @@ use uuid::Uuid;
 use self::task::MangaDownloadTask;
 
 use super::{
-    messages::{DropSingleTaskMessage, StartDownload},
+    messages::{DropSingleTaskMessage, GetTaskMessage, StartDownload},
     state::{DownloadManagerState, DownloadMessageState},
     traits::{managers::TaskManager, task::AsyncState},
 };
@@ -152,6 +152,9 @@ impl TaskManager for MangaDownloadManager {
         }
         task
     }
+    fn get_task(&self, id: Uuid) -> Option<Addr<Self::Task>> {
+        self.tasks.get(&id).and_then(WeakAddr::upgrade)
+    }
 }
 
 impl Handler<MangaDownloadMessage> for MangaDownloadManager {
@@ -166,5 +169,16 @@ impl Handler<DropSingleTaskMessage> for MangaDownloadManager {
     type Result = <DropSingleTaskMessage as Message>::Result;
     fn handle(&mut self, msg: DropSingleTaskMessage, _ctx: &mut Self::Context) -> Self::Result {
         self.drop_task(msg.0);
+    }
+}
+
+impl Handler<GetTaskMessage<MangaDownloadTask>> for MangaDownloadManager {
+    type Result = <GetTaskMessage<MangaDownloadTask> as Message>::Result;
+    fn handle(
+        &mut self,
+        msg: GetTaskMessage<MangaDownloadTask>,
+        _ctx: &mut Self::Context,
+    ) -> Self::Result {
+        self.get_task(msg.into())
     }
 }
