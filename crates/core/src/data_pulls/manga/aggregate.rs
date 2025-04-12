@@ -66,9 +66,14 @@ impl PartialOrd for AggregateNumber {
 
 impl Ord for AggregateNumber {
     fn cmp(&self, other: &Self) -> Ordering {
-        let a: Option<f32> = self.try_into().ok();
-        let b: Option<f32> = other.try_into().ok();
-        a.partial_cmp(&b).unwrap_or(self.0.cmp(other))
+        let f_a: Option<f32> = self.try_into().ok();
+        let f_b: Option<f32> = other.try_into().ok();
+        match (f_a, f_b) {
+            (None, None) => self.0.cmp(other),
+            (None, Some(_)) => Ordering::Greater,
+            (Some(_), None) => Ordering::Greater,
+            (Some(a), Some(b)) => a.partial_cmp(&b).unwrap_or(self.0.cmp(other)),
+        }
     }
 }
 
