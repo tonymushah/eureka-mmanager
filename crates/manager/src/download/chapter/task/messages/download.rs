@@ -175,6 +175,7 @@ impl Download for Task {
                                         )
                                         .await
                                     {
+                                        mark_have_error();
                                         log::error!("[chapter|{id}|{filename}]>write - {e}");
                                     }
                                 }
@@ -197,6 +198,7 @@ impl Download for Task {
                                             )
                                             .await
                                         {
+                                            mark_have_error();
                                             log::error!("[chapter|{id}|{filename}]>write - {e}");
                                         }
                                     }
