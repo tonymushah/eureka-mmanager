@@ -5,6 +5,7 @@ use std::{
 
 use actix::prelude::*;
 use bytes::{Buf, Bytes};
+use futures_util::FutureExt;
 use mangadex_api_schema_rust::v5::ChapterObject as Object;
 use mangadex_api_types_rust::RelationshipType;
 use tokio_stream::StreamExt;
@@ -36,6 +37,7 @@ impl Download for Task {
             let id = self.id;
 
             let entry = HistoryEntry::new(id, RelationshipType::Chapter);
+            let sender_spawn_map = self.sender.clone();
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
@@ -210,10 +212,10 @@ impl Download for Task {
                         }
                         Ok(res.data)
                     }
-                    .into_actor(self)
-                    .map(|res: ManagerCoreResult<Object>, this, _| {
-                        let _ = this.sender.send_replace(res.into());
-                    }),
+                    .map(move |res: ManagerCoreResult<Object>| {
+                        let _ = sender_spawn_map.send_replace(res.into());
+                    })
+                    .into_actor(self),
                 ),
             ) {
                 ctx.cancel_future(t);
