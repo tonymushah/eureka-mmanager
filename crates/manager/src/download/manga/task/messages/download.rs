@@ -1,4 +1,5 @@
 use actix::prelude::*;
+use futures_util::FutureExt;
 use mangadex_api_schema_rust::v5::MangaObject;
 use mangadex_api_types_rust::RelationshipType;
 
@@ -27,6 +28,7 @@ impl Download for MangaDownloadTask {
             let manager = self.manager.clone();
 
             let sender = self.sender.clone();
+            let sender2 = sender.clone();
             let id = self.id;
 
             let entry = HistoryEntry::new(id, RelationshipType::Manga);
@@ -50,17 +52,15 @@ impl Download for MangaDownloadTask {
                         history.remove_and_commit(entry).await?;
                         Ok(res.data)
                     }
-                    .into_actor(self)
-                    .map(|res: ManagerCoreResult<MangaObject>, this, _| match res {
+                    .map(move |res: ManagerCoreResult<MangaObject>| match res {
                         Ok(data) => {
-                            let _ = this.sender.send(DownloadTaskState::Done(data));
+                            let _ = sender2.send(DownloadTaskState::Done(data));
                         }
                         Err(err) => {
-                            let _ = this
-                                .sender
-                                .send_replace(DownloadTaskState::Error(err.into()));
+                            let _ = sender2.send_replace(DownloadTaskState::Error(err.into()));
                         }
-                    }),
+                    })
+                    .into_actor(self),
                 ),
             ) {
                 ctx.cancel_future(t);
