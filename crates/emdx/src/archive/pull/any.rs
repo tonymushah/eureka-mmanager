@@ -92,15 +92,15 @@ impl ArchiveAnyPullRegexes {
         let chapter = Regex::new(
             dir_options.chapters_add(r"(?P<chapter_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/data.cbor")
             .as_os_str().to_str().ok_or(io::Error::new(io::ErrorKind::InvalidData, "invalid path input"))?
-        ).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        ).map_err(io::Error::other)?;
         let manga = Regex::new(
             dir_options.mangas_add(r"(?P<manga_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).cbor")
             .as_os_str().to_str().ok_or(io::Error::new(io::ErrorKind::InvalidData, "invalid path input"))?
-        ).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        ).map_err(io::Error::other)?;
         let cover = Regex::new(
             dir_options.covers_add(r"(?P<cover_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).cbor")
             .as_os_str().to_str().ok_or(io::Error::new(io::ErrorKind::InvalidData, "invalid path input"))?
-        ).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        ).map_err(io::Error::other)?;
         let cover_image = Regex::new(
             dir_options
                 .cover_images_add(r"(?P<filename>\w*.*)")
@@ -111,11 +111,11 @@ impl ArchiveAnyPullRegexes {
                     "invalid path input",
                 ))?,
         )
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .map_err(io::Error::other)?;
         let chapter_image = Regex::new(
             dir_options.chapters_add(r"(?P<chapter_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/(?P<mode>data|data-saver)/(?P<filename>\w*.*)")
             .as_os_str().to_str().ok_or(io::Error::new(io::ErrorKind::InvalidData, "invalid path input"))?
-        ).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        ).map_err(io::Error::other)?;
         Ok(Self {
             manga,
             chapter,
