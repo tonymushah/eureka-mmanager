@@ -1,5 +1,6 @@
 use actix::prelude::*;
 use bytes::Buf;
+use futures_util::FutureExt;
 use mangadex_api_schema_rust::v5::CoverObject;
 use mangadex_api_types_rust::RelationshipType;
 
@@ -30,6 +31,7 @@ impl Download for Task {
             let id = self.id;
 
             let entry = HistoryEntry::new(id, RelationshipType::CoverArt);
+            let sender2 = sender.clone();
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
@@ -56,17 +58,15 @@ impl Download for Task {
                         history.remove_and_commit(entry).await?;
                         Ok(res.data)
                     }
-                    .into_actor(self)
-                    .map(|res: ManagerCoreResult<CoverObject>, this, _| match res {
+                    .map(move |res: ManagerCoreResult<CoverObject>| match res {
                         Ok(data) => {
-                            let _ = this.sender.send(DownloadTaskState::Done(data));
+                            let _ = sender2.send(DownloadTaskState::Done(data));
                         }
                         Err(err) => {
-                            let _ = this
-                                .sender
-                                .send_replace(DownloadTaskState::Error(err.into()));
+                            let _ = sender2.send_replace(DownloadTaskState::Error(err.into()));
                         }
-                    }),
+                    })
+                    .into_actor(self),
                 ),
             ) {
                 ctx.cancel_future(t);

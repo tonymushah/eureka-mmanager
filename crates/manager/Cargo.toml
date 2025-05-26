@@ -31,7 +31,7 @@ mangadex-api-input-types.workspace = true
 actix.workspace = true
 api-core = { workspace = true, features = ["stream", "actix"] }
 tokio-util = "0.7.13"
-futures-util = "0.3"
+futures-util = { version = "0.3", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
