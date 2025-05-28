@@ -1,6 +1,6 @@
 [package]
 name = "eureka-mmanager"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "An Actix actor collection for downloading manga, chapters, covers from Mangadex"
