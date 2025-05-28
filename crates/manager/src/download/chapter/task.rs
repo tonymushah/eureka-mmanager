@@ -5,12 +5,15 @@ use std::ops::Deref;
 use actix::prelude::*;
 use mangadex_api::utils::download::chapter::DownloadMode as Mode;
 use mangadex_api_schema_rust::v5::ChapterObject;
-use tokio::sync::watch::{channel, Sender};
 use uuid::Uuid;
 
-use crate::download::{
-    messages::DropSingleTaskMessage,
-    state::{DownloadTaskState, TaskState},
+use crate::{
+    download::{
+        messages::{DropSingleTaskMessage, TaskSubscriberMessages},
+        state::{DownloadTaskState, TaskState},
+    },
+    recipients::Recipients,
+    ArcRwLock,
 };
 
 use super::ChapterDownloadManager;
@@ -71,20 +74,30 @@ pub struct ChapterDownloadTask {
     id: Uuid,
     mode: DownloadMode,
     handle: Option<SpawnHandle>,
-    sender: Sender<ChapterDownloadTaskState>,
+    state: ArcRwLock<ChapterDownloadTaskState>,
     manager: Addr<ChapterDownloadManager>,
+    subscribers: Recipients<TaskSubscriberMessages<ChapterDownloadTaskState>>,
+}
+
+impl ChapterDownloadTask {
+    fn sync_state_subscribers(&self) {
+        self.subscribers.do_send(TaskSubscriberMessages::State(
+            self.state.read().deref().clone(),
+        ));
+    }
 }
 
 impl Drop for ChapterDownloadTask {
     fn drop(&mut self) {
         self.manager.do_send(DropSingleTaskMessage(self.id));
+        self.subscribers.do_send(TaskSubscriberMessages::Dropped);
     }
 }
 
 impl Actor for ChapterDownloadTask {
     type Context = Context<Self>;
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
-        if std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_loading() {
+        if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading() {
             Running::Continue
         } else {
             Running::Stop
@@ -98,12 +111,12 @@ impl ChapterDownloadTask {
         mode: M,
         manager: Addr<ChapterDownloadManager>,
     ) -> Self {
-        let (sender, _) = channel(ChapterDownloadTaskState::Pending);
         Self {
             id,
             mode: mode.into(),
             handle: None,
-            sender,
+            state: Default::default(),
+            subscribers: Default::default(),
             manager,
         }
     }
@@ -112,7 +125,7 @@ impl ChapterDownloadTask {
 impl Handler<DownloadMode> for ChapterDownloadTask {
     type Result = <DownloadMode as Message>::Result;
     fn handle(&mut self, msg: DownloadMode, _ctx: &mut Self::Context) -> Self::Result {
-        let state = std::convert::Into::<TaskState>::into(self.sender.borrow().deref());
+        let state = std::convert::Into::<TaskState>::into(self.state.read().deref());
         if !state.is_loading() {
             self.mode = msg;
         }

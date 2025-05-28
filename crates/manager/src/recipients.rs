@@ -1,12 +1,22 @@
 use actix::{Message, Recipient};
-use parking_lot::RwLock;
-use std::sync::Arc;
+
+use crate::ArcRwLock;
 
 #[derive(Debug, Clone)]
-pub struct Recipients<M>(Arc<RwLock<Vec<Recipient<M>>>>)
+pub struct Recipients<M>(ArcRwLock<Vec<Recipient<M>>>)
 where
     M: Message + Send,
     M::Result: Send;
+
+impl<M> Default for Recipients<M>
+where
+    M: Message + Send,
+    M::Result: Send,
+{
+    fn default() -> Self {
+        Self(ArcRwLock::default())
+    }
+}
 
 impl<M> Recipients<M>
 where

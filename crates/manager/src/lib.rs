@@ -9,6 +9,8 @@ type MailBoxResult<T, E = actix::MailboxError> = Result<T, E>;
 
 mod r#core;
 
+pub(crate) type ArcRwLock<T> = std::sync::Arc<parking_lot::RwLock<T>>;
+
 pub use crate::r#core::{Error, ErrorType, OwnedError};
 
 pub use download::DownloadManager;

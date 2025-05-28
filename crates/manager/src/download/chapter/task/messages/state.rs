@@ -19,6 +19,6 @@ impl Handler<TaskStateMessage> for Task {
 impl State for Task {
     type State = ChapterDownloadTaskState;
     fn inner_state(&self) -> Self::State {
-        self.sender.borrow().deref().clone()
+        self.state.read().deref().clone()
     }
 }
