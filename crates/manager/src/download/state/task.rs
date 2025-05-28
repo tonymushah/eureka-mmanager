@@ -1,10 +1,10 @@
 use std::{future::Future, ops::Deref, task::Poll};
 
 use actix::prelude::*;
-use tokio::sync::watch::Receiver;
+use tokio::sync::watch::{self, Receiver, Sender};
 use tokio_util::sync::ReusableBoxFuture;
 
-use crate::{ManagerCoreResult, OwnedError};
+use crate::{download::messages::TaskSubscriberMessages, ManagerCoreResult, OwnedError};
 
 #[derive(Debug, Clone)]
 pub enum DownloadTaskState<T, L> {
@@ -73,6 +73,60 @@ impl<T, L> From<ManagerCoreResult<T>> for DownloadTaskState<T, L> {
             Err(v) => Self::Error(v.into()),
         }
     }
+}
+
+struct WaitForFinishedActor<T, L> {
+    state: Sender<DownloadTaskState<T, L>>,
+}
+
+impl<T, L> Actor for WaitForFinishedActor<T, L>
+where
+    T: 'static,
+    L: 'static,
+{
+    type Context = Context<Self>;
+}
+
+impl<T, L> Handler<TaskSubscriberMessages<DownloadTaskState<T, L>>> for WaitForFinishedActor<T, L>
+where
+    T: 'static,
+    L: 'static,
+{
+    type Result = ();
+    fn handle(
+        &mut self,
+        msg: TaskSubscriberMessages<DownloadTaskState<T, L>>,
+        ctx: &mut Self::Context,
+    ) -> Self::Result {
+        if self.state.is_closed() {
+            ctx.stop();
+            return;
+        }
+        match msg {
+            TaskSubscriberMessages::State(s) => {
+                let _ = self.state.send_replace(s);
+            }
+            TaskSubscriberMessages::ID(_) => {
+                let _ = self.state.send_replace(DownloadTaskState::Pending);
+            }
+            _ => {}
+        };
+    }
+}
+
+pub(crate) fn make_wait_for_finish_couple<T, L>() -> (
+    Recipient<TaskSubscriberMessages<DownloadTaskState<T, L>>>,
+    WaitForFinished<T, L>,
+)
+where
+    T: 'static + Send + Clone + Sync,
+    L: 'static + Send + Sync,
+{
+    let (tx, rx) = watch::channel(DownloadTaskState::Pending);
+    (
+        WaitForFinishedActor { state: tx }.start().recipient(),
+        WaitForFinished::new(rx),
+    )
 }
 
 #[derive(Debug, MessageResponse)]

@@ -3,7 +3,7 @@ pub mod cover;
 pub mod manga;
 pub mod state;
 
-use std::{marker::PhantomData, sync::Arc};
+use std::{fmt::Debug, marker::PhantomData, sync::Arc};
 
 use actix::prelude::*;
 use tokio::sync::Notify;
@@ -18,17 +18,28 @@ impl Message for DropSingleTaskMessage {
     type Result = ();
 }
 
-#[derive(Debug, Default)]
-pub struct SubcribeMessage<T: ?Sized>(PhantomData<T>);
-
-impl<T: 'static> Message for SubcribeMessage<T> {
-    type Result = crate::ManagerCoreResult<tokio::sync::watch::Receiver<T>>;
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug)]
+pub enum TaskSubscriberMessages<State> {
+    Dropped,
+    State(State),
+    ID(Uuid),
 }
 
-impl<T: ?Sized> SubcribeMessage<T> {
-    pub fn new() -> Self {
-        Self(PhantomData::<T>)
-    }
+impl<State> Message for TaskSubscriberMessages<State> {
+    type Result = ();
+}
+
+#[derive(Debug)]
+pub struct SubcribeMessage<T>(pub Recipient<TaskSubscriberMessages<T>>)
+where
+    T: Send;
+
+impl<T> Message for SubcribeMessage<T>
+where
+    T: Send,
+{
+    type Result = ();
 }
 
 #[derive(Debug, Default, Clone, Copy, Message)]

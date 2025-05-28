@@ -703,6 +703,7 @@ dependencies = [
  "mangadex-api-schema-rust",
  "mangadex-api-types-rust",
  "once_cell",
+ "parking_lot",
  "reqwest",
  "serde",
  "serde_json",

@@ -32,6 +32,7 @@ actix.workspace = true
 api-core = { workspace = true, features = ["stream", "actix"] }
 tokio-util = "0.7.13"
 futures-util = { version = "0.3", default-features = false }
+parking_lot = "0.12"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
