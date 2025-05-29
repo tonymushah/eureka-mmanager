@@ -1,6 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::atomic::{AtomicBool, Ordering as AtomicOrd},
+    sync::{
+        atomic::{AtomicBool, Ordering as AtomicOrd},
+        Arc,
+    },
 };
 
 use actix::prelude::*;
@@ -13,7 +16,9 @@ use tokio_stream::StreamExt;
 use crate::{
     data_push::chapter::{image::ChapterImagePushEntry, ChapterRequiredRelationship},
     download::{
-        chapter::task::{ChapterDownloadTask as Task, ChapterDownloadingState as State},
+        chapter::task::{
+            ChapterDownloadTask as Task, ChapterDownloadTaskState, ChapterDownloadingState as State,
+        },
         messages::StartDownload,
         state::{messages::get::GetManagerStateData, DownloadTaskState, TaskState},
         traits::task::{Download, State as TaskStateTrait},
@@ -26,18 +31,36 @@ use crate::{
     ManagerCoreResult,
 };
 
+impl Task {
+    fn preloading(&self) {
+        *self.state.write() = DownloadTaskState::Loading(State::Preloading);
+        self.sync_state_subscribers();
+    }
+    fn send_to_subscrbers(&self) -> Arc<dyn Fn(ChapterDownloadTaskState) + Send + Sync + 'static> {
+        let state = self.state.clone();
+        let subs = self.subscribers.clone();
+        Arc::new({
+            move |state_to_send: ChapterDownloadTaskState| {
+                *state.write() = state_to_send.clone();
+                subs.do_send(crate::download::messages::TaskSubscriberMessages::State(
+                    state_to_send,
+                ));
+            }
+        })
+    }
+}
+
 impl Download for Task {
     fn download(&mut self, ctx: &mut Self::Context) {
         if self.state() != TaskState::Loading {
-            self.sender
-                .send_replace(DownloadTaskState::Loading(State::Preloading));
+            self.preloading();
             let manager = self.manager.clone();
             let mode = self.mode;
-            let sender = self.sender.clone();
             let id = self.id;
 
             let entry = HistoryEntry::new(id, RelationshipType::Chapter);
-            let sender_spawn_map = self.sender.clone();
+            let send_to_subscrbers = self.send_to_subscrbers();
+            let send_to_subs_map = send_to_subscrbers.clone();
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
@@ -46,7 +69,7 @@ impl Download for Task {
                         let client = manager.get_client().await?;
                         let mut history = manager.get_history().await?;
                         // fetching chapter data
-                        sender.send_replace(DownloadTaskState::Loading(State::FetchingData));
+                        send_to_subscrbers(DownloadTaskState::Loading(State::FetchingData));
                         // insert data in history
                         history.insert_and_commit(entry).await?;
                         let res = client
@@ -59,7 +82,7 @@ impl Download for Task {
                         // push chapter data to the dirs_option actor
                         manager.verify_and_push(res.data.clone()).await?;
                         // Getting fetching AtHome data
-                        sender.send_replace(DownloadTaskState::Loading(State::FetchingAtHomeData));
+                        send_to_subscrbers(DownloadTaskState::Loading(State::FetchingAtHomeData));
                         let current_images = manager.get_chapter_images(id).await?;
                         let mut images: HashMap<String, usize> = Default::default();
                         // getting current images size
@@ -159,7 +182,7 @@ impl Download for Task {
                         };
                         let mut stream = Box::pin(stream);
                         while let Some(((filename, res_bytes), index, len)) = stream.next().await {
-                            sender.send_replace(DownloadTaskState::Loading(State::FetchingImage {
+                            send_to_subscrbers(DownloadTaskState::Loading(State::FetchingImage {
                                 filename: filename.clone(),
                                 index,
                                 len,
@@ -213,7 +236,7 @@ impl Download for Task {
                         Ok(res.data)
                     }
                     .map(move |res: ManagerCoreResult<Object>| {
-                        let _ = sender_spawn_map.send_replace(res.into());
+                        send_to_subs_map(res.into());
                     })
                     .into_actor(self),
                 ),

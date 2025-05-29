@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use actix::prelude::*;
 
 use crate::download::{
@@ -13,12 +15,23 @@ impl Handler<SubcribeMessage<MangaDownloadTaskState>> for MangaDownloadTask {
         _msg: SubcribeMessage<MangaDownloadTaskState>,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
-        self.subscribe()
+        self.subscribe(_msg.0)
     }
 }
 
 impl Subscribe for MangaDownloadTask {
-    fn subscribe(&mut self) -> crate::ManagerCoreResult<tokio::sync::watch::Receiver<Self::State>> {
-        Ok(self.sender.subscribe())
+    fn subscribe(
+        &mut self,
+        subscriber: crate::recipients::MaybeWeakRecipient<
+            crate::download::messages::TaskSubscriberMessages<Self::State>,
+        >,
+    ) {
+        subscriber.do_send(crate::download::messages::TaskSubscriberMessages::ID(
+            self.id,
+        ));
+        subscriber.do_send(crate::download::messages::TaskSubscriberMessages::State(
+            self.state.read().deref().clone(),
+        ));
+        self.subscribers.push_recipient(subscriber);
     }
 }

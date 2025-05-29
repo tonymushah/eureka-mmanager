@@ -1,6 +1,6 @@
 [package]
 name = "eureka-mmanager"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "An Actix actor collection for downloading manga, chapters, covers from Mangadex"
@@ -32,6 +32,7 @@ actix.workspace = true
 api-core = { workspace = true, features = ["stream", "actix"] }
 tokio-util = "0.7.13"
 futures-util = { version = "0.3", default-features = false }
+parking_lot = "0.12"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }

@@ -18,26 +18,30 @@ use crate::{
     prelude::PushActorAddr,
     ManagerCoreResult,
 };
-
+impl MangaDownloadTask {
+    fn preloading(&self) {
+        self.send_to_subscrbers()(DownloadTaskState::Loading(
+            MangaDonwloadingState::Preloading,
+        ));
+    }
+}
 impl Download for MangaDownloadTask {
     fn download(&mut self, ctx: &mut Self::Context) {
         if self.state() != TaskState::Loading {
-            self.sender.send_replace(DownloadTaskState::Loading(
-                MangaDonwloadingState::Preloading,
-            ));
+            self.preloading();
             let manager = self.manager.clone();
 
-            let sender = self.sender.clone();
-            let sender2 = sender.clone();
             let id = self.id;
 
             let entry = HistoryEntry::new(id, RelationshipType::Manga);
+            let send_to_subs = self.send_to_subscrbers();
+            let send_to_subs2 = send_to_subs.clone();
             if let Some(t) = self.handle.replace(
                 ctx.spawn(
                     async move {
                         let client = manager.get_client().await?;
                         let mut history = manager.get_history().await?;
-                        sender.send_replace(DownloadTaskState::Loading(
+                        send_to_subs(DownloadTaskState::Loading(
                             MangaDonwloadingState::FetchingData,
                         ));
                         history.insert_and_commit(entry).await?;
@@ -54,10 +58,10 @@ impl Download for MangaDownloadTask {
                     }
                     .map(move |res: ManagerCoreResult<MangaObject>| match res {
                         Ok(data) => {
-                            let _ = sender2.send(DownloadTaskState::Done(data));
+                            send_to_subs2(DownloadTaskState::Done(data));
                         }
                         Err(err) => {
-                            let _ = sender2.send_replace(DownloadTaskState::Error(err.into()));
+                            send_to_subs2(DownloadTaskState::Error(err.into()));
                         }
                     })
                     .into_actor(self),

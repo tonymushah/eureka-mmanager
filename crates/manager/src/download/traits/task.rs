@@ -1,14 +1,17 @@
 use actix::prelude::*;
 use dev::ToEnvelope;
-use tokio::sync::watch::Receiver;
 
 use super::MailBoxResult;
 
-use crate::download::{
-    messages::{
-        CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage, WaitForFinishedMessage,
+use crate::{
+    download::{
+        messages::{
+            CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage,
+            TaskSubscriberMessages, WaitForFinishedMessage,
+        },
+        state::{TaskState, WaitForFinished},
     },
-    state::{TaskState, WaitForFinished},
+    recipients::MaybeWeakRecipient,
 };
 
 pub trait Cancelable: Actor {
@@ -21,7 +24,7 @@ pub trait Download: Actor {
 
 pub trait State: Actor
 where
-    Self::State: Into<TaskState>,
+    Self::State: Into<TaskState> + Send,
 {
     type State;
     fn state(&self) -> TaskState {
@@ -31,7 +34,7 @@ where
 }
 
 pub trait Subscribe: State {
-    fn subscribe(&mut self) -> crate::ManagerCoreResult<Receiver<Self::State>>;
+    fn subscribe(&mut self, subscriber: MaybeWeakRecipient<TaskSubscriberMessages<Self::State>>);
 }
 
 pub trait CanBeWaited: State {
@@ -70,7 +73,7 @@ where
 }
 
 pub trait AsyncState: Sync {
-    type State;
+    type State: Send;
     fn state(&self) -> impl std::future::Future<Output = MailBoxResult<TaskState>> + Send;
 }
 
@@ -88,7 +91,8 @@ where
 pub trait AsyncSubscribe: AsyncState {
     fn subscribe(
         &self,
-    ) -> impl std::future::Future<Output = crate::ManagerCoreResult<Receiver<Self::State>>> + Send;
+        subscriber: MaybeWeakRecipient<TaskSubscriberMessages<Self::State>>,
+    ) -> impl std::future::Future<Output = MailBoxResult<()>> + Send;
 }
 
 impl<A> AsyncSubscribe for Addr<A>
@@ -101,8 +105,11 @@ where
     <A as Actor>::Context:
         ToEnvelope<A, SubcribeMessage<<A as State>::State>> + ToEnvelope<A, TaskStateMessage>,
 {
-    async fn subscribe(&self) -> crate::ManagerCoreResult<Receiver<Self::State>> {
-        self.send(SubcribeMessage::<Self::State>::new()).await?
+    async fn subscribe(
+        &self,
+        subscriber: MaybeWeakRecipient<TaskSubscriberMessages<Self::State>>,
+    ) -> MailBoxResult<()> {
+        self.send(SubcribeMessage(subscriber)).await
     }
 }
 

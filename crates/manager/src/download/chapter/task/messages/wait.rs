@@ -4,7 +4,7 @@ use mangadex_api_schema_rust::v5::ChapterObject as Object;
 use crate::download::{
     chapter::task::{ChapterDownloadTask as Task, ChapterDownloadingState as State},
     messages::WaitForFinishedMessage,
-    state::WaitForFinished,
+    state::{make_wait_for_finish_couple, WaitForFinished},
     traits::task::CanBeWaited,
 };
 
@@ -25,6 +25,8 @@ impl CanBeWaited for Task {
     type Ok = Object;
     type Loading = State;
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading> {
-        WaitForFinished::new(self.sender.subscribe())
+        let (recipient, fut) = make_wait_for_finish_couple::<Self::Ok, Self::Loading>();
+        self.subscribers.push_recipient(recipient.into());
+        fut
     }
 }

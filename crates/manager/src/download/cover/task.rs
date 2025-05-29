@@ -2,14 +2,17 @@ pub mod messages;
 
 use actix::prelude::*;
 use mangadex_api_schema_rust::v5::CoverObject;
-use tokio::sync::watch::{channel, Sender};
 use uuid::Uuid;
 
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
-use crate::download::{
-    messages::DropSingleTaskMessage,
-    state::{DownloadTaskState, TaskState},
+use crate::{
+    download::{
+        messages::{DropSingleTaskMessage, TaskSubscriberMessages},
+        state::{DownloadTaskState, TaskState},
+    },
+    recipients::Recipients,
+    ArcRwLock,
 };
 
 use super::CoverDownloadManager;
@@ -27,13 +30,30 @@ pub type CoverDownloadTaskState = DownloadTaskState<CoverObject, CoverDownloadin
 pub struct CoverDownloadTask {
     id: Uuid,
     handle: Option<SpawnHandle>,
-    sender: Sender<CoverDownloadTaskState>,
+    state: ArcRwLock<CoverDownloadTaskState>,
+    subscribers: Recipients<TaskSubscriberMessages<CoverDownloadTaskState>>,
     manager: Addr<CoverDownloadManager>,
+}
+
+impl CoverDownloadTask {
+    fn send_to_subscrbers(&self) -> Arc<dyn Fn(CoverDownloadTaskState) + Send + Sync + 'static> {
+        let state = self.state.clone();
+        let subs = self.subscribers.clone();
+        Arc::new({
+            move |state_to_send: CoverDownloadTaskState| {
+                *state.write() = state_to_send.clone();
+                subs.do_send(crate::download::messages::TaskSubscriberMessages::State(
+                    state_to_send,
+                ));
+            }
+        })
+    }
 }
 
 impl Drop for CoverDownloadTask {
     fn drop(&mut self) {
-        self.manager.do_send(DropSingleTaskMessage(self.id))
+        self.manager.do_send(DropSingleTaskMessage(self.id));
+        self.subscribers.do_send(TaskSubscriberMessages::Dropped);
     }
 }
 
@@ -41,7 +61,7 @@ impl Actor for CoverDownloadTask {
     type Context = Context<Self>;
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
-        if std::convert::Into::<TaskState>::into(self.sender.borrow().deref()).is_loading() {
+        if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading() {
             Running::Continue
         } else {
             Running::Stop
@@ -51,12 +71,12 @@ impl Actor for CoverDownloadTask {
 
 impl CoverDownloadTask {
     pub(super) fn new(id: Uuid, manager: Addr<CoverDownloadManager>) -> Self {
-        let (sender, _) = channel(CoverDownloadTaskState::Pending);
         Self {
             id,
             handle: None,
-            sender,
+            state: Default::default(),
             manager,
+            subscribers: Default::default(),
         }
     }
 }
