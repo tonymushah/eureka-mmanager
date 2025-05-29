@@ -2,10 +2,13 @@ use std::ops::Deref;
 
 use actix::prelude::*;
 
-use crate::download::{
-    chapter::task::{ChapterDownloadTask as Task, ChapterDownloadTaskState as State},
-    messages::SubcribeMessage,
-    traits::task::Subscribe,
+use crate::{
+    download::{
+        chapter::task::{ChapterDownloadTask as Task, ChapterDownloadTaskState as State},
+        messages::SubcribeMessage,
+        traits::task::Subscribe,
+    },
+    recipients::MaybeWeakRecipient,
 };
 
 impl Handler<SubcribeMessage<State>> for Task {
@@ -18,7 +21,9 @@ impl Handler<SubcribeMessage<State>> for Task {
 impl Subscribe for Task {
     fn subscribe(
         &mut self,
-        subscriber: Recipient<crate::download::messages::TaskSubscriberMessages<Self::State>>,
+        subscriber: MaybeWeakRecipient<
+            crate::download::messages::TaskSubscriberMessages<Self::State>,
+        >,
     ) {
         subscriber.do_send(crate::download::messages::TaskSubscriberMessages::ID(
             self.id,

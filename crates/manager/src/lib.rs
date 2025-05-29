@@ -3,7 +3,7 @@ pub use crate::r#core::ManagerCoreResult;
 pub mod download;
 pub mod files_dirs;
 pub mod history;
-pub(crate) mod recipients;
+pub mod recipients;
 
 type MailBoxResult<T, E = actix::MailboxError> = Result<T, E>;
 

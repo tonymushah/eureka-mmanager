@@ -9,6 +9,8 @@ use actix::prelude::*;
 use tokio::sync::Notify;
 use uuid::Uuid;
 
+use crate::recipients::MaybeWeakRecipient;
+
 use super::state::{TaskState, WaitForFinished};
 
 #[derive(Debug, Clone, Copy)]
@@ -31,7 +33,7 @@ impl<State> Message for TaskSubscriberMessages<State> {
 }
 
 #[derive(Debug)]
-pub struct SubcribeMessage<T>(pub Recipient<TaskSubscriberMessages<T>>)
+pub struct SubcribeMessage<T>(pub MaybeWeakRecipient<TaskSubscriberMessages<T>>)
 where
     T: Send;
 

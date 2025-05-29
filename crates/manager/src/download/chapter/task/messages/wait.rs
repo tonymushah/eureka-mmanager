@@ -26,7 +26,7 @@ impl CanBeWaited for Task {
     type Loading = State;
     fn wait(&mut self) -> WaitForFinished<Self::Ok, Self::Loading> {
         let (recipient, fut) = make_wait_for_finish_couple::<Self::Ok, Self::Loading>();
-        self.subscribers.push_recipient(recipient);
+        self.subscribers.push_recipient(recipient.into());
         fut
     }
 }

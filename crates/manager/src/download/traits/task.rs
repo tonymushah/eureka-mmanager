@@ -3,12 +3,15 @@ use dev::ToEnvelope;
 
 use super::MailBoxResult;
 
-use crate::download::{
-    messages::{
-        CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage,
-        TaskSubscriberMessages, WaitForFinishedMessage,
+use crate::{
+    download::{
+        messages::{
+            CancelTaskMessage, StartDownload, SubcribeMessage, TaskStateMessage,
+            TaskSubscriberMessages, WaitForFinishedMessage,
+        },
+        state::{TaskState, WaitForFinished},
     },
-    state::{TaskState, WaitForFinished},
+    recipients::MaybeWeakRecipient,
 };
 
 pub trait Cancelable: Actor {
@@ -31,7 +34,7 @@ where
 }
 
 pub trait Subscribe: State {
-    fn subscribe(&mut self, subscriber: Recipient<TaskSubscriberMessages<Self::State>>);
+    fn subscribe(&mut self, subscriber: MaybeWeakRecipient<TaskSubscriberMessages<Self::State>>);
 }
 
 pub trait CanBeWaited: State {
@@ -88,7 +91,7 @@ where
 pub trait AsyncSubscribe: AsyncState {
     fn subscribe(
         &self,
-        subscriber: Recipient<TaskSubscriberMessages<Self::State>>,
+        subscriber: MaybeWeakRecipient<TaskSubscriberMessages<Self::State>>,
     ) -> impl std::future::Future<Output = MailBoxResult<()>> + Send;
 }
 
@@ -104,7 +107,7 @@ where
 {
     async fn subscribe(
         &self,
-        subscriber: Recipient<TaskSubscriberMessages<Self::State>>,
+        subscriber: MaybeWeakRecipient<TaskSubscriberMessages<Self::State>>,
     ) -> MailBoxResult<()> {
         self.send(SubcribeMessage(subscriber)).await
     }
