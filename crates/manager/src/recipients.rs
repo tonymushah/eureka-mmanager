@@ -44,9 +44,9 @@ where
     pub fn do_send(&self, message: M) -> bool {
         if let Some(recept) = self.as_strong() {
             recept.do_send(message);
-            return true;
+            true
         } else {
-            return false;
+            false
         }
     }
     pub fn send(&self, message: M) -> Option<RecipientRequest<M>> {

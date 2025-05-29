@@ -236,7 +236,7 @@ impl Download for Task {
                         Ok(res.data)
                     }
                     .map(move |res: ManagerCoreResult<Object>| {
-                        let _ = send_to_subs_map(res.into());
+                        send_to_subs_map(res.into());
                     })
                     .into_actor(self),
                 ),

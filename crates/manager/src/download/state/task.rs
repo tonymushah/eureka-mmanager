@@ -119,10 +119,12 @@ where
     }
 }
 
-pub(crate) fn make_wait_for_finish_couple<T, L>() -> (
+type WaitForFinishedCouple<T, L> = (
     Recipient<TaskSubscriberMessages<DownloadTaskState<T, L>>>,
     WaitForFinished<T, L>,
-)
+);
+
+pub(crate) fn make_wait_for_finish_couple<T, L>() -> WaitForFinishedCouple<T, L>
 where
     T: 'static + Send + Clone + Sync,
     L: 'static + Send + Sync,

@@ -65,10 +65,10 @@ impl Download for Task {
                     }
                     .map(move |res: ManagerCoreResult<CoverObject>| match res {
                         Ok(data) => {
-                            let _ = send_to_subscribers2(DownloadTaskState::Done(data));
+                            send_to_subscribers2(DownloadTaskState::Done(data));
                         }
                         Err(err) => {
-                            let _ = send_to_subscribers2(DownloadTaskState::Error(err.into()));
+                            send_to_subscribers2(DownloadTaskState::Error(err.into()));
                         }
                     })
                     .into_actor(self),
