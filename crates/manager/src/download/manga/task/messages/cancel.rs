@@ -18,6 +18,6 @@ impl Cancelable for Task {
         if let Some(handle) = self.handle.take() {
             ctx.cancel_future(handle);
         }
-        self.sender.send_replace(State::Canceled);
+        self.send_to_subscrbers()(State::Canceled);
     }
 }

@@ -12,7 +12,7 @@ use crate::download::{
 impl State for MangaDownloadTask {
     type State = MangaDownloadTaskState;
     fn inner_state(&self) -> Self::State {
-        self.sender.borrow().deref().clone()
+        self.state.read().deref().clone()
     }
 }
 
