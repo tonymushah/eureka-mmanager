@@ -109,7 +109,12 @@ where
             TaskSubscriberMessages::ID(_) => {
                 let _ = self.state.send_replace(DownloadTaskState::Pending);
             }
-            _ => {}
+            TaskSubscriberMessages::Dropped => {
+                let state = Into::<TaskState>::into(self.state.borrow().deref());
+                if !state.is_finished() {
+                    let _ = self.state.send_replace(DownloadTaskState::Canceled);
+                }
+            }
         };
     }
 }
@@ -132,6 +137,7 @@ where
 #[derive(Debug, MessageResponse)]
 pub struct WaitForFinished<T, L> {
     state: Receiver<DownloadTaskState<T, L>>,
+
     fut: ReusableBoxFuture<'static, Result<T, WaitForFinishedError>>,
 }
 
