@@ -62,7 +62,7 @@ fn main() -> anyhow::Result<()> {
     });
     run.block_on(async {
         if tokio::runtime::Handle::try_current().is_ok() {
-            println!("Has a tokio handle! :D");
+            log::info!("Has a tokio handle! :D");
         }
         let chapter_ids = [
             "48ab312a-5cb9-46e9-8061-5eca0dae32e3",
