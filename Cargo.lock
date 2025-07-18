@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "eureka-mmanager"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "actix",
  "anyhow",
@@ -705,7 +705,7 @@ dependencies = [
  "criterion",
  "eureka-mmanager-core",
  "futures-util",
- "itertools 0.14.0",
+ "itertools 0.10.5",
  "log",
  "mangadex-api",
  "mangadex-api-input-types",
