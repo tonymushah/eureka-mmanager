@@ -176,7 +176,7 @@ mod archive {
                             filename,
                             file: _,
                         } => {
-                            println!("CoverImage => {}", filename);
+                            println!("CoverImage => {filename}");
                         }
                         emdx::archive::pull::any::PossibleEntryData::ChapterImage {
                             filename,
@@ -184,7 +184,7 @@ mod archive {
                             chapter,
                             mode,
                         } => {
-                            println!("ChapterImage({chapter} - {mode:?}) => {}", filename);
+                            println!("ChapterImage({chapter} - {mode:?}) => {filename}");
                         }
                         emdx::archive::pull::any::PossibleEntryData::Any { tar_path, file: _ } => {
                             println!("Any => {tar_path:?}");

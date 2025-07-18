@@ -49,9 +49,9 @@ impl AsyncRun for CoverDeleteArgs {
 
         let dir_option = ctx.manager.get_dir_options().await?;
         for id in &ids {
-            info!("Deleting cover {}", id);
+            info!("Deleting cover {id}");
             dir_option.delete_cover(*id).await?;
-            info!("Deleted cover {}", id);
+            info!("Deleted cover {id}");
             pb.inc(1);
         }
         pb.finish();

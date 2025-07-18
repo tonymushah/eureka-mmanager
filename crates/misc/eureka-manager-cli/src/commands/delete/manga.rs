@@ -48,9 +48,9 @@ impl AsyncRun for MangaDeleteArgs {
         info!("Deleting {} titles", ids.len());
         let dir_option = ctx.manager.get_dir_options().await?;
         for id in &ids {
-            info!("Deleting title {}", id);
+            info!("Deleting title {id}");
             let delete_data = dir_option.delete_manga(*id).await?;
-            info!("Deleted title {}", id);
+            info!("Deleted title {id}");
             info!(
                 "Deleted {} covers: {:?}",
                 delete_data.covers.len(),

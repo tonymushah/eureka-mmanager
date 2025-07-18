@@ -127,7 +127,7 @@ impl Pull<MangaObject, Uuid> for DirsOptions {
     type Error = crate::Error;
     // TODO add cbor support
     fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<MangaObject> {
-        let manga_id_path = self.mangas_add(format!("{}.json", id));
+        let manga_id_path = self.mangas_add(format!("{id}.json"));
         let file = BufReader::new(File::open(manga_id_path)?);
         let manga: MangaData = serde_json::from_reader(file)?;
         Ok(manga.data)

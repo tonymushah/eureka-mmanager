@@ -123,7 +123,7 @@ impl<I> IntoFiltered<CoverListDataPullFilterParams> for I where I: Iterator<Item
 impl Pull<CoverObject, Uuid> for DirsOptions {
     type Error = crate::Error;
     fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<CoverObject> {
-        let manga_id_path = self.covers_add(format!("{}.json", id));
+        let manga_id_path = self.covers_add(format!("{id}.json"));
         let file = BufReader::new(File::open(manga_id_path)?);
         let manga: CoverData = serde_json::from_reader(file)?;
         Ok(manga.data)

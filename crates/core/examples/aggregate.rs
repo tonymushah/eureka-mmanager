@@ -12,6 +12,6 @@ fn main() -> anyhow::Result<()> {
             translated_language: Default::default(),
             groups: Default::default(),
         });
-    println!("{:#?}", aggregate);
+    println!("{aggregate:#?}");
     Ok(())
 }

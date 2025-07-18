@@ -192,7 +192,7 @@ impl<I> IntoFiltered<ChapterListDataPullFilterParams> for I where I: Iterator<It
 impl Pull<ChapterObject, Uuid> for DirsOptions {
     type Error = crate::Error;
     fn pull(&self, id: Uuid) -> crate::ManagerCoreResult<ChapterObject> {
-        let manga_id_path = self.chapters_add(format!("{}", id)).join("data.json");
+        let manga_id_path = self.chapters_add(format!("{id}")).join("data.json");
         let file = BufReader::new(File::open(manga_id_path)?);
         let manga: ChapterData = serde_json::from_reader(file)?;
         Ok(manga.data)
