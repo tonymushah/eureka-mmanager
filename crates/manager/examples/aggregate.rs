@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
                 groups: Default::default(),
             })
             .await;
-        println!("{:#?}", aggregate);
+        println!("{aggregate:#?}");
         Ok::<(), anyhow::Error>(())
     })?;
     Ok(())
