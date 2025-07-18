@@ -97,7 +97,9 @@ impl Drop for ChapterDownloadTask {
 impl Actor for ChapterDownloadTask {
     type Context = Context<Self>;
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
-        if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading() {
+        if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading()
+            || self.subscribers.has_connection()
+        {
             Running::Continue
         } else {
             Running::Stop
