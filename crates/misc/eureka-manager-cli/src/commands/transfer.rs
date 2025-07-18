@@ -183,7 +183,7 @@ impl AsyncRun for TransferCommand {
                 }
                 entries
             };
-            info!("Transfering {} chapter...", id);
+            info!("Transfering {id} chapter...");
             let manga = chapter
                 .find_first_relationships(RelationshipType::Manga)
                 .cloned();
@@ -196,7 +196,7 @@ impl AsyncRun for TransferCommand {
                 target_opts.push(images).await?;
             }
 
-            info!("Transfered {} chapter!", id);
+            info!("Transfered {id} chapter!");
             if let Some(manga) = manga {
                 if mangas.contains(&manga.id) {
                     mangas.push(manga.id);
@@ -216,20 +216,20 @@ impl AsyncRun for TransferCommand {
             {
                 covers.push(cover.id);
             }
-            info!("Transfering {} title...", id);
+            info!("Transfering {id} title...");
             if self.verify {
                 target_opts.verify_and_push(manga).await?;
             } else {
                 target_opts.push(manga).await?;
             }
-            info!("Transfered {} title!", id);
+            info!("Transfered {id} title!");
         }
 
         covers.dedup();
         let mut cover_stream = current_opts.get_covers_by_ids(covers.into_iter()).await?;
         while let Some(cover) = StreamExt::next(&mut cover_stream).await {
             let id = cover.id;
-            info!("Transfering {} cover...", id);
+            info!("Transfering {id} cover...");
             let image = current_opts.get_cover_image(cover.id).await?;
             if self.verify {
                 target_opts
@@ -238,7 +238,7 @@ impl AsyncRun for TransferCommand {
             } else {
                 target_opts.push((cover, BufReader::new(image))).await?;
             }
-            info!("Transfered {} cover!", id);
+            info!("Transfered {id} cover!");
         }
         Ok(())
     }

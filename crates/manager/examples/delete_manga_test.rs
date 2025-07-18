@@ -16,7 +16,7 @@ fn main() -> anyhow::Result<()> {
         let data = options_actor.delete_manga(manga_id).await?;
         // The `MangaDeleteData` consists of `covers` field which is the deleted covers ids
         // and `chapters` field which is the deleted chapters ids
-        println!("{:#?}", data);
+        println!("{data:#?}");
         // Get all the manga chapter
         let chapters: Vec<Uuid> = {
             let params = ChapterListDataPullFilterParams {

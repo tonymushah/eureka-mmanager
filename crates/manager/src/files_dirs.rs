@@ -62,7 +62,7 @@ impl Actor for DirsOptions {
     type Context = Context<Self>;
     fn started(&mut self, _ctx: &mut Self::Context) {
         if let Err(e) = self.verify_and_init() {
-            error!("{:#?}", e);
+            error!("{e:#?}");
         }
     }
 }

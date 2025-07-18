@@ -80,8 +80,7 @@ impl AsyncRun for MangaDownloadArgs {
                     );
                     data.find_first_relationships(RelationshipType::CoverArt)
                         .ok_or(anyhow::Error::msg(format!(
-                            "Cannot find the title {} cover art",
-                            id
+                            "Cannot find the title {id} cover art"
                         )))?
                         .clone()
                 };
@@ -108,7 +107,7 @@ impl AsyncRun for MangaDownloadArgs {
                 Ok::<_, anyhow::Error>(())
             };
             if let Err(err) = task.await {
-                log::error!("{}", err);
+                log::error!("{err}");
             }
             progress.inc(1);
         }

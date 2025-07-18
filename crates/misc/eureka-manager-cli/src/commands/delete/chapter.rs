@@ -47,9 +47,9 @@ impl AsyncRun for ChapterDeleteArgs {
         info!("Deleting {} chapter", ids.len());
         let dir_option = ctx.manager.get_dir_options().await?;
         for id in &ids {
-            info!("Deleting chapter {}", id);
+            info!("Deleting chapter {id}");
             dir_option.delete_chapter(*id).await?;
-            info!("Deleted chapter {}", id);
+            info!("Deleted chapter {id}");
             pb.inc(1);
         }
         pb.finish();

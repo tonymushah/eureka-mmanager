@@ -105,6 +105,9 @@ where
         }
         self.clean_up();
     }
+    pub fn has_connection(&self) -> bool {
+        self.0.read().iter().any(|r| r.connected())
+    }
 }
 
 impl<M> Recipients<M>

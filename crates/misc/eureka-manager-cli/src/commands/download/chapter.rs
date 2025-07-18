@@ -127,8 +127,7 @@ impl AsyncRun for ChapterDownloadArgs {
                     );
                     data.find_first_relationships(RelationshipType::Manga)
                         .ok_or(anyhow::Error::msg(format!(
-                            "Cannot find the chapter {} title",
-                            id
+                            "Cannot find the chapter {id} title"
                         )))?
                         .clone()
                 };
@@ -191,7 +190,7 @@ impl AsyncRun for ChapterDownloadArgs {
             let res = task.await;
 
             if let Err(err) = res {
-                log::error!("{}", err);
+                log::error!("{err}");
             }
             progress.inc(1);
         }

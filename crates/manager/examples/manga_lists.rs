@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
         let params = MangaListDataPullFilterParams {
             ..Default::default()
         };
-        println!("{:#?}", params);
+        println!("{params:#?}");
         let data_pull = options_actor
             .get_manga_list()
             .await?
