@@ -8,7 +8,7 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::{
     download::{
-        messages::{DropSingleTaskMessage, TaskSubscriberMessages},
+        messages::{DropSingleTaskMessage, StopTask, TaskSubscriberMessages},
         state::{DownloadTaskState, TaskState},
     },
     recipients::Recipients,
@@ -33,6 +33,7 @@ pub struct CoverDownloadTask {
     state: ArcRwLock<CoverDownloadTaskState>,
     subscribers: Recipients<TaskSubscriberMessages<CoverDownloadTaskState>>,
     manager: Addr<CoverDownloadManager>,
+    should_stop: bool,
 }
 
 impl CoverDownloadTask {
@@ -52,7 +53,9 @@ impl CoverDownloadTask {
 
 impl Drop for CoverDownloadTask {
     fn drop(&mut self) {
-        self.manager.do_send(DropSingleTaskMessage(self.id));
+        if !self.should_stop {
+            self.manager.do_send(DropSingleTaskMessage(self.id));
+        }
         self.subscribers.do_send(TaskSubscriberMessages::Dropped);
     }
 }
@@ -71,6 +74,14 @@ impl Actor for CoverDownloadTask {
     }
 }
 
+impl Handler<StopTask> for CoverDownloadTask {
+    type Result = ();
+    fn handle(&mut self, _msg: StopTask, ctx: &mut Self::Context) -> Self::Result {
+        self.should_stop = true;
+        ctx.terminate();
+    }
+}
+
 impl CoverDownloadTask {
     pub(super) fn new(id: Uuid, manager: Addr<CoverDownloadManager>) -> Self {
         Self {
@@ -79,6 +90,7 @@ impl CoverDownloadTask {
             state: Default::default(),
             manager,
             subscribers: Default::default(),
+            should_stop: false,
         }
     }
 }

@@ -7,7 +7,7 @@ use actix::{prelude::*, WeakAddr};
 use tokio::sync::Notify;
 use uuid::Uuid;
 
-use crate::prelude::AsyncState;
+use crate::{download::messages::StopTask, prelude::AsyncState};
 
 use self::task::CoverDownloadTask;
 
@@ -185,5 +185,14 @@ impl Handler<GetTaskMessage<CoverDownloadTask>> for CoverDownloadManager {
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         self.get_task(msg.into())
+    }
+}
+
+impl Drop for CoverDownloadManager {
+    fn drop(&mut self) {
+        self.tasks
+            .values()
+            .flat_map(|maybe_task| maybe_task.upgrade())
+            .for_each(|task| task.do_send(StopTask));
     }
 }

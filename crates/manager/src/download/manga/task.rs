@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{
     download::{
-        messages::{DropSingleTaskMessage, TaskSubscriberMessages},
+        messages::{DropSingleTaskMessage, StopTask, TaskSubscriberMessages},
         state::{DownloadTaskState, TaskState},
     },
     recipients::Recipients,
@@ -32,11 +32,14 @@ pub struct MangaDownloadTask {
     state: ArcRwLock<MangaDownloadTaskState>,
     subscribers: Recipients<TaskSubscriberMessages<MangaDownloadTaskState>>,
     manager: Addr<MangaDownloadManager>,
+    should_stop: bool,
 }
 
 impl Drop for MangaDownloadTask {
     fn drop(&mut self) {
-        self.manager.do_send(DropSingleTaskMessage(self.id));
+        if !self.should_stop {
+            self.manager.do_send(DropSingleTaskMessage(self.id));
+        }
         self.subscribers.do_send(TaskSubscriberMessages::Dropped);
     }
 }
@@ -51,6 +54,14 @@ impl Actor for MangaDownloadTask {
         } else {
             Running::Stop
         }
+    }
+}
+
+impl Handler<StopTask> for MangaDownloadTask {
+    type Result = ();
+    fn handle(&mut self, _msg: StopTask, ctx: &mut Self::Context) -> Self::Result {
+        self.should_stop = true;
+        ctx.terminate();
     }
 }
 
@@ -77,6 +88,7 @@ impl MangaDownloadTask {
             state: Default::default(),
             manager,
             subscribers: Default::default(),
+            should_stop: false,
         }
     }
 }

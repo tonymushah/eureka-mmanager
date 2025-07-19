@@ -7,6 +7,8 @@ use actix::{prelude::*, WeakAddr};
 use tokio::sync::Notify;
 use uuid::Uuid;
 
+use crate::download::messages::StopTask;
+
 use self::task::MangaDownloadTask;
 
 use super::{
@@ -180,5 +182,14 @@ impl Handler<GetTaskMessage<MangaDownloadTask>> for MangaDownloadManager {
         _ctx: &mut Self::Context,
     ) -> Self::Result {
         self.get_task(msg.into())
+    }
+}
+
+impl Drop for MangaDownloadManager {
+    fn drop(&mut self) {
+        self.tasks
+            .values()
+            .flat_map(|maybe_task| maybe_task.upgrade())
+            .for_each(|task| task.do_send(StopTask));
     }
 }

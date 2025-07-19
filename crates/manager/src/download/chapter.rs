@@ -8,6 +8,8 @@ use task::DownloadMode;
 use tokio::sync::Notify;
 use uuid::Uuid;
 
+use crate::download::messages::StopTask;
+
 use self::task::ChapterDownloadTask;
 
 use super::{
@@ -157,6 +159,15 @@ impl Handler<ChapterDownloadMessage> for ChapterDownloadManager {
     type Result = <ChapterDownloadMessage as Message>::Result;
     fn handle(&mut self, msg: ChapterDownloadMessage, ctx: &mut Self::Context) -> Self::Result {
         self.new_task(msg, ctx)
+    }
+}
+
+impl Drop for ChapterDownloadManager {
+    fn drop(&mut self) {
+        self.tasks
+            .values()
+            .flat_map(|maybe_task| maybe_task.upgrade())
+            .for_each(|task| task.do_send(StopTask));
     }
 }
 

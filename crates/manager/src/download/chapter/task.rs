@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     download::{
-        messages::{DropSingleTaskMessage, TaskSubscriberMessages},
+        messages::{DropSingleTaskMessage, StopTask, TaskSubscriberMessages},
         state::{DownloadTaskState, TaskState},
     },
     recipients::Recipients,
@@ -77,6 +77,7 @@ pub struct ChapterDownloadTask {
     state: ArcRwLock<ChapterDownloadTaskState>,
     manager: Addr<ChapterDownloadManager>,
     subscribers: Recipients<TaskSubscriberMessages<ChapterDownloadTaskState>>,
+    should_stop: bool,
 }
 
 impl ChapterDownloadTask {
@@ -89,7 +90,9 @@ impl ChapterDownloadTask {
 
 impl Drop for ChapterDownloadTask {
     fn drop(&mut self) {
-        self.manager.do_send(DropSingleTaskMessage(self.id));
+        if !self.should_stop {
+            self.manager.do_send(DropSingleTaskMessage(self.id));
+        }
         self.subscribers.do_send(TaskSubscriberMessages::Dropped);
     }
 }
@@ -107,6 +110,14 @@ impl Actor for ChapterDownloadTask {
     }
 }
 
+impl Handler<StopTask> for ChapterDownloadTask {
+    type Result = ();
+    fn handle(&mut self, _msg: StopTask, ctx: &mut Self::Context) -> Self::Result {
+        self.should_stop = true;
+        ctx.terminate();
+    }
+}
+
 impl ChapterDownloadTask {
     pub(super) fn new<M: Into<DownloadMode>>(
         id: Uuid,
@@ -120,6 +131,7 @@ impl ChapterDownloadTask {
             state: Default::default(),
             subscribers: Default::default(),
             manager,
+            should_stop: false,
         }
     }
 }

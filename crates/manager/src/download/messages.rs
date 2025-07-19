@@ -125,3 +125,7 @@ where
 {
     type Result = Option<Addr<T>>;
 }
+
+#[derive(Debug, Message)]
+#[rtype(result = "()")]
+pub(crate) struct StopTask;
