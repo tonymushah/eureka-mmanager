@@ -7,14 +7,6 @@ use crate::{
     history::HistoryBaseError,
 };
 
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WhenError {
-    type_: ErrorType,
-    message: String,
-    result: String,
-}
-
 /// This is the crate Error
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
