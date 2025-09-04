@@ -58,6 +58,7 @@ impl Download for Task {
             let manager = self.manager.clone();
             let mode = self.mode;
             let id = self.id;
+            let force_port_443 = self.force_port_443;
 
             let entry = HistoryEntry::new(id, RelationshipType::Chapter);
             let send_to_subscrbers = self.send_to_subscrbers();
@@ -135,6 +136,7 @@ impl Download for Task {
                             .chapter(id)
                             .report(true)
                             .mode(mode)
+                            .force_port_443(force_port_443)
                             .build()?
                             .download_stream_with_checker(|at_home, resp| {
                                 if !is_new.load(AtomicOrd::Relaxed)

@@ -30,6 +30,7 @@ pub struct ChapterDownloadMessage {
     id: Uuid,
     state: DownloadMessageState,
     mode: DownloadMode,
+    force_port_443: bool,
 }
 
 impl ChapterDownloadMessage {
@@ -38,6 +39,7 @@ impl ChapterDownloadMessage {
             id,
             state: DownloadMessageState::Pending,
             mode: DownloadMode::Normal,
+            force_port_443: false,
         }
     }
     pub fn state(self, state: DownloadMessageState) -> Self {
@@ -46,6 +48,12 @@ impl ChapterDownloadMessage {
     pub fn mode<M: Into<DownloadMode>>(self, mode: M) -> Self {
         Self {
             mode: mode.into(),
+            ..self
+        }
+    }
+    pub fn force_port_443(self, force_port_443: bool) -> Self {
+        Self {
+            force_port_443,
             ..self
         }
     }
@@ -107,13 +115,16 @@ impl TaskManager for ChapterDownloadManager {
                     if let Some(tsk) = weak.upgrade() {
                         tsk
                     } else {
-                        let tsk = Self::Task::new(msg.id, msg.mode, ctx.address()).start();
+                        let tsk =
+                            Self::Task::new(msg.id, msg.mode, msg.force_port_443, ctx.address())
+                                .start();
                         let _weak = std::mem::replace(weak, tsk.downgrade());
                         tsk
                     }
                 }
                 std::collections::hash_map::Entry::Vacant(vacant_entry) => {
-                    let tsk = Self::Task::new(msg.id, msg.mode, ctx.address()).start();
+                    let tsk = Self::Task::new(msg.id, msg.mode, msg.force_port_443, ctx.address())
+                        .start();
                     vacant_entry.insert(tsk.downgrade());
                     tsk
                 }
