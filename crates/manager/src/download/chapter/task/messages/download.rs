@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    path::Path,
     sync::{
         atomic::{AtomicBool, Ordering as AtomicOrd},
         Arc,
@@ -83,37 +84,51 @@ impl Download for Task {
                         manager.verify_and_push(res.data.clone()).await?;
                         // Getting fetching AtHome data
                         send_to_subscrbers(DownloadTaskState::Loading(State::FetchingAtHomeData));
-                        let current_images = manager.get_chapter_images(id).await?;
-                        let mut images: HashMap<String, usize> = Default::default();
-                        // getting current images size
-                        match mode {
-                            crate::download::chapter::task::DownloadMode::Normal => {
-                                for image in &current_images.data {
-                                    if let Ok(b) =
-                                        manager.get_chapter_image(id, image.clone()).await
-                                    {
-                                        if let Ok(len) = b.metadata().map(|met| met.len() as usize)
+                        let current_images =
+                            manager.get_chapter_images(id).await.unwrap_or_default();
+                        let (images, is_new) = {
+                            let mut images: HashMap<String, usize> = Default::default();
+                            // getting current images size
+                            match mode {
+                                crate::download::chapter::task::DownloadMode::Normal => {
+                                    for image in &current_images.data {
+                                        if let Ok(b) =
+                                            manager.get_chapter_image(id, image.clone()).await
                                         {
-                                            images.insert(image.clone(), len);
+                                            if let Ok(len) =
+                                                b.metadata().map(|met| met.len() as usize)
+                                            {
+                                                images.insert(image.clone(), len);
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            crate::download::chapter::task::DownloadMode::DataSaver => {
-                                for image in &current_images.data_saver {
-                                    if let Ok(b) = manager
-                                        .get_chapter_image_data_saver(id, image.clone())
-                                        .await
-                                    {
-                                        if let Ok(len) = b.metadata().map(|met| met.len() as usize)
+                                crate::download::chapter::task::DownloadMode::DataSaver => {
+                                    for image in &current_images.data_saver {
+                                        if let Ok(b) = manager
+                                            .get_chapter_image_data_saver(id, image.clone())
+                                            .await
                                         {
-                                            images.insert(image.clone(), len);
+                                            if let Ok(len) =
+                                                b.metadata().map(|met| met.len() as usize)
+                                            {
+                                                images.insert(image.clone(), len);
+                                            }
                                         }
                                     }
                                 }
-                            }
+                            };
+                            let is_new = AtomicBool::new(match mode {
+                                crate::download::chapter::task::DownloadMode::Normal => {
+                                    current_images.data.is_empty()
+                                }
+                                crate::download::chapter::task::DownloadMode::DataSaver => {
+                                    current_images.data_saver.is_empty()
+                                }
+                            });
+                            (images, is_new)
                         };
-                        let is_new = AtomicBool::new(current_images.is_empty());
+
                         let is_first_loading = AtomicBool::new(true);
                         let stream = client
                             .download()
@@ -133,7 +148,8 @@ impl Download for Task {
                                                     .chapter
                                                     .data
                                                     .partial_cmp(&current_images.data)
-                                                    .is_some_and(|cm| cm.is_eq()),
+                                                    .map(|cm| cm.is_ne())
+                                                    .unwrap_or(true),
                                                 AtomicOrd::Relaxed,
                                             );
                                         }
@@ -144,21 +160,25 @@ impl Download for Task {
                                                     .chapter
                                                     .data_saver
                                                     .partial_cmp(&current_images.data_saver)
-                                                    .is_some_and(|cm| cm.is_eq()),
+                                                    .map(|cm| cm.is_ne())
+                                                    .unwrap_or(true),
                                                 AtomicOrd::Relaxed,
                                             );
                                         }
                                     };
                                     is_first_loading.swap(false, AtomicOrd::Relaxed);
                                 }
+                                // log::debug!("{}", is_new.load(AtomicOrd::Relaxed));
                                 if is_new.load(AtomicOrd::Relaxed) {
                                     false
                                 } else {
-                                    !resp
-                                        .content_length()
+                                    resp.content_length()
                                         .and_then(|cl| {
+                                            let filename = Path::new(resp.url().path())
+                                                .file_name()?
+                                                .to_str()?;
                                             images
-                                                .get(resp.url().path().split('/').next()?)?
+                                                .get(filename)?
                                                 .partial_cmp(&TryInto::<usize>::try_into(cl).ok()?)
                                         })
                                         .map(|o| o.is_eq())
