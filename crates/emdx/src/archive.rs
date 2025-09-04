@@ -145,7 +145,7 @@ where
     pub fn manga_pull(
         &mut self,
         rewind: bool,
-    ) -> ThisResult<ArchiveMangaPull<DecoderInner<'a, R>>> {
+    ) -> ThisResult<ArchiveMangaPull<'_, DecoderInner<'a, R>>> {
         let package_contents = self.get_package_contents().cloned()?;
         let archive = self.get_archive(rewind)?;
         let entries = archive.entries()?;
@@ -157,7 +157,7 @@ where
     pub fn cover_pull(
         &mut self,
         rewind: bool,
-    ) -> ThisResult<ArchiveCoverPull<DecoderInner<'a, R>>> {
+    ) -> ThisResult<ArchiveCoverPull<'_, DecoderInner<'a, R>>> {
         let package_contents = self.get_package_contents().cloned()?;
         let archive = self.get_archive(rewind)?;
         let entries = archive.entries()?;
@@ -169,7 +169,7 @@ where
     pub fn chapter_pull(
         &mut self,
         rewind: bool,
-    ) -> ThisResult<ArchiveChapterPull<DecoderInner<'a, R>>> {
+    ) -> ThisResult<ArchiveChapterPull<'_, DecoderInner<'a, R>>> {
         let package_contents = self.get_package_contents().cloned()?;
         let archive = self.get_archive(rewind)?;
         let entries = archive.entries()?;
@@ -286,7 +286,10 @@ where
             }
         })
     }
-    pub fn any_pull(&mut self, rewind: bool) -> ThisResult<ArchiveAnyPull<DecoderInner<'a, R>>> {
+    pub fn any_pull(
+        &mut self,
+        rewind: bool,
+    ) -> ThisResult<ArchiveAnyPull<'_, DecoderInner<'a, R>>> {
         let package_contents = self.get_package_contents().cloned()?;
         let archive = self.get_archive(rewind)?;
         let entries = archive.entries()?;
