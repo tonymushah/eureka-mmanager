@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
 use mangadex_api_types_rust::RelationshipType;
+use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
 #[error(transparent)]
+#[non_exhaustive]
 pub enum Error {
     Io(#[from] std::io::Error),
     DirsOptionsVerification(#[from] crate::file_dirs::verification::DirsOptionsVerificationError),
@@ -18,4 +20,6 @@ pub enum Error {
     Regex(#[from] regex::Error),
     #[error("Missing Relationship {0:#?}")]
     MissingRelationships(Vec<RelationshipType>),
+    #[error("No chapter images for {0}")]
+    NoChapterImages(Uuid),
 }
