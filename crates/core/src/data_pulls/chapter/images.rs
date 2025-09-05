@@ -28,7 +28,14 @@ fn m_read_dir<P: AsRef<Path>>(path: P) -> Vec<String> {
                             .map(|ext| ext != "json")
                             .unwrap_or_default()
                 })
-                .filter_map(|e| e.file_name().to_str().map(String::from))
+                .filter_map(|e| {
+                    if let Some(len) = e.metadata().ok().map(|md| md.len()) {
+                        if len == 0 {
+                            return None::<String>;
+                        }
+                    }
+                    e.file_name().to_str().map(String::from)
+                })
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default()
@@ -55,6 +62,11 @@ impl Pull<ChapterImagesData, Uuid> for DirsOptions {
         string_f_usize_sort(&mut data)?;
         let mut data_saver = m_read_dir(self.chapters_id_data_saver_add(id));
         string_f_usize_sort(&mut data_saver)?;
-        Ok(ChapterImagesData { data, data_saver })
+        let images = ChapterImagesData { data, data_saver };
+        if images.is_empty() {
+            Err(crate::Error::NoChapterImages(id))
+        } else {
+            Ok(images)
+        }
     }
 }

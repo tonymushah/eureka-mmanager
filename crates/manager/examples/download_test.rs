@@ -65,9 +65,9 @@ fn main() -> anyhow::Result<()> {
             log::info!("Has a tokio handle! :D");
         }
         let chapter_ids = [
-            "48ab312a-5cb9-46e9-8061-5eca0dae32e3",
-            "8a1906ae-08d3-40ab-8d8f-127cbc940ff1",
-            "5ed3d1ba-756e-4077-acbe-4146401c601b",
+            "48512232-f973-47f2-9443-871c06e94104",
+            "8f63a544-dad4-4ac7-be22-beaa6e8c0fe6",
+            "2d86967a-e2fb-4ab8-9d8e-dc109e311cad",
         ]
         .into_iter()
         .flat_map(Uuid::from_str)

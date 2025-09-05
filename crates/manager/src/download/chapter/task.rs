@@ -78,6 +78,7 @@ pub struct ChapterDownloadTask {
     manager: Addr<ChapterDownloadManager>,
     subscribers: Recipients<TaskSubscriberMessages<ChapterDownloadTaskState>>,
     should_stop: bool,
+    force_port_443: bool,
 }
 
 impl ChapterDownloadTask {
@@ -122,6 +123,7 @@ impl ChapterDownloadTask {
     pub(super) fn new<M: Into<DownloadMode>>(
         id: Uuid,
         mode: M,
+        force_port_443: bool,
         manager: Addr<ChapterDownloadManager>,
     ) -> Self {
         Self {
@@ -132,6 +134,7 @@ impl ChapterDownloadTask {
             subscribers: Default::default(),
             manager,
             should_stop: false,
+            force_port_443,
         }
     }
 }
