@@ -39,7 +39,7 @@ log = "^0.4.21"
 tokio-stream = { version = "0.1" }
 bytes = { version = "1.6" }
 itertools = "0"
-mangadex-api-input-types = { version = ">= 0.5, < 1" }
+mangadex-api-input-types = { version = ">= 0.5, < 2" }
 actix = "0.13"
 regex = "1"
 rand = { version = "0" }
