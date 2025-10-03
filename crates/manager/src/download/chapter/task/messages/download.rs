@@ -95,12 +95,10 @@ impl Download for Task {
                                     for image in &current_images.data {
                                         if let Ok(b) =
                                             manager.get_chapter_image(id, image.clone()).await
-                                        {
-                                            if let Ok(len) =
+                                            && let Ok(len) =
                                                 b.metadata().map(|met| met.len() as usize)
-                                            {
-                                                images.insert(image.clone(), len);
-                                            }
+                                        {
+                                            images.insert(image.clone(), len);
                                         }
                                     }
                                 }
@@ -109,12 +107,10 @@ impl Download for Task {
                                         if let Ok(b) = manager
                                             .get_chapter_image_data_saver(id, image.clone())
                                             .await
-                                        {
-                                            if let Ok(len) =
+                                            && let Ok(len) =
                                                 b.metadata().map(|met| met.len() as usize)
-                                            {
-                                                images.insert(image.clone(), len);
-                                            }
+                                        {
+                                            images.insert(image.clone(), len);
                                         }
                                     }
                                 }
