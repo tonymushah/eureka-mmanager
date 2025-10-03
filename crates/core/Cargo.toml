@@ -24,6 +24,7 @@ mangadex-api-input-types.workspace = true
 actix = { workspace = true, optional = true }
 regex.workspace = true
 log = { workspace = true, optional = true }
+non-exhaustive.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true

@@ -1,20 +1,20 @@
 pub mod image;
 
 use std::{
-    fs::{create_dir_all, File},
+    fs::{File, create_dir_all},
     io::{BufWriter, Write},
 };
 
 use itertools::Itertools;
-use mangadex_api_schema_rust::{v5::ChapterObject, ApiData};
+use mangadex_api_schema_rust::{ApiData, v5::ChapterObject};
 use mangadex_api_types_rust::{
     ReferenceExpansionResource, RelationshipType, ResponseType, ResultType,
 };
 use uuid::Uuid;
 
-use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
+use crate::{DirsOptions, ManagerCoreResult, data_pulls::Pull};
 
-use super::{seed_rel, Push};
+use super::{Push, seed_rel};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChapterRequiredRelationship {
@@ -69,11 +69,11 @@ impl Push<ChapterObject> for DirsOptions {
         let mut file = BufWriter::new(File::create(chapter_path.join("data.json"))?);
         serde_json::to_writer(
             &mut file,
-            &ApiData {
+            &non_exhaustive::non_exhaustive!(ApiData<ChapterObject> {
                 response: ResponseType::Entity,
                 result: ResultType::Ok,
-                data,
-            },
+                data: data,
+            }),
         )?;
         file.flush()?;
         Ok(())

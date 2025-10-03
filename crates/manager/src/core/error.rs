@@ -9,13 +9,14 @@ use crate::{
 
 /// This is the crate Error
 #[derive(thiserror::Error, Debug)]
+#[non_exhaustive]
 pub enum Error {
     #[error("An std::io::Error captured! \n Details : {0}")]
     Io(#[from] std::io::Error),
     #[error("An Error captured during sending a request \n Details : {0}")]
     ReqwestError(#[from] reqwest::Error),
     #[error("An Error captured from the `mangadex_api` crate \n Details : {0}")]
-    MangadexAPIError(#[from] mangadex_api_types_rust::error::Error),
+    MangadexAPIError(#[from] mangadex_api::error::Error),
     #[error("An error occured during Joining handles \n Details : {0}")]
     TokioJoinError(#[from] tokio::task::JoinError),
     #[error("An error occured when parsing some string to json \n Details : {0}")]
@@ -29,7 +30,7 @@ pub enum Error {
     #[error("An error occured when parsing something into a String \n Details : {0}")]
     StringParseError(#[from] std::string::ParseError),
     #[error("An error occured when building a mangdex_api request \n Details : {0}")]
-    MangadexBuilderError(#[from] mangadex_api_types_rust::error::BuilderError),
+    MangadexBuilderError(#[from] mangadex_api::error::BuilderError),
     #[error("An Download Tasks limit Exceded {current}/{limit}")]
     DownloadTaskLimitExceded { current: u16, limit: u16 },
     #[error("An error occured when converting into a int")]

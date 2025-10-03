@@ -4,8 +4,8 @@ use std::{
 };
 
 use mangadex_api_schema_rust::{
-    v5::{CoverObject, RelatedAttributes},
     ApiData,
+    v5::{CoverObject, RelatedAttributes},
 };
 use mangadex_api_types_rust::{
     ReferenceExpansionResource, RelationshipType, ResponseType, ResultType,
@@ -29,11 +29,11 @@ impl Push<CoverObject> for DirsOptions {
         let mut file = BufWriter::new(File::create(cover_path)?);
         serde_json::to_writer(
             &mut file,
-            &ApiData {
+            &non_exhaustive::non_exhaustive!(ApiData<CoverObject> {
                 response: ResponseType::Entity,
                 result: ResultType::Ok,
-                data,
-            },
+                data: data,
+            }),
         )?;
         file.flush()?;
         Ok(())

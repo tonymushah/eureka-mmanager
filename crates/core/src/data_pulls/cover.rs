@@ -16,9 +16,9 @@ use uuid::Uuid;
 
 use crate::{DirsOptions, ManagerCoreResult};
 
-use super::{sort::IntoSorted, IntoFiltered, Pull};
 #[cfg(feature = "stream")]
 use super::{AsyncIntoSorted, IntoParamedFilteredStream};
+use super::{IntoFiltered, Pull, sort::IntoSorted};
 
 #[cfg(feature = "stream")]
 #[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
@@ -58,6 +58,7 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
                         b.cmp(a)
                     });
                 }
+                _ => {}
             },
             CoverSortOrder::UpdatedAt(o) => match o {
                 OrderDirection::Ascending => {
@@ -74,6 +75,7 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
             CoverSortOrder::Volume(o) => match o {
                 OrderDirection::Ascending => {
@@ -106,7 +108,9 @@ impl IntoSorted<CoverSortOrder> for Vec<CoverObject> {
                         b.partial_cmp(&a).unwrap_or(Ordering::Less)
                     });
                 }
+                _ => {}
             },
+            _ => {}
         }
         self
     }

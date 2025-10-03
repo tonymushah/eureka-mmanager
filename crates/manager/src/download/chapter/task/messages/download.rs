@@ -2,8 +2,8 @@ use std::{
     collections::HashMap,
     path::Path,
     sync::{
-        atomic::{AtomicBool, Ordering as AtomicOrd},
         Arc,
+        atomic::{AtomicBool, Ordering as AtomicOrd},
     },
 };
 
@@ -15,21 +15,21 @@ use mangadex_api_types_rust::RelationshipType;
 use tokio_stream::StreamExt;
 
 use crate::{
-    data_push::chapter::{image::ChapterImagePushEntry, ChapterRequiredRelationship},
+    ManagerCoreResult,
+    data_push::chapter::{ChapterRequiredRelationship, image::ChapterImagePushEntry},
     download::{
         chapter::task::{
             ChapterDownloadTask as Task, ChapterDownloadTaskState, ChapterDownloadingState as State,
         },
         messages::StartDownload,
-        state::{messages::get::GetManagerStateData, DownloadTaskState, TaskState},
+        state::{DownloadTaskState, TaskState, messages::get::GetManagerStateData},
         traits::task::{Download, State as TaskStateTrait},
     },
     history::{
-        history_w_file::traits::{AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove},
         HistoryEntry,
+        history_w_file::traits::{AsyncAutoCommitRollbackInsert, AsyncAutoCommitRollbackRemove},
     },
     prelude::{ChapterDataPullAsyncTrait, DeleteDataAsyncTrait, PushActorAddr},
-    ManagerCoreResult,
 };
 
 impl Task {
@@ -131,13 +131,14 @@ impl Download for Task {
                         };
 
                         let is_first_loading = AtomicBool::new(true);
-                        let stream = client
+                        let pre_stream = client
                             .download()
                             .chapter(id)
                             .report(true)
                             .mode(mode)
                             .force_port_443(force_port_443)
-                            .build()?
+                            .build()?;
+                        let stream = pre_stream
                             .download_stream_with_checker(|at_home, resp| {
                                 if !is_new.load(AtomicOrd::Relaxed)
                                     && is_first_loading.load(AtomicOrd::Relaxed)
@@ -227,10 +228,7 @@ impl Download for Task {
                                     }
                                 }
                                 Err(e) => {
-                                    if let mangadex_api_types_rust::error::Error::SkippedDownload(
-                                        _,
-                                    ) = &e
-                                    {
+                                    if let mangadex_api::error::Error::SkippedDownload(_) = &e {
                                     } else {
                                         mark_have_error();
                                         log::error!("[chapter|{id}|{filename}]>write - {e}");

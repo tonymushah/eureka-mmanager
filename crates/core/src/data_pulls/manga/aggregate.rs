@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::data_pulls::{chapter::ChapterListDataPullFilterParams, IntoFiltered};
+use crate::data_pulls::{IntoFiltered, chapter::ChapterListDataPullFilterParams};
 
 #[cfg(feature = "stream")]
 use crate::data_pulls::IntoParamedFilteredStream;
@@ -12,8 +12,8 @@ use crate::data_pulls::IntoParamedFilteredStream;
 use itertools::Itertools;
 use mangadex_api_input_types::manga::aggregate::MangaAggregateParam;
 use mangadex_api_schema_rust::v5::{
-    manga_aggregate::{ChapterAggregate, VolumeAggregate},
     ChapterObject, MangaAggregate,
+    manga_aggregate::{ChapterAggregate, VolumeAggregate},
 };
 use mangadex_api_types_rust::ResultType;
 #[cfg(feature = "stream")]
@@ -116,12 +116,12 @@ fn insert_in_collector(collector: &mut AggregateCollector, chapter: ChapterObjec
             chapter.attributes.chapter.clone().unwrap_or_else(none),
         )) {
         std::collections::btree_map::Entry::Vacant(e) => {
-            e.insert(ChapterAggregate {
+            e.insert(non_exhaustive::non_exhaustive!(ChapterAggregate {
                 chapter: chapter.attributes.chapter.clone().unwrap_or_else(none),
                 id: chapter.id,
                 others: Default::default(),
                 count: 1,
-            });
+            }));
         }
         std::collections::btree_map::Entry::Occupied(mut e) => {
             let agg = e.get_mut();
@@ -144,17 +144,17 @@ impl ToMangaAgg for AggregateCollector {
                     .values()
                     .map(|c| c.count)
                     .reduce(|acc, e| acc + e)?;
-                Some(VolumeAggregate {
+                Some(non_exhaustive::non_exhaustive!(VolumeAggregate {
                     volume: volume.0,
                     count: v_count,
                     chapters: chapters.into_values().collect_vec(),
-                })
+                }))
             })
             .collect_vec();
-        MangaAggregate {
+        non_exhaustive::non_exhaustive!(MangaAggregate {
             result: ResultType::Ok,
-            volumes,
-        }
+            volumes: volumes
+        })
     }
 }
 

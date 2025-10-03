@@ -8,12 +8,12 @@ use mangadex_api_schema_rust::v5::ChapterObject;
 use uuid::Uuid;
 
 use crate::{
+    ArcRwLock,
     download::{
         messages::{DropSingleTaskMessage, StopTask, TaskSubscriberMessages},
         state::{DownloadTaskState, TaskState},
     },
     recipients::Recipients,
-    ArcRwLock,
 };
 
 use super::ChapterDownloadManager;
@@ -56,6 +56,7 @@ impl From<Mode> for DownloadMode {
         match value {
             Mode::Normal => Self::Normal,
             Mode::DataSaver => Self::DataSaver,
+            _ => Self::Normal,
         }
     }
 }

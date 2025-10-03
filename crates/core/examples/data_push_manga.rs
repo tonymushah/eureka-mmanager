@@ -1,7 +1,7 @@
-use eureka_mmanager_core::{data_pulls::Pull, data_push::Push, DirsOptions};
+use eureka_mmanager_core::{DirsOptions, data_pulls::Pull, data_push::Push};
 use mangadex_api_schema_rust::{
-    v5::{MangaAttributes, MangaObject},
     ApiObject,
+    v5::{MangaAttributes, MangaObject},
 };
 use mangadex_api_types_rust::{
     ContentRating, Language, MangaDexDateTime, MangaState, MangaStatus, RelationshipType,
@@ -14,10 +14,10 @@ fn main() -> anyhow::Result<()> {
     options.verify_and_init()?;
     let id = Uuid::new_v4();
     let created_at = MangaDexDateTime::default();
-    options.push(ApiObject {
-        id,
+    options.push(non_exhaustive::non_exhaustive!(ApiObject<MangaAttributes> {
+        id: id,
         type_: RelationshipType::Manga,
-        attributes: MangaAttributes {
+        attributes: non_exhaustive::non_exhaustive!(MangaAttributes {
             title: Default::default(),
             alt_titles: Default::default(),
             description: Default::default(),
@@ -35,12 +35,12 @@ fn main() -> anyhow::Result<()> {
             available_translated_languages: Default::default(),
             tags: Default::default(),
             state: MangaState::Draft,
-            created_at,
+            created_at: created_at,
             updated_at: None,
             version: 1,
-        },
+        }),
         relationships: Default::default(),
-    })?;
+    }))?;
     let _title = Pull::<MangaObject, _>::pull(&options, id)?;
     Ok(())
 }

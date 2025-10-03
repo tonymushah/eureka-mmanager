@@ -29,14 +29,14 @@ impl<T> Collection<T> {
 impl<T> TryFrom<Collection<T>> for Results<T> {
     type Error = TryFromIntError;
     fn try_from(value: Collection<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
+        Ok(non_exhaustive::non_exhaustive!(Self {
             result: ResultType::Ok,
             response: ResponseType::Collection,
             data: value.data,
             limit: value.limit.try_into()?,
             offset: value.offset.try_into()?,
             total: value.total.try_into()?,
-        })
+        }))
     }
 }
 

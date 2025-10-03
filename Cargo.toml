@@ -46,6 +46,7 @@ zstd = "0.13"
 tar = "0.4"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
+non-exhaustive = "0.1"
 
 [workspace.package]
 edition = "2024"

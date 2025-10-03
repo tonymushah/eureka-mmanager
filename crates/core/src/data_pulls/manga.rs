@@ -16,9 +16,9 @@ use uuid::Uuid;
 
 use crate::{DirsOptions, ManagerCoreResult};
 
-use super::{sort::IntoSorted, IntoFiltered, Pull};
 #[cfg(feature = "stream")]
 use super::{AsyncIntoSorted, IntoParamedFilteredStream};
+use super::{IntoFiltered, Pull, sort::IntoSorted};
 
 #[cfg(feature = "stream")]
 #[cfg_attr(docsrs, doc(cfg(feature = "stream")))]
@@ -58,6 +58,7 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
                         b.cmp(a)
                     });
                 }
+                _ => {}
             },
             MangaSortOrder::FollowedCount(_) => {}
             MangaSortOrder::LatestUploadedChapter(_) => {}
@@ -77,6 +78,7 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
             MangaSortOrder::UpdatedAt(o) => match o {
                 OrderDirection::Ascending => {
@@ -93,6 +95,7 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
             MangaSortOrder::Year(o) => match o {
                 OrderDirection::Ascending => {
@@ -109,7 +112,9 @@ impl IntoSorted<MangaSortOrder> for Vec<MangaObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
+            _ => {}
         };
         self
     }

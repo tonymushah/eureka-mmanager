@@ -62,6 +62,7 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                         b.cmp(a)
                     });
                 }
+                _ => {}
             },
             ChapterSortOrder::Chapter(o) => match o {
                 OrderDirection::Ascending => {
@@ -94,6 +95,7 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                         b.partial_cmp(&a).unwrap_or(Ordering::Less)
                     });
                 }
+                _ => {}
             },
             ChapterSortOrder::PublishAt(o) => match o {
                 OrderDirection::Ascending => {
@@ -110,6 +112,7 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
             ChapterSortOrder::ReadableAt(o) => match o {
                 OrderDirection::Ascending => {
@@ -126,6 +129,7 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
             ChapterSortOrder::UpdatedAt(o) => match o {
                 OrderDirection::Ascending => {
@@ -142,6 +146,7 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                         b.cmp(&a)
                     });
                 }
+                _ => {}
             },
             ChapterSortOrder::Volume(o) => match o {
                 OrderDirection::Ascending => {
@@ -174,7 +179,9 @@ impl IntoSorted<ChapterSortOrder> for Vec<ChapterObject> {
                         b.partial_cmp(&a).unwrap_or(Ordering::Less)
                     });
                 }
+                _ => {}
             },
+            _ => {}
         };
         self
     }
