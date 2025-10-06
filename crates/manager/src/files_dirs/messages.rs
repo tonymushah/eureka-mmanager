@@ -3,6 +3,7 @@ pub mod join;
 pub mod modify;
 pub mod pull;
 pub mod push;
+pub mod subscribe;
 
 use super::DirsOptions;
 use actix::dev::{MessageResponse, OneshotSender};
