@@ -27,17 +27,19 @@ pub(crate) mod data_push {
 /// The `mangadex-desktop-api2` prelude module
 pub mod prelude {
     pub use super::{
+        Error, ManagerCoreResult, OwnedError,
         download::{
-            chapter::{task::ChapterDownloadTask, ChapterDownloadManager},
-            cover::{task::CoverDownloadTask, CoverDownloadManager},
-            manga::{task::MangaDownloadTask, MangaDownloadManager},
+            DownloadManager, GetManager,
+            chapter::{ChapterDownloadManager, task::ChapterDownloadTask},
+            cover::{CoverDownloadManager, task::CoverDownloadTask},
+            manga::{MangaDownloadManager, task::MangaDownloadTask},
             messages::{
                 chapter::GetChapterDownloadManager, cover::GetCoverDownloadManager,
                 manga::GetMangaDownloadManager,
             },
             state::{
-                messages::{get::GetManagerStateData, update::UpdateManagerStateData},
                 DownloadManagerState,
+                messages::{get::GetManagerStateData, update::UpdateManagerStateData},
             },
             traits::{
                 managers::TaskManagerAddr,
@@ -45,9 +47,9 @@ pub mod prelude {
                     AsyncCanBeWaited, AsyncCancelable, AsyncDownload, AsyncState, AsyncSubscribe,
                 },
             },
-            DownloadManager, GetManager,
         },
         files_dirs::{
+            DirsOptions,
             messages::{
                 delete::DeleteDataAsyncTrait,
                 join::JoinPathAsyncTraits,
@@ -58,26 +60,24 @@ pub mod prelude {
                 },
                 push::PushActorAddr,
             },
-            DirsOptions,
         },
         history::{
-            history_w_file::traits::*, service::HistoryActorService, AsyncInsert, AsyncIsIn,
-            AsyncRemove, HistoryEntry,
+            AsyncInsert, AsyncIsIn, AsyncRemove, HistoryEntry, history_w_file::traits::*,
+            service::HistoryActorService,
         },
-        Error, ManagerCoreResult, OwnedError,
     };
     pub use api_core::{
         data_pulls::{
+            AsyncIntoSorted, AsyncPaginate, AsyncRand, IntoFiltered, IntoParamedFilteredStream,
+            IntoSorted, Paginate, Rand,
             chapter::ChapterListDataPullFilterParams,
             cover::CoverListDataPullFilterParams,
             manga::{
-                aggregate::{AsyncIntoMangaAggreagate, IntoMangaAggreagate},
                 MangaListDataPullFilterParams,
+                aggregate::{AsyncIntoMangaAggreagate, IntoMangaAggreagate},
             },
-            AsyncIntoSorted, AsyncPaginate, AsyncRand, IntoFiltered, IntoParamedFilteredStream,
-            IntoSorted, Paginate, Rand,
         },
-        data_push::{chapter::image::ChapterImagePushEntry, Push},
+        data_push::{Push, chapter::image::ChapterImagePushEntry},
         file_dirs::DirsOptions as DirsOptionsCore,
     };
 }

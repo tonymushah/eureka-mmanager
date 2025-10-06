@@ -9,8 +9,8 @@ use super::MailBoxResult;
 
 use crate::download::{
     messages::{
-        state::GetManagerStateMessage, DropSingleTaskMessage, GetTaskMessage, GetTasksListMessage,
-        SubcribeToManagerMessage,
+        DropSingleTaskMessage, GetTaskMessage, GetTasksListMessage, SubcribeToManagerMessage,
+        state::GetManagerStateMessage,
     },
     state::DownloadManagerState,
 };
@@ -27,7 +27,7 @@ where
     fn tasks_id(&self) -> Vec<Uuid>;
     fn tasks(&self) -> Vec<Addr<Self::Task>>;
     fn new_task(&mut self, msg: Self::DownloadMessage, ctx: &mut Self::Context)
-        -> Addr<Self::Task>;
+    -> Addr<Self::Task>;
     fn drop_task(&mut self, id: Uuid);
     fn get_task(&self, id: Uuid) -> Option<Addr<Self::Task>>;
 }

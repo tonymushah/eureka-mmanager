@@ -2,8 +2,8 @@ mod entry;
 pub use entry::HistoryEntry;
 
 mod base;
-pub use base::error::HistoryBaseError;
 pub use base::HistoryBase;
+pub use base::error::HistoryBaseError;
 
 pub mod history_w_file;
 pub use history_w_file::HistoryWFile;
