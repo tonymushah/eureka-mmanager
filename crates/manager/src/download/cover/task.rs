@@ -1,18 +1,23 @@
 pub mod messages;
 
 use actix::prelude::*;
+use futures_util::FutureExt;
 use mangadex_api_schema_rust::v5::CoverObject;
 use uuid::Uuid;
 
 use std::{ops::Deref, sync::Arc};
 
 use crate::{
+    ArcRwLock,
     download::{
         messages::{DropSingleTaskMessage, StopTask, TaskSubscriberMessages},
         state::{DownloadTaskState, TaskState},
+        traits::task::{Cancelable, State},
     },
-    recipients::Recipients,
-    ArcRwLock,
+    files_dirs::{
+        events::FilesDirSubscriberMessage, messages::subscribe::DirsOptionsSubscribeMessage,
+    },
+    recipients::{MaybeWeakRecipient, Recipients},
 };
 
 use super::CoverDownloadManager;
@@ -63,6 +68,25 @@ impl Drop for CoverDownloadTask {
 impl Actor for CoverDownloadTask {
     type Context = Context<Self>;
 
+    fn started(&mut self, ctx: &mut Self::Context) {
+        let addr = ctx.address();
+
+        let manager = self.manager.clone();
+        async move {
+            manager
+                .send(DirsOptionsSubscribeMessage(MaybeWeakRecipient::Weak(
+                    addr.downgrade().into(),
+                )))
+                .await
+        }
+        .map(|d| {
+            if let Err(err) = d {
+                log::error!("{err}");
+            }
+        })
+        .into_actor(self)
+        .wait(ctx);
+    }
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading()
             || self.subscribers.has_connection()
@@ -91,6 +115,21 @@ impl CoverDownloadTask {
             manager,
             subscribers: Default::default(),
             should_stop: false,
+        }
+    }
+}
+
+impl Handler<FilesDirSubscriberMessage> for CoverDownloadTask {
+    type Result = ();
+    fn handle(&mut self, msg: FilesDirSubscriberMessage, ctx: &mut Self::Context) -> Self::Result {
+        if let FilesDirSubscriberMessage::RemovedCoverArt { id } = msg
+            && id == self.id
+        {
+            if self.state().is_finished() {
+                *self.state.write() = CoverDownloadTaskState::Pending;
+            } else if self.state().is_loading() {
+                self.cancel(ctx);
+            }
         }
     }
 }

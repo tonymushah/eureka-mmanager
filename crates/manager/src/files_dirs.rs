@@ -13,39 +13,51 @@ use mangadex_api_types_rust::RelationshipType;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod events;
 pub mod messages;
 
 use crate::{
     core::ManagerCoreResult,
-    history::{service::messages::is_in::IsInMessage, IsIn},
+    files_dirs::events::FilesDirSubscriberMessage,
+    history::{IsIn, service::messages::is_in::IsInMessage},
+    recipients::Recipients,
 };
-use api_core::{data_push::Push, DirsOptions as DirsOptionsCore};
+use api_core::{DirsOptions as DirsOptionsCore, data_push::Push};
 
+// TODO add an message for push and other thingy
 #[derive(Deserialize, Serialize, Clone, Debug)]
-pub struct DirsOptions(DirsOptionsCore);
+pub struct DirsOptions {
+    #[serde(flatten)]
+    core: DirsOptionsCore,
+    #[serde(skip)]
+    subscribers: Recipients<FilesDirSubscriberMessage>,
+}
 
 impl From<DirsOptionsCore> for DirsOptions {
     fn from(value: DirsOptionsCore) -> Self {
-        Self(value)
+        Self {
+            core: value,
+            subscribers: Default::default(),
+        }
     }
 }
 
 impl From<DirsOptions> for DirsOptionsCore {
     fn from(value: DirsOptions) -> Self {
-        value.0
+        value.core
     }
 }
 
 impl Deref for DirsOptions {
     type Target = DirsOptionsCore;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.core
     }
 }
 
 impl DerefMut for DirsOptions {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.core
     }
 }
 
@@ -90,6 +102,9 @@ impl DirsOptions {
 
     fn manga(&self, id: Uuid) -> bool {
         self.mangas_add(format!("{id}.json")).exists()
+    }
+    pub(crate) fn subscribers(&self) -> &Recipients<FilesDirSubscriberMessage> {
+        &self.subscribers
     }
 }
 
@@ -149,9 +164,9 @@ where
     type Error = crate::Error;
 
     fn push(&mut self, data: T) -> Result<(), Self::Error> {
-        self.0.push(data).map_err(|e| e.into())
+        self.core.push(data).map_err(|e| e.into())
     }
     fn verify_and_push(&mut self, data: T) -> Result<(), Self::Error> {
-        self.0.verify_and_push(data).map_err(|e| e.into())
+        self.core.verify_and_push(data).map_err(|e| e.into())
     }
 }

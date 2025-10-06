@@ -4,15 +4,15 @@ use std::{
 };
 
 use itertools::Itertools;
-use mangadex_api_schema_rust::{v5::MangaObject, ApiData};
+use mangadex_api_schema_rust::{ApiData, v5::MangaObject};
 use mangadex_api_types_rust::{
     ReferenceExpansionResource, RelationshipType, ResponseType, ResultType,
 };
 use uuid::Uuid;
 
-use crate::{data_pulls::Pull, DirsOptions};
+use crate::{DirsOptions, data_pulls::Pull};
 
-use super::{seed_rel, Push};
+use super::{Push, seed_rel};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MangaRequiredRelationship {
@@ -72,11 +72,11 @@ impl Push<MangaObject> for DirsOptions {
         let mut file = BufWriter::new(File::create(self.mangas_add(format!("{}.json", data.id)))?);
         serde_json::to_writer(
             &mut file,
-            &ApiData {
+            &non_exhaustive::non_exhaustive!(ApiData<MangaObject> {
                 response: ResponseType::Entity,
-                data,
+                data: data,
                 result: ResultType::Ok,
-            },
+            }),
         )?;
         file.flush()?;
         Ok(())

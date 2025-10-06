@@ -129,6 +129,7 @@ impl MangaListDataPullFilterParams {
                     .filter(|t| self.included_tags.contains(t))
                     .all(|t| self.included_tags.contains(t)),
                 TagSearchMode::Or => self.included_tags.iter().any(|t| input_tags.contains(t)),
+                _ => Default::default(),
             };
             Some(res)
         } else {
@@ -150,6 +151,7 @@ impl MangaListDataPullFilterParams {
                     .filter(|t| self.excluded_tags.contains(t))
                     .all(|t| self.excluded_tags.contains(t)),
                 TagSearchMode::Or => self.excluded_tags.iter().any(|t| input_tags.contains(t)),
+                _ => Default::default(),
             };
             Some(!res)
         } else {

@@ -3,7 +3,7 @@ use std::future::Future;
 use actix::prelude::*;
 use mangadex_api::MangaDexClient;
 
-use crate::{history::service::HistoryActorService, DirsOptions};
+use crate::{DirsOptions, history::service::HistoryActorService};
 
 use self::{
     chapter::ChapterDownloadManager, cover::CoverDownloadManager, manga::MangaDownloadManager,
@@ -54,3 +54,40 @@ impl From<Addr<DownloadManagerState>> for DownloadManager {
         }
     }
 }
+
+macro_rules! impl_dopt_sub_to_manager {
+    ($manager:ty) => {
+        impl actix::Handler<$crate::files_dirs::messages::subscribe::DirsOptionsSubscribeMessage>
+            for $manager
+        {
+            type Result = ResponseFuture<()>;
+            fn handle(
+                &mut self,
+                msg: $crate::files_dirs::messages::subscribe::DirsOptionsSubscribeMessage,
+                _ctx: &mut Self::Context,
+            ) -> Self::Result {
+                use futures_util::FutureExt;
+                let state =
+                    <$manager as $crate::download::traits::managers::TaskManager>::state(&self);
+                Box::pin(
+                    async move {
+                        use $crate::prelude::GetManagerStateData;
+                        let dir_options = state.get_dir_options().await?;
+                        dir_options.send(msg).await?;
+                        Ok::<(), $crate::Error>(())
+                    }
+                    .map(|res| {
+                        if let Err(err) = res {
+                            log::error!("{err}");
+                        }
+                    }),
+                )
+            }
+        }
+    };
+    () => {};
+}
+
+impl_dopt_sub_to_manager!(chapter::ChapterDownloadManager);
+impl_dopt_sub_to_manager!(cover::CoverDownloadManager);
+impl_dopt_sub_to_manager!(manga::MangaDownloadManager);

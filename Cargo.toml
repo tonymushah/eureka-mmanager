@@ -7,13 +7,13 @@ members = [
     "crates/emdx",
 ]
 default-members = ["./crates/manager"]
-resolver = "2"
+resolver = "3"
 
 [workspace.dependencies]
-emdx = { path = "crates/emdx", version = "0.1" }
+emdx = { path = "crates/emdx", version = "1" }
 id_list_txt_reader = { path = "./crates/misc/id_list_txt_reader", version = "0.1" }
-eureka-mmanager = { path = "./crates/manager", version = "0.3" }
-api-core = { path = "./crates/core", package = "eureka-mmanager-core", version = "0.1" }
+eureka-mmanager = { path = "./crates/manager", version = "1" }
+api-core = { path = "./crates/core", package = "eureka-mmanager-core", version = "1" }
 reqwest = { version = "0.12", features = [
     "cookies",
     "json",
@@ -21,30 +21,32 @@ reqwest = { version = "0.12", features = [
     "rustls-tls",
 ] }
 serde = { version = "1.0", features = ["derive"] }
-thiserror = "2.0"
+thiserror = "2"
 uuid = { version = "1.8", features = ["serde", "v4"] }
 url = { version = "2.5", features = ["serde"] }
-mangadex-api = { version = ">= 3.3, < 4", default-features = false, features = [
-    "rw-multi-thread",
-    "utils",
-    "serialize",
+mangadex-api = { version = "4", default-features = false, features = [
+    "utils"
 ] }
 serde_json = { version = "1.0" }
-mangadex-api-schema-rust = { version = ">= 0.9, < 1", default-features = false, features = [
+mangadex-api-schema-rust = { version = "1", default-features = false, features = [
     "serialize",
 ] }
-mangadex-api-types-rust = { version = ">= 0.9, < 1", default-features = false }
+mangadex-api-types-rust = { version = "1", default-features = false }
 tokio = { version = "1", features = ["sync", "rt"] }
-log = "^0.4.21"
+log = "0.4"
 tokio-stream = { version = "0.1" }
 bytes = { version = "1.6" }
 itertools = "0"
-mangadex-api-input-types = { version = ">= 0.5, < 1" }
+mangadex-api-input-types = { version = "1" }
 actix = "0.13"
 regex = "1"
 rand = { version = "0" }
 ciborium = { version = "0" }
-zstd = "0.13.2"
-tar = "0.4.41"
+zstd = "0.13"
+tar = "0.4"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
+non-exhaustive = "0.1"
+
+[workspace.package]
+edition = "2024"

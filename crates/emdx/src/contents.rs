@@ -7,8 +7,8 @@ use std::{
 };
 
 use api_core::{
-    data_pulls::{chapter::images::ChapterImagesData, Pull},
     DirsOptions,
+    data_pulls::{Pull, chapter::images::ChapterImagesData},
 };
 use mangadex_api_schema_rust::v5::ChapterObject;
 use mangadex_api_types_rust::RelationshipType;
@@ -95,10 +95,10 @@ impl TryFrom<&DirsOptions> for PackageContents {
         let data = value.pull_all_mangas()?.flatten().fold(
             HashMap::<Uuid, PMangaObject>::new(),
             |mut acc, manga| {
-                if let Some(covers) = _covers.remove(&manga.id) {
-                    if let Some(chapters) = _chapters.remove(&manga.id) {
-                        acc.insert(manga.id, PMangaObject { covers, chapters });
-                    }
+                if let Some(covers) = _covers.remove(&manga.id)
+                    && let Some(chapters) = _chapters.remove(&manga.id)
+                {
+                    acc.insert(manga.id, PMangaObject { covers, chapters });
                 }
                 acc
             },

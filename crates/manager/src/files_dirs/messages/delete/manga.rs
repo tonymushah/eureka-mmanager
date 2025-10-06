@@ -5,14 +5,15 @@ use tokio_stream::StreamExt;
 use uuid::Uuid;
 
 use crate::{
-    data_pulls::{
-        chapter::ChapterListDataPullFilterParams, cover::filter::CoverListDataPullFilterParams,
-        IntoParamedFilteredStream,
-    },
-    files_dirs::messages::pull::{
-        chapter::ChapterListDataPullMessage, cover::CoverListDataPullMessage,
-    },
     DirsOptions,
+    data_pulls::{
+        IntoParamedFilteredStream, chapter::ChapterListDataPullFilterParams,
+        cover::filter::CoverListDataPullFilterParams,
+    },
+    files_dirs::{
+        events::FilesDirSubscriberMessage,
+        messages::pull::{chapter::ChapterListDataPullMessage, cover::CoverListDataPullMessage},
+    },
 };
 
 use super::{DeleteChapterMessage, DeleteCoverMessage};
@@ -95,6 +96,8 @@ impl Handler<DeleteMangaMessage> for DirsOptions {
             if let Err(e) = remove_file(manga_path) {
                 log::error!("{e}");
             }
+            this.subscribers()
+                .do_send(FilesDirSubscriberMessage::RemovedManga { id: msg.0 });
             delete_data
         });
         Box::pin(fut)

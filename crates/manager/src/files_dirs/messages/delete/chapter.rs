@@ -6,7 +6,7 @@ use actix::{Handler, Message};
 use images::ChapterImages;
 use uuid::Uuid;
 
-use crate::DirsOptions;
+use crate::{DirsOptions, files_dirs::events::FilesDirSubscriberMessage};
 
 use self::images::{DeleteChapterImagesError, DeleteChapterImagesMessage};
 
@@ -44,13 +44,15 @@ impl Handler<DeleteChapterMessage> for DirsOptions {
     type Result = <DeleteChapterMessage as Message>::Result;
     fn handle(&mut self, msg: DeleteChapterMessage, ctx: &mut Self::Context) -> Self::Result {
         let chapter_path = self.chapters_id_add(msg.id);
-        if let Some(msg) = Into::<Option<DeleteChapterImagesMessage>>::into(msg) {
-            match self.handle(msg, ctx) {
+        if let Some(_msg) = Into::<Option<DeleteChapterImagesMessage>>::into(msg) {
+            match self.handle(_msg, ctx) {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     if let crate::Error::DeleteChapterImages(e) = e {
                         if let DeleteChapterImagesError::Conflict = e {
                             remove_dir_all(chapter_path)?;
+                            self.subscribers()
+                                .do_send(FilesDirSubscriberMessage::RemovedChapter { id: msg.id });
                             Ok(())
                         } else {
                             Err(crate::Error::DeleteChapterImages(e))
@@ -62,6 +64,8 @@ impl Handler<DeleteChapterMessage> for DirsOptions {
             }
         } else {
             remove_dir_all(chapter_path)?;
+            self.subscribers()
+                .do_send(FilesDirSubscriberMessage::RemovedChapter { id: msg.id });
             Ok(())
         }
     }

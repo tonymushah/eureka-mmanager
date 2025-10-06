@@ -2,7 +2,7 @@ use std::{fs::read_dir, path::Path};
 
 use uuid::Uuid;
 
-use crate::{data_pulls::Pull, DirsOptions, ManagerCoreResult};
+use crate::{DirsOptions, ManagerCoreResult, data_pulls::Pull};
 
 #[derive(Debug, Clone, Hash, Default)]
 #[cfg_attr(feature = "actix", derive(actix::MessageResponse))]
@@ -29,10 +29,10 @@ fn m_read_dir<P: AsRef<Path>>(path: P) -> Vec<String> {
                             .unwrap_or_default()
                 })
                 .filter_map(|e| {
-                    if let Some(len) = e.metadata().ok().map(|md| md.len()) {
-                        if len == 0 {
-                            return None::<String>;
-                        }
+                    if let Some(len) = e.metadata().ok().map(|md| md.len())
+                        && len == 0
+                    {
+                        return None::<String>;
                     }
                     e.file_name().to_str().map(String::from)
                 })

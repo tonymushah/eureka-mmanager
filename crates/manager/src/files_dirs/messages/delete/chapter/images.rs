@@ -3,7 +3,10 @@ use std::fs::remove_dir_all;
 use actix::prelude::*;
 use uuid::Uuid;
 
-use crate::{data_push::chapter::image::Mode, download::chapter::task::DownloadMode, DirsOptions};
+use crate::{
+    DirsOptions, data_push::chapter::image::Mode, download::chapter::task::DownloadMode,
+    files_dirs::events::FilesDirSubscriberMessage,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ChapterImages {
@@ -78,10 +81,20 @@ impl Handler<DeleteChapterImagesMessage> for DirsOptions {
         let remove = || match msg.images {
             ChapterImages::Data => {
                 remove_dir_all(&data_path)?;
+                self.subscribers()
+                    .do_send(FilesDirSubscriberMessage::RemovedChapterImages {
+                        id: msg.id,
+                        mode: Some(msg.images),
+                    });
                 Ok(())
             }
             ChapterImages::DataSaver => {
                 remove_dir_all(&data_saver_path)?;
+                self.subscribers()
+                    .do_send(FilesDirSubscriberMessage::RemovedChapterImages {
+                        id: msg.id,
+                        mode: Some(msg.images),
+                    });
                 Ok(())
             }
         };
