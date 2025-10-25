@@ -1,6 +1,6 @@
 [package]
 name = "eureka-mmanager"
-version = "0.3.3"
+version = "0.4.0"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "An Actix actor collection for downloading manga, chapters, covers from Mangadex"
@@ -33,6 +33,15 @@ api-core = { workspace = true, features = ["stream", "actix"] }
 tokio-util = "0.7.13"
 futures-util = { version = "0.3", default-features = false }
 parking_lot = "0.12"
+shrink_fit_wrapper.workspace = true
+hotpath = { workspace = true, optional = true }
+
+[features]
+hotpath = ["dep:hotpath", "hotpath/hotpath"]
+hotpath-alloc-bytes-total = ["hotpath/hotpath-alloc-bytes-total"]
+hotpath-alloc-count-total = ["hotpath/hotpath-alloc-count-total"]
+hotpath-alloc-self = ["hotpath/hotpath-alloc-self"]
+hotpath-off = ["hotpath/hotpath-off"]
 
 [dev-dependencies]
 criterion = { version = "0.7", features = ["async_tokio", "html_reports"] }

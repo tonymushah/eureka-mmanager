@@ -1,6 +1,6 @@
 [package]
 name = "eureka-manager-cli"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
@@ -32,5 +32,13 @@ tokio-stream.workspace = true
 indicatif = "0.18"
 duration-string = "0.5.2"
 indicatif-log-bridge = "0.2.3"
+hotpath = { workspace = true, optional = true }
+
+[features]
+hotpath = ["dep:hotpath", "hotpath/hotpath"]
+hotpath-alloc-bytes-total = ["hotpath/hotpath-alloc-bytes-total"]
+hotpath-alloc-count-total = ["hotpath/hotpath-alloc-count-total"]
+hotpath-alloc-self = ["hotpath/hotpath-alloc-self"]
+hotpath-off = ["hotpath/hotpath-off"]
 
 [dev-dependencies]

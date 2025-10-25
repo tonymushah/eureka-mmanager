@@ -12,7 +12,7 @@ resolver = "2"
 [workspace.dependencies]
 emdx = { path = "crates/emdx", version = "0.1" }
 id_list_txt_reader = { path = "./crates/misc/id_list_txt_reader", version = "0.1" }
-eureka-mmanager = { path = "./crates/manager", version = "0.3" }
+eureka-mmanager = { path = "./crates/manager", version = "0.4" }
 api-core = { path = "./crates/core", package = "eureka-mmanager-core", version = "0.1" }
 reqwest = { version = "0.12", features = [
     "cookies",
@@ -48,3 +48,5 @@ zstd = "0.13.2"
 tar = "0.4.41"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
+shrink_fit_wrapper = "1"
+hotpath = { version = "0.5" }
