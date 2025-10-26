@@ -1,9 +1,10 @@
 pub mod messages;
 pub mod task;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use actix::{prelude::*, WeakAddr};
+use shrink_fit_wrapper::ShrinkFitWrapper;
 use tokio::sync::Notify;
 use uuid::Uuid;
 
@@ -20,7 +21,7 @@ use super::{
 #[derive(Debug)]
 pub struct CoverDownloadManager {
     state: Addr<DownloadManagerState>,
-    tasks: HashMap<Uuid, WeakAddr<CoverDownloadTask>>,
+    tasks: ShrinkFitWrapper<HashMap<Uuid, WeakAddr<CoverDownloadTask>>>,
     notify: Arc<Notify>,
 }
 
@@ -28,7 +29,8 @@ impl CoverDownloadManager {
     pub fn new(state: Addr<DownloadManagerState>) -> Self {
         Self {
             state,
-            tasks: HashMap::new(),
+            tasks: ShrinkFitWrapper::new(HashMap::new())
+                .set_shrink_duration_cycle(Duration::from_secs(10 * 60)),
             notify: Arc::new(Notify::new()),
         }
     }
@@ -110,7 +112,7 @@ impl TaskManager for CoverDownloadManager {
         ctx: &mut Self::Context,
     ) -> Addr<Self::Task> {
         let task = {
-            match self.tasks.entry(msg.id) {
+            match self.tasks.as_mut().entry(msg.id) {
                 std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
                     let weak = occupied_entry.get_mut();
                     if let Some(tsk) = weak.upgrade() {
@@ -153,7 +155,7 @@ impl TaskManager for CoverDownloadManager {
     fn drop_task(&mut self, id: Uuid) {
         if let Some(task) = self.tasks.get(&id) {
             if task.upgrade().is_none() {
-                self.tasks.remove(&id);
+                self.tasks.as_mut().remove(&id);
             }
         }
         self.notify.notify_waiters();
