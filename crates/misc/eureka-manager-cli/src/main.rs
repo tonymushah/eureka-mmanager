@@ -12,6 +12,7 @@ use indicatif::MultiProgress;
 use indicatif_log_bridge::LogWrapper;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
 
+#[cfg_attr(feature = "hotpath", hotpath::main)]
 fn main() {
     let sys = System::new();
     let progress = MultiProgress::new();
