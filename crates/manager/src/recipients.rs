@@ -1,4 +1,8 @@
+use std::time::Duration;
+
 use actix::{dev::RecipientRequest, Message, Recipient, WeakRecipient};
+use parking_lot::lock_api::RwLock;
+use shrink_fit_wrapper::ShrinkFitWrapper;
 
 use crate::ArcRwLock;
 
@@ -75,7 +79,7 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Recipients<M>(ArcRwLock<Vec<MaybeWeakRecipient<M>>>)
+pub(crate) struct Recipients<M>(ArcRwLock<ShrinkFitWrapper<Vec<MaybeWeakRecipient<M>>>>)
 where
     M: Message + Send,
     M::Result: Send;
@@ -86,7 +90,10 @@ where
     M::Result: Send,
 {
     fn default() -> Self {
-        Self(ArcRwLock::default())
+        Self(ArcRwLock::new(RwLock::new(
+            ShrinkFitWrapper::new(Vec::default())
+                .set_shrink_duration_cycle(Duration::from_secs(60 * 5)),
+        )))
     }
 }
 
@@ -96,12 +103,12 @@ where
     M::Result: Send,
 {
     fn clean_up(&self) {
-        self.0.write().retain(|e| e.connected());
+        self.0.write().as_mut().retain(|e| e.connected());
     }
     pub fn push_recipient(&self, recipient: MaybeWeakRecipient<M>) {
         {
             let mut write = self.0.write();
-            write.push(recipient);
+            write.as_mut().push(recipient);
         }
         self.clean_up();
     }
@@ -118,6 +125,7 @@ where
     pub fn do_send(&self, message: M) {
         self.0
             .write()
+            .as_mut()
             .retain(|recipient| recipient.do_send(message.clone()));
     }
 }
