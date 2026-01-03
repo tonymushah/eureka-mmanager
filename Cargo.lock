@@ -472,7 +472,7 @@ dependencies = [
  "ciborium",
  "clap",
  "criterion-plot",
- "itertools 0.13.0",
+ "itertools",
  "num-traits",
  "oorandom",
  "page_size",
@@ -493,7 +493,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed943f81ea2faa8dcecbbfa50164acf95d555afec96a27871663b300e387b2e4"
 dependencies = [
  "cast",
- "itertools 0.13.0",
+ "itertools",
 ]
 
 [[package]]
@@ -652,7 +652,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "emdx"
-version = "1.0.0"
+version = "1.0.0-alpha.1"
 dependencies = [
  "anyhow",
  "ciborium",
@@ -702,7 +702,7 @@ dependencies = [
 
 [[package]]
 name = "eureka-manager-cli"
-version = "0.2.0"
+version = "1.0.0-alpha.1"
 dependencies = [
  "actix",
  "anyhow",
@@ -728,7 +728,7 @@ dependencies = [
 
 [[package]]
 name = "eureka-mmanager"
-version = "1.0.0"
+version = "1.0.0-alpha.1"
 dependencies = [
  "actix",
  "anyhow",
@@ -737,7 +737,7 @@ dependencies = [
  "criterion",
  "eureka-mmanager-core",
  "futures-util",
- "itertools 0.14.0",
+ "itertools",
  "log",
  "mangadex-api",
  "mangadex-api-input-types",
@@ -760,14 +760,14 @@ dependencies = [
 
 [[package]]
 name = "eureka-mmanager-core"
-version = "1.0.0"
+version = "1.0.0-alpha.1"
 dependencies = [
  "actix",
  "anyhow",
  "bytes",
  "ciborium",
  "clap",
- "itertools 0.14.0",
+ "itertools",
  "log",
  "mangadex-api-input-types",
  "mangadex-api-schema-rust",
@@ -1295,15 +1295,6 @@ name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
