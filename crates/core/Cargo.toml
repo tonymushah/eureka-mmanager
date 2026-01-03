@@ -1,6 +1,6 @@
 [package]
 name = "eureka-mmanager-core"
-version = "1.0.0"
+version = "1.0.0-alpha.1"
 edition.workspace = true
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
