@@ -1485,9 +1485,9 @@ dependencies = [
 
 [[package]]
 name = "mangadex-api-input-types"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd374bf54246e8a0d0c2a9209c7ac03b520b1be4980a31d1050efe0909413b8a"
+checksum = "ce1ea675a2ba89ac2229a47e14923c2240a77dde8aef89febe0a680225ac0e56"
 dependencies = [
  "mangadex-api",
  "mangadex-api-schema-rust",
