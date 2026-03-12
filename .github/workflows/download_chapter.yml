@@ -30,6 +30,6 @@ jobs:
       - name: Do result exists 
         run: if test -f "${{ env.RES }}"; then echo "The result file exist"; else exit "the result file doesn't exist"; fi;
       - name: Create report 
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           message-path: ${{ env.RES }}
