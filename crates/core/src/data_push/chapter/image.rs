@@ -5,18 +5,13 @@ use std::{
 
 use uuid::Uuid;
 
-use crate::{data_push::Push, DirsOptions};
+use crate::{DirsOptions, data_push::Push};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Mode {
+    #[default]
     Data,
     DataSaver,
-}
-
-impl Default for Mode {
-    fn default() -> Self {
-        Self::Data
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
