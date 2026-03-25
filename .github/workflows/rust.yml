@@ -35,7 +35,4 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: test
-        run: cargo test \
-          --workspace \
-          --tests \
-          --no-fail-fast
+        run: cargo test --workspace --tests --no-fail-fast
