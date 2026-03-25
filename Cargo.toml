@@ -45,3 +45,6 @@ non-exhaustive = "0.1"
 
 [workspace.package]
 edition = "2024"
+version = "1.0.0-alpha.1"
+authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
+repository = "https://github.com/tonymushah/eureka-mmanager"
