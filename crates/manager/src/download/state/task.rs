@@ -199,14 +199,9 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum DownloadMessageState {
+    #[default]
     Pending,
     Downloading,
-}
-
-impl Default for DownloadMessageState {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
