@@ -4,10 +4,11 @@ use actix::prelude::*;
 use tokio::sync::watch::{self, Receiver, Sender};
 use tokio_util::sync::ReusableBoxFuture;
 
-use crate::{download::messages::TaskSubscriberMessages, ManagerCoreResult, OwnedError};
+use crate::{ManagerCoreResult, OwnedError, download::messages::TaskSubscriberMessages};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum DownloadTaskState<T, L> {
+    #[default]
     Pending,
     Loading(L),
     Error(OwnedError),
@@ -15,25 +16,14 @@ pub enum DownloadTaskState<T, L> {
     Canceled,
 }
 
-impl<T, L> Default for DownloadTaskState<T, L> {
-    fn default() -> Self {
-        Self::Pending
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, MessageResponse)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, MessageResponse, Default)]
 pub enum TaskState {
+    #[default]
     Pending,
     Loading,
     Error,
     Done,
     Canceled,
-}
-
-impl Default for TaskState {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 impl TaskState {
@@ -209,14 +199,9 @@ where
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum DownloadMessageState {
+    #[default]
     Pending,
     Downloading,
-}
-
-impl Default for DownloadMessageState {
-    fn default() -> Self {
-        Self::Pending
-    }
 }

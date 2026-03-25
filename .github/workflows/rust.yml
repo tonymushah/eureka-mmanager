@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ "v0.x", "main" ]
+    branches: ["v0.x", "main"]
   pull_request:
-    branches: [ "v0.x", "main" ]
+    branches: ["v0.x", "main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -17,10 +17,22 @@ jobs:
         platform: [macos-latest, ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.platform }}
-    
+
     steps:
-    - uses: actions/checkout@v6
-    - name: Build
-      run: cargo build --verbose
-    - name: Run checks
-      run: cargo clippy --verbose
+      - uses: actions/checkout@v6
+      - name: Build
+        run: cargo build --verbose
+      - name: Run checks
+        run: cargo clippy --verbose
+
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: test
+        run: cargo test --workspace --tests --no-fail-fast

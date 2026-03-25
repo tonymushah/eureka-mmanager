@@ -197,10 +197,8 @@ impl AsyncRun for TransferCommand {
             }
 
             info!("Transfered {id} chapter!");
-            if let Some(manga) = manga {
-                if mangas.contains(&manga.id) {
-                    mangas.push(manga.id);
-                }
+            if let Some(manga) = manga.filter(|manga| mangas.contains(&manga.id)) {
+                mangas.push(manga.id);
             }
         }
 
