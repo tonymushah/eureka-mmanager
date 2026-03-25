@@ -1,11 +1,11 @@
 [package]
 name = "eureka-mmanager-core"
-version = "1.0.0-alpha.1"
+version.workspace = true
 edition.workspace = true
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "The core package for the eureka-mmanager crate."
-repository = "https://github.com/tonymushah/eureka-mmanager"
+repository.workspace = true
 
 [dependencies]
 serde.workspace = true

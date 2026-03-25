@@ -1,11 +1,11 @@
 [package]
 name = "eureka-manager-cli"
-version = "1.0.0-alpha.1"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 authors = ["tonymushah <tonymushahdev06@yahoo.com>"]
 license = "MIT OR Apache-2.0"
 description = "The official cli for the eureka-mmanager"
-repository = "https://github.com/tonymushah/eureka-mmanager"
+repository.workspace = true
 
 [[bin]]
 name = "eureka-manager"
