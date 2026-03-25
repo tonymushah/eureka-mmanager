@@ -16,19 +16,14 @@ pub enum DownloadTaskState<T, L> {
     Canceled,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, MessageResponse)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, MessageResponse, Default)]
 pub enum TaskState {
+    #[default]
     Pending,
     Loading,
     Error,
     Done,
     Canceled,
-}
-
-impl Default for TaskState {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 impl TaskState {
