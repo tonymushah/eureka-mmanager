@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test_wait;
+
 use std::{future::Future, ops::Deref, task::Poll};
 
 use actix::prelude::*;
