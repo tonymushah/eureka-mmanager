@@ -96,6 +96,7 @@ impl MangaDownloadTask {
         let subs = self.subscribers.clone();
         Arc::new({
             move |state_to_send: MangaDownloadTaskState| {
+                log::debug!("{:#?}", state_to_send);
                 *state.write() = state_to_send.clone();
                 subs.do_send(crate::download::messages::TaskSubscriberMessages::State(
                     state_to_send,
