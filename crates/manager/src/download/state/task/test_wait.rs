@@ -59,7 +59,8 @@ async fn run_wait_test() -> anyhow::Result<()> {
     let act = TestActor::default().start();
     act.send(StartDownload).await?;
     let wait = act.send(WaitForFinishedMessage::<(), ()>::new()).await?;
+    let wait1 = act.send(WaitForFinishedMessage::<(), ()>::new()).await?;
     tokio::spawn(tokio::time::timeout(Duration::from_secs(4), wait)).await???;
-
+    tokio::spawn(tokio::time::timeout(Duration::from_secs(4), wait1)).await???;
     Ok(())
 }
