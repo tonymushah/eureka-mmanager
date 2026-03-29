@@ -4,6 +4,7 @@ use std::ops::Deref;
 
 use actix::prelude::*;
 use futures_util::FutureExt;
+use log::trace;
 use mangadex_api::utils::download::chapter::DownloadMode as Mode;
 use mangadex_api_schema_rust::v5::ChapterObject;
 use uuid::Uuid;
@@ -110,7 +111,9 @@ impl Actor for ChapterDownloadTask {
         let addr = ctx.address();
 
         let manager = self.manager.clone();
+        log::debug!("Created chapter download task");
         async move {
+            log::trace!("Sending DirsOptions Subscribe Message for self");
             manager
                 .send(DirsOptionsSubscribeMessage(MaybeWeakRecipient::Weak(
                     addr.downgrade().into(),
@@ -120,10 +123,13 @@ impl Actor for ChapterDownloadTask {
         .map(|d| {
             if let Err(err) = d {
                 log::error!("{err}");
+            } else {
+                trace!("Sent message");
             }
         })
         .into_actor(self)
-        .wait(ctx);
+        // Using wait will cause dead lock
+        .spawn(ctx);
     }
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading()

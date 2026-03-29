@@ -41,3 +41,5 @@ anyhow = "1.0"
 ciborium.workspace = true
 tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
 non-exhaustive.workspace = true
+env_logger = "0.11"
+clap = { workspace = true }

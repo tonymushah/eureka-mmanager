@@ -1,7 +1,10 @@
-use std::{future::Future, ops::Deref, task::Poll};
+#[cfg(test)]
+mod test_wait;
+
+use std::{future::Future, marker::PhantomData, task::Poll};
 
 use actix::prelude::*;
-use tokio::sync::watch::{self, Receiver, Sender};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio_util::sync::ReusableBoxFuture;
 
 use crate::{ManagerCoreResult, OwnedError, download::messages::TaskSubscriberMessages};
@@ -66,7 +69,7 @@ impl<T, L> From<ManagerCoreResult<T>> for DownloadTaskState<T, L> {
 }
 
 struct WaitForFinishedActor<T, L> {
-    state: Sender<DownloadTaskState<T, L>>,
+    tx: UnboundedSender<DownloadTaskState<T, L>>,
 }
 
 impl<T, L> Actor for WaitForFinishedActor<T, L>
@@ -88,24 +91,19 @@ where
         msg: TaskSubscriberMessages<DownloadTaskState<T, L>>,
         ctx: &mut Self::Context,
     ) -> Self::Result {
-        if self.state.is_closed() {
+        if self.tx.is_closed() {
             ctx.stop();
+            log::warn!("Stopping actor since the channel closed");
             return;
         }
-        match msg {
-            TaskSubscriberMessages::State(s) => {
-                let _ = self.state.send_replace(s);
-            }
-            TaskSubscriberMessages::ID(_) => {
-                let _ = self.state.send_replace(DownloadTaskState::Pending);
-            }
-            TaskSubscriberMessages::Dropped => {
-                let state = Into::<TaskState>::into(self.state.borrow().deref());
-                if !state.is_finished() {
-                    let _ = self.state.send_replace(DownloadTaskState::Canceled);
-                }
-            }
+        let res = match msg {
+            TaskSubscriberMessages::State(s) => self.tx.send(s),
+            TaskSubscriberMessages::ID(_) => self.tx.send(DownloadTaskState::Pending),
+            TaskSubscriberMessages::Dropped => self.tx.send(DownloadTaskState::Canceled),
         };
+        if res.is_err() {
+            log::warn!("Stopping actor since the channel closed");
+        }
     }
 }
 
@@ -119,28 +117,26 @@ where
     T: 'static + Send + Clone + Sync,
     L: 'static + Send + Sync,
 {
-    let (tx, rx) = watch::channel(DownloadTaskState::Pending);
+    let (tx, rx) = mpsc::unbounded_channel();
+    let _ = tx.send(DownloadTaskState::Pending);
     (
-        WaitForFinishedActor { state: tx }.start().recipient(),
+        WaitForFinishedActor { tx }.start().recipient(),
         WaitForFinished::new(rx),
     )
 }
 
 #[derive(Debug, MessageResponse)]
 pub struct WaitForFinished<T, L> {
-    state: Receiver<DownloadTaskState<T, L>>,
-
+    phantom: PhantomData<L>,
     fut: ReusableBoxFuture<'static, Result<T, WaitForFinishedError>>,
 }
 
 async fn make_future<T: Clone + Send + Sync, L: Send + Sync>(
-    mut rx: Receiver<DownloadTaskState<T, L>>,
+    mut rx: UnboundedReceiver<DownloadTaskState<T, L>>,
 ) -> Result<T, WaitForFinishedError> {
     loop {
-        rx.changed()
-            .await
-            .map_err(WaitForFinishedError::RecvError)?;
-        match rx.borrow().deref() {
+        let val = rx.recv().await.ok_or(WaitForFinishedError::ChannelClosed)?;
+        match val {
             DownloadTaskState::Error(e) => {
                 return Err(WaitForFinishedError::Error(e.clone()));
             }
@@ -156,23 +152,11 @@ where
     T: Clone + Send + Sync + 'static,
     L: Send + Sync + 'static,
 {
-    pub fn new(state: Receiver<DownloadTaskState<T, L>>) -> Self {
-        let mut rx = state.clone();
-        rx.mark_changed();
+    pub fn new(state: UnboundedReceiver<DownloadTaskState<T, L>>) -> Self {
         Self {
-            state,
-            fut: ReusableBoxFuture::new(make_future(rx)),
+            phantom: PhantomData,
+            fut: ReusableBoxFuture::new(make_future(state)),
         }
-    }
-}
-
-impl<T, L> Clone for WaitForFinished<T, L>
-where
-    T: Clone + Send + Sync + 'static,
-    L: Send + Sync + 'static,
-{
-    fn clone(&self) -> Self {
-        Self::new(self.state.clone())
     }
 }
 
@@ -182,13 +166,14 @@ pub enum WaitForFinishedError {
     Canceled,
     #[error("{0}")]
     Error(OwnedError),
-    #[error(transparent)]
-    RecvError(#[from] tokio::sync::watch::error::RecvError),
+    #[error("The mpsc is closed")]
+    ChannelClosed,
 }
 
 impl<T, L> Future for WaitForFinished<T, L>
 where
     T: Send + Sync,
+    L: Unpin,
 {
     type Output = Result<T, WaitForFinishedError>;
     fn poll(

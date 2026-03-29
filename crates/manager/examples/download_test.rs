@@ -1,59 +1,47 @@
-use std::str::FromStr;
+use std::num::NonZero;
 
 use actix::prelude::*;
+use clap::Parser;
 use eureka_mmanager::{
+    DirsOptions,
     download::{
-        chapter::{task::DownloadMode, ChapterDownloadMessage},
+        DownloadManager,
+        chapter::{ChapterDownloadMessage, task::DownloadMode},
         cover::CoverDownloadMessage,
         manga::MangaDownloadMessage,
         messages::{
             chapter::GetChapterDownloadManagerMessage, cover::GetCoverDownloadManagerMessage,
             manga::GetMangaDownloadManagerMessage, state::GetManagerStateMessage,
         },
-        state::{messages::get::GetDirsOptionsMessage, DownloadMessageState},
+        state::{DownloadMessageState, messages::get::GetDirsOptionsMessage},
         traits::task::AsyncCanBeWaited,
-        DownloadManager,
     },
     files_dirs::messages::pull::{
         chapter::ChapterIdsListDataPullMessage,
         cover::CoverListDataPullMessage,
         manga::{MangaDataPullMessage, MangaListDataPullMessage},
     },
-    history::{service::messages::is_in::IsInMessage, HistoryEntry},
-    DirsOptions,
+    history::{HistoryEntry, service::messages::is_in::IsInMessage},
 };
+use log::debug;
 use mangadex_api::MangaDexClient;
 use mangadex_api_types_rust::RelationshipType;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
-use log::{Level, Metadata, Record};
-use log::{LevelFilter, SetLoggerError};
-
-struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static LOGGER: SimpleLogger = SimpleLogger;
-
-pub fn init() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace))
+#[derive(Debug, Parser)]
+#[command(version, about, long_about = None, propagate_version = true)]
+struct Cli {
+    #[arg(long)]
+    expected_mangas: Option<NonZero<u8>>,
+    #[arg(long)]
+    expected_covers: Option<NonZero<u8>>,
+    chapters: Vec<Uuid>,
 }
 
 fn main() -> anyhow::Result<()> {
-    init().map_err(anyhow::Error::msg)?;
+    let cli = Cli::parse();
+    env_logger::init();
     let run = System::with_tokio_rt(|| {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -64,14 +52,7 @@ fn main() -> anyhow::Result<()> {
         if tokio::runtime::Handle::try_current().is_ok() {
             log::info!("Has a tokio handle! :D");
         }
-        let chapter_ids = [
-            "48512232-f973-47f2-9443-871c06e94104",
-            "8f63a544-dad4-4ac7-be22-beaa6e8c0fe6",
-            "2d86967a-e2fb-4ab8-9d8e-dc109e311cad",
-        ]
-        .into_iter()
-        .flat_map(Uuid::from_str)
-        .collect::<Vec<_>>();
+        let chapter_ids = cli.chapters;
         let dowload_manager = {
             let client = MangaDexClient::default();
             let options = {
@@ -91,19 +72,25 @@ fn main() -> anyhow::Result<()> {
             let dw_mangr = dowload_manager.clone();
             let options = options.clone();
             join_set.spawn(async move {
-                log::info!("task spawned!");
-                let chapter = dw_mangr
-                    .send(GetChapterDownloadManagerMessage)
-                    .await?
-                    .send(
-                        ChapterDownloadMessage::new(id)
-                            .mode(DownloadMode::DataSaver)
-                            .state(DownloadMessageState::Downloading),
-                    )
-                    .await?
-                    .wait()
-                    .await?
-                    .await?;
+                log::info!("downloading chapter {id}");
+                let chapter = {
+                    let c_manager = dw_mangr.send(GetChapterDownloadManagerMessage).await?;
+                    debug!("Got manager");
+
+                    let mut task = c_manager
+                        .send(
+                            ChapterDownloadMessage::new(id)
+                                .mode(DownloadMode::DataSaver)
+                                .state(DownloadMessageState::Downloading),
+                        )
+                        .await?;
+                    debug!("Got task!");
+                    let wait = task.wait().await?;
+                    debug!("Got wait");
+                    let res = wait.await?;
+                    debug!("Downloaded chapter {id}");
+                    res
+                };
                 println!("downloaded chapter [{}]", chapter.id);
 
                 let manga_base: HistoryEntry = chapter
@@ -183,13 +170,19 @@ fn main() -> anyhow::Result<()> {
             .await??
             .flatten()
             .fold(0_usize, |acc, _x| acc + 1);
-        assert_eq!(covers, 1);
+        assert_eq!(
+            covers,
+            cli.expected_covers.unwrap_or(1.try_into()?).get() as usize
+        );
         let mangas = options
             .send(MangaListDataPullMessage)
             .await??
             .flatten()
             .fold(0_usize, |acc, _x| acc + 1);
-        assert_eq!(mangas, 1);
+        assert_eq!(
+            mangas,
+            cli.expected_mangas.unwrap_or(1.try_into()?).get() as usize
+        );
         Ok::<(), anyhow::Error>(())
     })?;
     Ok(())

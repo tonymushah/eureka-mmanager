@@ -1,10 +1,11 @@
 use actix::prelude::*;
+use log::trace;
 use mangadex_api_schema_rust::v5::ChapterObject as Object;
 
 use crate::download::{
     chapter::task::{ChapterDownloadTask as Task, ChapterDownloadingState as State},
     messages::WaitForFinishedMessage,
-    state::{make_wait_for_finish_couple, WaitForFinished},
+    state::{WaitForFinished, make_wait_for_finish_couple},
     traits::task::CanBeWaited,
 };
 
@@ -17,6 +18,7 @@ impl Handler<WaitForFinishedChapterMessage> for Task {
         _msg: WaitForFinishedMessage<Object, State>,
         _ctx: &mut Self::Context,
     ) -> Self::Result {
+        trace!("getting wait");
         self.wait()
     }
 }

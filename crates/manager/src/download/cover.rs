@@ -4,6 +4,7 @@ pub mod task;
 use std::{collections::HashMap, sync::Arc};
 
 use actix::{WeakAddr, prelude::*};
+use log::{debug, trace};
 use tokio::sync::Notify;
 use uuid::Uuid;
 
@@ -110,18 +111,22 @@ impl TaskManager for CoverDownloadManager {
         ctx: &mut Self::Context,
     ) -> Addr<Self::Task> {
         let task = {
+            debug!("Getting task");
             match self.tasks.entry(msg.id) {
                 std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
                     let weak = occupied_entry.get_mut();
                     if let Some(tsk) = weak.upgrade() {
+                        trace!("Got task");
                         tsk
                     } else {
+                        trace!("Creating task");
                         let tsk = Self::Task::new(msg.id, ctx.address()).start();
                         let _weak = std::mem::replace(weak, tsk.downgrade());
                         tsk
                     }
                 }
                 std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    trace!("creating task");
                     let tsk = Self::Task::new(msg.id, ctx.address()).start();
                     vacant_entry.insert(tsk.downgrade());
                     tsk
@@ -129,12 +134,15 @@ impl TaskManager for CoverDownloadManager {
             }
         };
         let re_task = task.clone();
+        trace!("notifying waiters");
         self.notify.notify_waiters();
 
         if let DownloadMessageState::Downloading = msg.state {
             let fut = async move {
+                trace!("getting task state");
                 let state = re_task.state().await?;
                 if !state.is_loading() {
+                    trace!("Sending StartDownload message");
                     re_task.send(StartDownload).await?;
                 }
                 Ok::<_, actix::MailboxError>(())

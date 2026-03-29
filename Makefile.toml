@@ -55,6 +55,18 @@ args = [
     "./chapters.txt",
 ]
 
+[tasks.download_test]
+command = "cargo"
+args = [
+    "run",
+    "--example",
+    "download_test",
+    "--",
+    "48512232-f973-47f2-9443-871c06e94104",
+    "8f63a544-dad4-4ac7-be22-beaa6e8c0fe6",
+    "2d86967a-e2fb-4ab8-9d8e-dc109e311cad"
+]
+
 [tasks.publish-all]
 workspace = false
 dependencies = [

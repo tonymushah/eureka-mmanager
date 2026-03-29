@@ -4,6 +4,7 @@ use std::{ops::Deref, sync::Arc};
 
 use actix::prelude::*;
 use futures_util::FutureExt;
+use log::debug;
 use mangadex_api_schema_rust::v5::MangaObject;
 use uuid::Uuid;
 
@@ -55,6 +56,8 @@ impl Actor for MangaDownloadTask {
     fn started(&mut self, ctx: &mut Self::Context) {
         let addr = ctx.address();
 
+        debug!("Starting task...");
+
         let manager = self.manager.clone();
         async move {
             manager
@@ -69,7 +72,8 @@ impl Actor for MangaDownloadTask {
             }
         })
         .into_actor(self)
-        .wait(ctx);
+        // Using wait cause dead lock
+        .spawn(ctx);
     }
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading()
@@ -96,6 +100,7 @@ impl MangaDownloadTask {
         let subs = self.subscribers.clone();
         Arc::new({
             move |state_to_send: MangaDownloadTaskState| {
+                log::debug!("{:#?}", state_to_send);
                 *state.write() = state_to_send.clone();
                 subs.do_send(crate::download::messages::TaskSubscriberMessages::State(
                     state_to_send,

@@ -34,5 +34,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - name: test
+      - name: precompile tests
+        run: cargo build --tests --workspace
+      - name: run tests
         run: cargo test --workspace --tests --no-fail-fast
+  testing_download:
+    needs: test
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: install cargo make
+        run: cargo install --force cargo-make
+      - name: prebuild download_test
+        run: cargo build --example download_test
+      - name: downloading things...
+        run: RUST_LOG=trace cargo make download_test
+        timeout-minutes: 5

@@ -21,7 +21,6 @@ id_list_txt_reader = { workspace = true }
 time = { version = "0.3.37", features = ["formatting", "local-offset"] }
 humantime = "2.1.0"
 mangadex-api.workspace = true
-reqwest.workspace = true
 emdx.workspace = true
 uuid.workspace = true
 log.workspace = true
@@ -32,5 +31,6 @@ tokio-stream.workspace = true
 indicatif = "0.18"
 duration-string = "0.5.2"
 indicatif-log-bridge = "0.2.3"
+reqwest = { workspace = true, features = ["gzip", "zstd", "http2", "brotli", "deflate", "rustls"] }
 
 [dev-dependencies]
