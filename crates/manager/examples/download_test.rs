@@ -1,6 +1,7 @@
-use std::str::FromStr;
+use std::num::NonZero;
 
 use actix::prelude::*;
+use clap::Parser;
 use eureka_mmanager::{
     DirsOptions,
     download::{
@@ -28,7 +29,16 @@ use mangadex_api_types_rust::RelationshipType;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
+#[derive(Debug, Parser)]
+#[command(version, about, long_about = None, propagate_version = true)]
+struct Cli {
+    expected_mangas: Option<NonZero<u8>>,
+    expected_covers: Option<NonZero<u8>>,
+    chapters: Vec<Uuid>,
+}
+
 fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
     env_logger::init();
     let run = System::with_tokio_rt(|| {
         tokio::runtime::Builder::new_multi_thread()
@@ -40,14 +50,7 @@ fn main() -> anyhow::Result<()> {
         if tokio::runtime::Handle::try_current().is_ok() {
             log::info!("Has a tokio handle! :D");
         }
-        let chapter_ids = [
-            "48512232-f973-47f2-9443-871c06e94104",
-            "8f63a544-dad4-4ac7-be22-beaa6e8c0fe6",
-            "2d86967a-e2fb-4ab8-9d8e-dc109e311cad",
-        ]
-        .into_iter()
-        .flat_map(Uuid::from_str)
-        .collect::<Vec<_>>();
+        let chapter_ids = cli.chapters;
         let dowload_manager = {
             let client = MangaDexClient::default();
             let options = {
@@ -165,13 +168,19 @@ fn main() -> anyhow::Result<()> {
             .await??
             .flatten()
             .fold(0_usize, |acc, _x| acc + 1);
-        assert_eq!(covers, 1);
+        assert_eq!(
+            covers,
+            cli.expected_covers.unwrap_or(1.try_into()?).get() as usize
+        );
         let mangas = options
             .send(MangaListDataPullMessage)
             .await??
             .flatten()
             .fold(0_usize, |acc, _x| acc + 1);
-        assert_eq!(mangas, 1);
+        assert_eq!(
+            mangas,
+            cli.expected_mangas.unwrap_or(1.try_into()?).get() as usize
+        );
         Ok::<(), anyhow::Error>(())
     })?;
     Ok(())
