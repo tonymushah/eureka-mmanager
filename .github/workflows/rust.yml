@@ -34,7 +34,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-      - name: test
+      - name: precompile tests
+        run: cargo build --tests --workspace
+      - name: run tests
         run: cargo test --workspace --tests --no-fail-fast
   testing_download:
     needs: test
