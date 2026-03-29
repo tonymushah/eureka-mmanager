@@ -4,6 +4,7 @@ pub mod task;
 use std::{collections::HashMap, sync::Arc};
 
 use actix::{WeakAddr, prelude::*};
+use log::{debug, trace};
 use task::DownloadMode;
 use tokio::sync::Notify;
 use uuid::Uuid;
@@ -109,12 +110,15 @@ impl TaskManager for ChapterDownloadManager {
         ctx: &mut Self::Context,
     ) -> Addr<Self::Task> {
         let task = {
+            trace!("Getting task");
             match self.tasks.entry(msg.id) {
                 std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
                     let weak = occupied_entry.get_mut();
                     if let Some(tsk) = weak.upgrade() {
+                        trace!("Got task");
                         tsk
                     } else {
+                        trace!("Task not found. creating new task");
                         let tsk =
                             Self::Task::new(msg.id, msg.mode, msg.force_port_443, ctx.address())
                                 .start();
@@ -123,21 +127,28 @@ impl TaskManager for ChapterDownloadManager {
                     }
                 }
                 std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    trace!("Task not found. Creating task...");
                     let tsk = Self::Task::new(msg.id, msg.mode, msg.force_port_443, ctx.address())
                         .start();
                     vacant_entry.insert(tsk.downgrade());
+                    trace!("created!");
                     tsk
                 }
             }
         };
         let re_task = task.clone();
+        trace!("notify waiters");
         self.notify.notify_waiters();
 
         if let DownloadMessageState::Downloading = msg.state {
+            debug!("Telling task to download chapter");
             let fut = async move {
+                trace!("getting state...");
                 let state = re_task.state().await?;
                 if !state.is_loading() {
+                    trace!("Sending mode message");
                     re_task.send(msg.mode).await?;
+                    trace!("Sending start download");
                     re_task.send(StartDownload).await?;
                 }
                 Ok::<_, actix::MailboxError>(())
@@ -148,7 +159,7 @@ impl TaskManager for ChapterDownloadManager {
                     log::error!("{err}");
                 }
             });
-            ctx.wait(fut)
+            ctx.wait(fut);
         }
         task
     }

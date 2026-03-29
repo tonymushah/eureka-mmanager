@@ -85,7 +85,8 @@ impl Actor for CoverDownloadTask {
             }
         })
         .into_actor(self)
-        .wait(ctx);
+        // Using wait cause dead lock
+        .spawn(ctx);
     }
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         if std::convert::Into::<TaskState>::into(self.state.read().deref()).is_loading()

@@ -2,58 +2,34 @@ use std::str::FromStr;
 
 use actix::prelude::*;
 use eureka_mmanager::{
+    DirsOptions,
     download::{
-        chapter::{task::DownloadMode, ChapterDownloadMessage},
+        DownloadManager,
+        chapter::{ChapterDownloadMessage, task::DownloadMode},
         cover::CoverDownloadMessage,
         manga::MangaDownloadMessage,
         messages::{
             chapter::GetChapterDownloadManagerMessage, cover::GetCoverDownloadManagerMessage,
             manga::GetMangaDownloadManagerMessage, state::GetManagerStateMessage,
         },
-        state::{messages::get::GetDirsOptionsMessage, DownloadMessageState},
+        state::{DownloadMessageState, messages::get::GetDirsOptionsMessage},
         traits::task::AsyncCanBeWaited,
-        DownloadManager,
     },
     files_dirs::messages::pull::{
         chapter::ChapterIdsListDataPullMessage,
         cover::CoverListDataPullMessage,
         manga::{MangaDataPullMessage, MangaListDataPullMessage},
     },
-    history::{service::messages::is_in::IsInMessage, HistoryEntry},
-    DirsOptions,
+    history::{HistoryEntry, service::messages::is_in::IsInMessage},
 };
+use log::debug;
 use mangadex_api::MangaDexClient;
 use mangadex_api_types_rust::RelationshipType;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
-use log::{Level, Metadata, Record};
-use log::{LevelFilter, SetLoggerError};
-
-struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static LOGGER: SimpleLogger = SimpleLogger;
-
-pub fn init() -> Result<(), SetLoggerError> {
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace))
-}
-
 fn main() -> anyhow::Result<()> {
-    init().map_err(anyhow::Error::msg)?;
+    env_logger::init();
     let run = System::with_tokio_rt(|| {
         tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -91,19 +67,25 @@ fn main() -> anyhow::Result<()> {
             let dw_mangr = dowload_manager.clone();
             let options = options.clone();
             join_set.spawn(async move {
-                log::info!("task spawned!");
-                let chapter = dw_mangr
-                    .send(GetChapterDownloadManagerMessage)
-                    .await?
-                    .send(
-                        ChapterDownloadMessage::new(id)
-                            .mode(DownloadMode::DataSaver)
-                            .state(DownloadMessageState::Downloading),
-                    )
-                    .await?
-                    .wait()
-                    .await?
-                    .await?;
+                log::info!("downloading chapter {id}");
+                let chapter = {
+                    let c_manager = dw_mangr.send(GetChapterDownloadManagerMessage).await?;
+                    debug!("Got manager");
+
+                    let mut task = c_manager
+                        .send(
+                            ChapterDownloadMessage::new(id)
+                                .mode(DownloadMode::DataSaver)
+                                .state(DownloadMessageState::Downloading),
+                        )
+                        .await?;
+                    debug!("Got task!");
+                    let wait = task.wait().await?;
+                    debug!("Got wait");
+                    let res = wait.await?;
+                    debug!("Downloaded chapter {id}");
+                    res
+                };
                 println!("downloaded chapter [{}]", chapter.id);
 
                 let manga_base: HistoryEntry = chapter
