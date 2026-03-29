@@ -176,8 +176,11 @@ where
     L: Unpin,
 {
     type Output = Result<T, WaitForFinishedError>;
-    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Self::Output> {
-        self.get_mut().fut.poll(cx)
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> Poll<Self::Output> {
+        self.fut.poll(cx)
     }
 }
 
