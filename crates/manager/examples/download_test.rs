@@ -32,7 +32,9 @@ use uuid::Uuid;
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None, propagate_version = true)]
 struct Cli {
+    #[arg(long)]
     expected_mangas: Option<NonZero<u8>>,
+    #[arg(long)]
     expected_covers: Option<NonZero<u8>>,
     chapters: Vec<Uuid>,
 }
